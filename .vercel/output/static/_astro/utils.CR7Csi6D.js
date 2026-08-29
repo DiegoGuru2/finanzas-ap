@@ -1,0 +1,1 @@
+function e(e,t=`USD`,n=`en-US`){return new Intl.NumberFormat(n,{style:`currency`,currency:t,minimumFractionDigits:2,maximumFractionDigits:2}).format(e)}export{e as t};
