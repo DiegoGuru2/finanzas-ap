@@ -1,0 +1,231 @@
+@import "tailwindcss";
+
+/* ═══════════════════════════════════════════
+   FinanzasAP — Design System Tokens
+   ═══════════════════════════════════════════ */
+
+@theme {
+  /* ─── Brand Colors ─── */
+  --color-brand-50: oklch(0.97 0.01 250);
+  --color-brand-100: oklch(0.93 0.03 250);
+  --color-brand-200: oklch(0.86 0.06 250);
+  --color-brand-300: oklch(0.76 0.10 250);
+  --color-brand-400: oklch(0.65 0.15 250);
+  --color-brand-500: oklch(0.55 0.18 250);
+  --color-brand-600: oklch(0.48 0.18 250);
+  --color-brand-700: oklch(0.40 0.16 250);
+  --color-brand-800: oklch(0.33 0.12 250);
+  --color-brand-900: oklch(0.27 0.09 250);
+  --color-brand-950: oklch(0.20 0.06 250);
+
+  /* ─── Accent (Emerald/Success) ─── */
+  --color-accent-50: oklch(0.97 0.02 160);
+  --color-accent-100: oklch(0.93 0.04 160);
+  --color-accent-200: oklch(0.86 0.08 160);
+  --color-accent-300: oklch(0.76 0.13 160);
+  --color-accent-400: oklch(0.65 0.17 160);
+  --color-accent-500: oklch(0.55 0.18 160);
+  --color-accent-600: oklch(0.48 0.16 160);
+  --color-accent-700: oklch(0.40 0.13 160);
+
+  /* ─── Danger (Red) ─── */
+  --color-danger-50: oklch(0.97 0.01 25);
+  --color-danger-100: oklch(0.93 0.04 25);
+  --color-danger-200: oklch(0.86 0.08 25);
+  --color-danger-300: oklch(0.76 0.13 25);
+  --color-danger-400: oklch(0.65 0.18 25);
+  --color-danger-500: oklch(0.55 0.20 25);
+  --color-danger-600: oklch(0.48 0.20 25);
+  --color-danger-700: oklch(0.40 0.17 25);
+
+  /* ─── Warning (Amber) ─── */
+  --color-warning-50: oklch(0.97 0.02 85);
+  --color-warning-100: oklch(0.93 0.05 85);
+  --color-warning-200: oklch(0.86 0.10 85);
+  --color-warning-300: oklch(0.76 0.15 85);
+  --color-warning-400: oklch(0.65 0.18 85);
+  --color-warning-500: oklch(0.55 0.17 85);
+
+  /* ─── Surface Colors (Dark-first design) ─── */
+  --color-surface-0: oklch(0.13 0.01 250);
+  --color-surface-50: oklch(0.16 0.01 250);
+  --color-surface-100: oklch(0.19 0.01 250);
+  --color-surface-200: oklch(0.23 0.01 250);
+  --color-surface-300: oklch(0.30 0.01 250);
+  --color-surface-400: oklch(0.40 0.01 250);
+
+  /* ─── Text Colors ─── */
+  --color-text-primary: oklch(0.95 0.00 0);
+  --color-text-secondary: oklch(0.70 0.01 250);
+  --color-text-muted: oklch(0.50 0.01 250);
+  --color-text-inverse: oklch(0.15 0.00 0);
+
+  /* ─── Border Colors ─── */
+  --color-border-default: oklch(0.25 0.01 250);
+  --color-border-hover: oklch(0.35 0.01 250);
+  --color-border-focus: oklch(0.55 0.18 250);
+
+  /* ─── Typography ─── */
+  --font-sans: 'Inter', 'system-ui', '-apple-system', 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+
+  /* ─── Border Radius ─── */
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.5rem;
+
+  /* ─── Shadows ─── */
+  --shadow-sm: 0 1px 2px 0 oklch(0 0 0 / 0.15);
+  --shadow-md: 0 4px 6px -1px oklch(0 0 0 / 0.2), 0 2px 4px -2px oklch(0 0 0 / 0.15);
+  --shadow-lg: 0 10px 15px -3px oklch(0 0 0 / 0.25), 0 4px 6px -4px oklch(0 0 0 / 0.15);
+  --shadow-xl: 0 20px 25px -5px oklch(0 0 0 / 0.3), 0 8px 10px -6px oklch(0 0 0 / 0.2);
+  --shadow-glow: 0 0 20px oklch(0.55 0.18 250 / 0.3);
+
+  /* ─── Animations ─── */
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ═══════════════════════════════════════════
+   Tema Claro (html[data-theme='light'])
+   El diseño es dark-first; aquí se redefinen los
+   tokens de superficie, texto y borde para modo claro.
+   ═══════════════════════════════════════════ */
+
+html[data-theme='light'] {
+  color-scheme: light;
+
+  --color-surface-0: oklch(0.975 0.005 250);
+  --color-surface-50: oklch(1 0 0);
+  --color-surface-100: oklch(0.955 0.006 250);
+  --color-surface-200: oklch(0.91 0.008 250);
+  --color-surface-300: oklch(0.84 0.01 250);
+  --color-surface-400: oklch(0.72 0.01 250);
+
+  --color-text-primary: oklch(0.22 0.01 250);
+  --color-text-secondary: oklch(0.42 0.015 250);
+  --color-text-muted: oklch(0.55 0.012 250);
+  --color-text-inverse: oklch(0.98 0 0);
+
+  --color-border-default: oklch(0.885 0.008 250);
+  --color-border-hover: oklch(0.78 0.01 250);
+
+  /* Tonos -400 más oscuros para mantener contraste sobre fondo claro */
+  --color-brand-400: oklch(0.5 0.17 250);
+  --color-accent-400: oklch(0.47 0.15 160);
+  --color-danger-400: oklch(0.5 0.19 25);
+  --color-warning-400: oklch(0.52 0.14 85);
+
+  --shadow-sm: 0 1px 2px 0 oklch(0 0 0 / 0.06);
+  --shadow-md: 0 4px 6px -1px oklch(0 0 0 / 0.08), 0 2px 4px -2px oklch(0 0 0 / 0.06);
+  --shadow-lg: 0 10px 15px -3px oklch(0 0 0 / 0.1), 0 4px 6px -4px oklch(0 0 0 / 0.06);
+  --shadow-xl: 0 20px 25px -5px oklch(0 0 0 / 0.12), 0 8px 10px -6px oklch(0 0 0 / 0.08);
+}
+
+html[data-theme='light'] .glass {
+  background: oklch(1 0 0 / 0.7);
+  border: 1px solid oklch(0.885 0.008 250 / 0.6);
+}
+
+/* ═══════════════════════════════════════════
+   Base Styles
+   ═══════════════════════════════════════════ */
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--color-surface-0);
+  color: var(--color-text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ─── Scrollbar ─── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-surface-50);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-surface-300);
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-surface-400);
+}
+
+/* ─── Focus visible ─── */
+*:focus-visible {
+  outline: 2px solid var(--color-border-focus);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* ─── Selection ─── */
+::selection {
+  background-color: oklch(0.55 0.18 250 / 0.3);
+  color: var(--color-text-primary);
+}
+
+/* ═══════════════════════════════════════════
+   Utility Classes
+   ═══════════════════════════════════════════ */
+
+/* Glass effect for cards */
+.glass {
+  background: oklch(0.16 0.01 250 / 0.6);
+  backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid oklch(0.25 0.01 250 / 0.5);
+}
+
+/* Gradient text */
+.gradient-text {
+  background: linear-gradient(135deg, var(--color-brand-400), var(--color-accent-400));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Shimmer loading animation */
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.shimmer {
+  position: relative;
+  overflow: hidden;
+}
+
+.shimmer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    oklch(1 0 0 / 0.05),
+    transparent
+  );
+  animation: shimmer 2s infinite;
+}
+
+/* Pulse glow animation for CTAs */
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 0 0 oklch(0.55 0.18 250 / 0.4); }
+  50% { box-shadow: 0 0 20px 4px oklch(0.55 0.18 250 / 0.2); }
+}
+
+.pulse-glow {
+  animation: pulse-glow 3s ease-in-out infinite;
+}

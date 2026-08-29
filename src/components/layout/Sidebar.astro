@@ -1,0 +1,177 @@
+---
+interface NavItem {
+  href: string;
+  label: string;
+  icon: string;
+}
+
+interface Props {
+  currentPath: string;
+}
+
+const { currentPath } = Astro.props;
+
+const navItems: NavItem[] = [
+  { href: '/app/dashboard', label: 'Dashboard', icon: 'layout-dashboard' },
+  { href: '/app/debts', label: 'Deudas', icon: 'credit-card' },
+  { href: '/app/incomes', label: 'Ingresos', icon: 'trending-up' },
+  { href: '/app/expenses', label: 'Gastos', icon: 'receipt' },
+  { href: '/app/payments', label: 'Pagos', icon: 'banknote' },
+  { href: '/app/settings', label: 'Configuración', icon: 'settings' },
+];
+
+function isActive(href: string): boolean {
+  if (href === '/app/dashboard') return currentPath === '/app/dashboard';
+  return currentPath.startsWith(href);
+}
+---
+
+<!-- Mobile overlay -->
+<div
+  id="sidebar-overlay"
+  class="fixed inset-0 z-40 hidden bg-black/50 backdrop-blur-sm lg:hidden"
+>
+</div>
+
+<!-- Sidebar -->
+<aside
+  id="app-sidebar"
+  class="fixed inset-y-0 left-0 z-50 flex w-64 -translate-x-full flex-col border-r border-border-default bg-surface-50 transition-transform duration-300 ease-smooth lg:translate-x-0"
+>
+  <!-- Logo -->
+  <div class="flex h-16 items-center gap-3 border-b border-border-default px-6">
+    <div
+      class="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-500"
+    >
+      <svg
+        class="h-5 w-5 text-white"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+        ></path>
+      </svg>
+    </div>
+    <span class="text-lg font-bold gradient-text">FinanzasAP</span>
+  </div>
+
+  <!-- Navigation -->
+  <nav class="flex-1 space-y-1 px-3 py-4">
+    {
+      navItems.map((item) => (
+        <a
+          href={item.href}
+          class:list={[
+            'group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200',
+            isActive(item.href)
+              ? 'bg-brand-500/15 text-brand-400 shadow-sm'
+              : 'text-text-secondary hover:bg-surface-100 hover:text-text-primary',
+          ]}
+        >
+          <span
+            class:list={[
+              'flex h-5 w-5 items-center justify-center',
+              isActive(item.href)
+                ? 'text-brand-400'
+                : 'text-text-muted group-hover:text-text-secondary',
+            ]}
+          >
+            {/* Icon placeholder - will be replaced with Lucide icons in React islands */}
+            <svg
+              class="h-5 w-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              {item.icon === 'layout-dashboard' && (
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="1.5"
+                  d="M4 5a1 1 0 011-1h4a1 1 0 011 1v5a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM14 5a1 1 0 011-1h4a1 1 0 011 1v2a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 16a1 1 0 011-1h4a1 1 0 011 1v3a1 1 0 01-1 1H5a1 1 0 01-1-1v-3zM14 13a1 1 0 011-1h4a1 1 0 011 1v6a1 1 0 01-1 1h-4a1 1 0 01-1-1v-6z"
+                />
+              )}
+              {item.icon === 'credit-card' && (
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="1.5"
+                  d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
+                />
+              )}
+              {item.icon === 'trending-up' && (
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="1.5"
+                  d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
+                />
+              )}
+              {item.icon === 'receipt' && (
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="1.5"
+                  d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z"
+                />
+              )}
+              {item.icon === 'banknote' && (
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="1.5"
+                  d="M2 7a2 2 0 012-2h16a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V7zm10 3a2 2 0 100 4 2 2 0 000-4z"
+                />
+              )}
+              {item.icon === 'settings' && (
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="1.5"
+                  d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                />
+              )}
+              {item.icon === 'settings' && (
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="1.5"
+                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                />
+              )}
+            </svg>
+          </span>
+          {item.label}
+        </a>
+      ))
+    }
+  </nav>
+
+  <!-- Bottom section -->
+  <div class="border-t border-border-default p-3">
+    <a
+      href="/api/auth/sign-out"
+      class="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-danger-400 transition-colors hover:bg-danger-500/10"
+    >
+      <svg
+        class="h-5 w-5"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="1.5"
+          d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+        ></path>
+      </svg>
+      Cerrar sesión
+    </a>
+  </div>
+</aside>

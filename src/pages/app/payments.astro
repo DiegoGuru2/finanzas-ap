@@ -1,0 +1,8 @@
+---
+import AppLayout from '../../layouts/AppLayout.astro';
+import PaymentsView from '@/components/payments/PaymentsView';
+---
+
+<AppLayout title="Cronograma de Pagos">
+  <PaymentsView client:load />
+</AppLayout>

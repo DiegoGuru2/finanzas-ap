@@ -1,0 +1,10 @@
+---
+import AppLayout from '../../layouts/AppLayout.astro';
+import DashboardView from '@/components/dashboard/DashboardView';
+
+const user = Astro.locals.user;
+---
+
+<AppLayout title="Dashboard">
+  <DashboardView client:load />
+</AppLayout>

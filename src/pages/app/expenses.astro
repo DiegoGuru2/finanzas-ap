@@ -1,0 +1,8 @@
+---
+import AppLayout from '../../layouts/AppLayout.astro';
+import ExpensesManager from '@/components/expenses/ExpensesManager';
+---
+
+<AppLayout title="Gastos Recurrentes">
+  <ExpensesManager client:load />
+</AppLayout>
