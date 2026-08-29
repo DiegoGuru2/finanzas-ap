@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { signIn } from '@/lib/auth/client';
 import { loginSchema } from '@/modules/financial-engine/validators';
+import PasswordInput from './PasswordInput';
 
 export default function LoginForm() {
   const [email, setEmail] = useState('');
@@ -69,16 +70,11 @@ export default function LoginForm() {
             ¿Olvidaste tu contraseña?
           </a>
         </div>
-        <input
-          type="password"
+        <PasswordInput
           id="password"
-          name="password"
           value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
+          onChange={setPassword}
           autoComplete="current-password"
-          placeholder="••••••••"
-          className="w-full rounded-xl border border-border-default bg-surface-100 px-4 py-3 text-sm text-text-primary placeholder:text-text-muted transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
         />
       </div>
 

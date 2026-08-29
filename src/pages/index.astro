@@ -44,7 +44,20 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         <span class="text-xl font-bold gradient-text">FinanzasAP</span>
       </div>
 
-      <div class="flex items-center gap-4">
+      <div class="flex items-center gap-2 sm:gap-4">
+        <button
+          id="theme-toggle-landing"
+          class="rounded-lg p-2 text-text-secondary transition-colors hover:bg-surface-100 hover:text-text-primary cursor-pointer"
+          title="Cambiar tema claro / oscuro"
+          aria-label="Cambiar tema"
+        >
+          <svg id="landing-icon-moon" class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+          </svg>
+          <svg id="landing-icon-sun" class="hidden h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+          </svg>
+        </button>
         <a
           href="/login"
           class="text-sm font-medium text-text-secondary transition-colors hover:text-text-primary"
@@ -61,7 +74,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     </nav>
 
     <!-- Hero Content -->
-    <main class="relative z-10 mx-auto max-w-5xl px-6 pb-20 pt-20 text-center lg:pt-32">
+    <main class="relative z-10 mx-auto max-w-6xl px-6 pb-20 pt-16 text-center lg:pt-24">
       <!-- Badge -->
       <div class="mb-8 inline-flex items-center gap-2 rounded-full border border-brand-500/20 bg-brand-500/10 px-4 py-1.5 text-sm font-medium text-brand-400">
         <span class="relative flex h-2 w-2">
@@ -70,7 +83,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
           ></span>
           <span class="relative inline-flex h-2 w-2 rounded-full bg-brand-400"></span>
         </span>
-        Motor de optimización financiera
+        Hecho para la nómina ecuatoriana 🇪🇨
       </div>
 
       <!-- Heading -->
@@ -82,8 +95,9 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
       <!-- Subtitle -->
       <p class="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-text-secondary sm:text-xl">
-        FinanzasAP analiza tus deudas y te dice exactamente cuánto pagar a cada
-        una para minimizar intereses y alcanzar tu libertad financiera.
+        Organiza tus deudas y gastos en un cronograma quincenal — qué pagar el 15,
+        qué pagar a fin de mes y cuánto te queda del sueldo — con descuento IESS y
+        estrategias de pago comparadas.
       </p>
 
       <!-- CTA Buttons -->
@@ -114,36 +128,149 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         </a>
       </div>
 
+      <!-- Product Preview: mini cronograma -->
+      <div class="relative mx-auto mt-16 max-w-4xl">
+        <div
+          class="pointer-events-none absolute -inset-6 rounded-3xl bg-brand-500/10 blur-2xl"
+          aria-hidden="true"
+        >
+        </div>
+        <div
+          class="relative overflow-hidden rounded-2xl border border-border-default bg-surface-50 text-left shadow-2xl"
+        >
+          <div class="flex items-center justify-between border-b border-border-default px-5 py-3">
+            <div class="flex items-center gap-2">
+              <span class="h-2.5 w-2.5 rounded-full bg-danger-500/60"></span>
+              <span class="h-2.5 w-2.5 rounded-full bg-warning-500/60"></span>
+              <span class="h-2.5 w-2.5 rounded-full bg-accent-500/60"></span>
+            </div>
+            <span class="text-xs font-semibold text-text-secondary">Cronograma de Pagos</span>
+            <span class="rounded-md bg-brand-500/10 px-2 py-0.5 text-[10px] font-bold text-brand-400">quincenal</span>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full min-w-[560px] text-xs sm:text-sm">
+              <thead>
+                <tr class="border-b border-border-default text-[11px] text-text-muted">
+                  <th class="px-5 py-2 text-left font-medium">Concepto</th>
+                  <th class="border-l border-border-default px-3 py-2 text-center font-medium text-brand-400">Día 15</th>
+                  <th class="border-l border-border-default bg-brand-500/[0.07] px-3 py-2 text-center font-medium text-accent-400">
+                    Fin de mes
+                    <div class="text-[9px] font-bold uppercase tracking-wide text-brand-400">próximo</div>
+                  </th>
+                  <th class="border-l border-border-default px-3 py-2 text-center font-medium text-brand-400">Día 15</th>
+                  <th class="border-l border-border-default px-3 py-2 text-center font-medium text-accent-400">Fin de mes</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="border-b border-border-default/50">
+                  <td class="px-5 py-2.5">
+                    <div class="font-medium text-text-primary">Maestría</div>
+                    <div class="text-[10px] text-text-muted">12 cuotas de $219.54</div>
+                  </td>
+                  <td class="border-l border-border-default/50 px-3 py-2.5 text-center text-text-muted/40">—</td>
+                  <td class="border-l border-border-default/50 bg-brand-500/[0.07] px-3 py-2.5 text-center">
+                    <span class="inline-flex items-center gap-1 rounded-md bg-accent-500/15 px-2 py-0.5 text-[11px] font-semibold text-accent-400">✓ $219.54</span>
+                  </td>
+                  <td class="border-l border-border-default/50 px-3 py-2.5 text-center text-text-muted/40">—</td>
+                  <td class="border-l border-border-default/50 px-3 py-2.5 text-center text-text-primary">$219.54</td>
+                </tr>
+                <tr class="border-b border-border-default/50">
+                  <td class="px-5 py-2.5">
+                    <div class="font-medium text-text-primary">Préstamo Banco</div>
+                    <div class="text-[10px] text-text-muted">10 cuotas de $186.00</div>
+                  </td>
+                  <td class="border-l border-border-default/50 px-3 py-2.5 text-center text-text-primary">$186.00</td>
+                  <td class="border-l border-border-default/50 bg-brand-500/[0.07] px-3 py-2.5 text-center text-text-muted/40">—</td>
+                  <td class="border-l border-border-default/50 px-3 py-2.5 text-center text-text-primary">$186.00</td>
+                  <td class="border-l border-border-default/50 px-3 py-2.5 text-center text-text-muted/40">—</td>
+                </tr>
+                <tr class="border-b border-border-default/50">
+                  <td class="px-5 py-2.5">
+                    <div class="font-medium text-text-primary">Comida del Hogar</div>
+                    <div class="text-[10px] text-text-muted">$80.00/mes · repartido</div>
+                  </td>
+                  <td class="border-l border-border-default/50 px-3 py-2.5 text-center text-text-secondary">$40.00</td>
+                  <td class="border-l border-border-default/50 bg-brand-500/[0.07] px-3 py-2.5 text-center text-text-secondary">$40.00</td>
+                  <td class="border-l border-border-default/50 px-3 py-2.5 text-center text-text-secondary">$40.00</td>
+                  <td class="border-l border-border-default/50 px-3 py-2.5 text-center text-text-secondary">$40.00</td>
+                </tr>
+              </tbody>
+              <tfoot>
+                <tr class="bg-surface-100">
+                  <td class="px-5 py-2.5 text-[11px] font-bold text-text-primary">Lo que queda del sueldo</td>
+                  <td class="border-l border-border-default/50 px-3 py-2.5 text-center font-bold text-accent-400">$134.00</td>
+                  <td class="border-l border-border-default/50 bg-brand-500/[0.07] px-3 py-2.5 text-center font-bold text-accent-400">$195.41</td>
+                  <td class="border-l border-border-default/50 px-3 py-2.5 text-center font-bold text-accent-400">$134.00</td>
+                  <td class="border-l border-border-default/50 px-3 py-2.5 text-center font-bold text-accent-400">$195.41</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+      </div>
+
       <!-- Stats -->
       <div
-        class="mx-auto mt-20 grid max-w-3xl grid-cols-1 gap-8 rounded-2xl border border-border-default bg-surface-50/50 p-8 backdrop-blur-sm sm:grid-cols-3"
+        class="mx-auto mt-16 grid max-w-3xl grid-cols-1 gap-8 rounded-2xl border border-border-default bg-surface-50/50 p-8 backdrop-blur-sm sm:grid-cols-3"
       >
         <div>
-          <div class="text-3xl font-bold text-brand-400">-42%</div>
+          <div class="text-3xl font-bold text-brand-400">15 y 30</div>
           <div class="mt-1 text-sm text-text-muted">
-            Intereses ahorrados en promedio
+            Cronograma alineado a tu quincena
           </div>
         </div>
         <div>
-          <div class="text-3xl font-bold text-accent-400">18 meses</div>
+          <div class="text-3xl font-bold text-accent-400">9.45%</div>
           <div class="mt-1 text-sm text-text-muted">
-            Menos de deuda en promedio
+            Aporte IESS calculado automáticamente
           </div>
         </div>
         <div>
-          <div class="text-3xl font-bold text-warning-400">100%</div>
+          <div class="text-3xl font-bold text-warning-400">3</div>
           <div class="mt-1 text-sm text-text-muted">
-            Motor matemático determinista
+            Estrategias de pago comparadas
           </div>
         </div>
       </div>
     </main>
 
+    <!-- Cómo funciona -->
+    <section class="relative z-10 mx-auto max-w-5xl px-6 py-16">
+      <h2 class="text-center text-3xl font-bold sm:text-4xl">
+        En <span class="gradient-text">3 pasos</span> tomas el control
+      </h2>
+      <div class="mt-12 grid grid-cols-1 gap-6 md:grid-cols-3">
+        <div class="relative rounded-2xl border border-border-default bg-surface-50/50 p-6">
+          <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-500 text-base font-extrabold text-white shadow-lg shadow-brand-500/25">1</div>
+          <h3 class="mt-4 text-lg font-semibold">Configura tu sueldo</h3>
+          <p class="mt-2 text-sm leading-relaxed text-text-secondary">
+            Registra tu sueldo bruto y el sistema calcula el descuento IESS, tu anticipo
+            de quincena y el saldo de fin de mes. Décimos y bonos también entran.
+          </p>
+        </div>
+        <div class="relative rounded-2xl border border-border-default bg-surface-50/50 p-6">
+          <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-500 text-base font-extrabold text-white shadow-lg shadow-brand-500/25">2</div>
+          <h3 class="mt-4 text-lg font-semibold">Añade deudas y gastos</h3>
+          <p class="mt-2 text-sm leading-relaxed text-text-secondary">
+            Tarjetas, préstamos BIESS, maestrías en cuotas fijas, y tus gastos del
+            hogar — cada uno con su corte de pago: el 15, fin de mes o repartido.
+          </p>
+        </div>
+        <div class="relative rounded-2xl border border-border-default bg-surface-50/50 p-6">
+          <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-500 text-base font-extrabold text-white shadow-lg shadow-brand-500/25">3</div>
+          <h3 class="mt-4 text-lg font-semibold">Sigue tu cronograma</h3>
+          <p class="mt-2 text-sm leading-relaxed text-text-secondary">
+            Ve exactamente qué pagar en cada quincena, cuánto te queda del sueldo,
+            registra abonos con un clic y observa cómo tu deuda desaparece.
+          </p>
+        </div>
+      </div>
+    </section>
+
     <!-- Features Section -->
     <section id="features" class="relative z-10 mx-auto max-w-6xl px-6 py-20">
       <h2 class="text-center text-3xl font-bold sm:text-4xl">
-        Todo lo que necesitas para
-        <span class="gradient-text">tomar el control</span>
+        Todo lo que necesitas para <span class="gradient-text">tomar el control</span>
       </h2>
       <p class="mx-auto mt-4 max-w-2xl text-center text-text-secondary">
         Un motor financiero que analiza tu situación y te da recomendaciones
@@ -151,7 +278,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       </p>
 
       <div class="mt-16 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-        <!-- Feature 1 -->
+        <!-- Feature 1: Cronograma -->
         <div
           class="group rounded-2xl border border-border-default bg-surface-50/50 p-6 transition-all duration-300 hover:border-brand-500/30 hover:bg-surface-100/50"
         >
@@ -163,17 +290,106 @@ import BaseLayout from '../layouts/BaseLayout.astro';
                 stroke-linecap="round"
                 stroke-linejoin="round"
                 stroke-width="1.5"
-                d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
             </svg>
           </div>
-          <h3 class="mt-4 text-lg font-semibold">Estrategia Avalancha</h3>
+          <h3 class="mt-4 text-lg font-semibold">Cronograma Quincenal</h3>
           <p class="mt-2 text-sm leading-relaxed text-text-secondary">
-            Prioriza las deudas con mayor tasa de interés para minimizar el costo
-            total de tus obligaciones.
+            Tu plan completo por quincenas: qué pagar el 15, qué pagar a fin de mes
+            y cuánto te queda del sueldo en cada corte.
           </p>
         </div>
 
-        <!-- Feature 2 -->
+        <!-- Feature 2: Nómina EC -->
+        <div
+          class="group rounded-2xl border border-border-default bg-surface-50/50 p-6 transition-all duration-300 hover:border-warning-500/30 hover:bg-surface-100/50"
+        >
+          <div
+            class="flex h-12 w-12 items-center justify-center rounded-xl bg-warning-500/15 text-warning-400 transition-colors group-hover:bg-warning-500/25"
+          >
+            <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="1.5"
+                d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+          </div>
+          <h3 class="mt-4 text-lg font-semibold">Nómina Ecuatoriana</h3>
+          <p class="mt-2 text-sm leading-relaxed text-text-secondary">
+            Aporte IESS del 9.45% descontado automáticamente, anticipo de quincena,
+            ahorro programado, décimos y fondos de reserva.
+          </p>
+        </div>
+
+        <!-- Feature 3: Estrategias -->
+        <div
+          class="group rounded-2xl border border-border-default bg-surface-50/50 p-6 transition-all duration-300 hover:border-accent-500/30 hover:bg-surface-100/50"
+        >
+          <div
+            class="flex h-12 w-12 items-center justify-center rounded-xl bg-accent-500/15 text-accent-400 transition-colors group-hover:bg-accent-500/25"
+          >
+            <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="1.5"
+                d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+            </svg>
+          </div>
+          <h3 class="mt-4 text-lg font-semibold">Estrategias Comparadas</h3>
+          <p class="mt-2 text-sm leading-relaxed text-text-secondary">
+            Avalancha, Bola de Nieve o Liquidez: compara intereses proyectados y
+            fecha libre de deuda de cada estrategia y elige la tuya.
+          </p>
+        </div>
+
+        <!-- Feature 4: Cuotas -->
+        <div
+          class="group rounded-2xl border border-border-default bg-surface-50/50 p-6 transition-all duration-300 hover:border-brand-500/30 hover:bg-surface-100/50"
+        >
+          <div
+            class="flex h-12 w-12 items-center justify-center rounded-xl bg-brand-500/15 text-brand-400 transition-colors group-hover:bg-brand-500/25"
+          >
+            <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="1.5"
+                d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+            </svg>
+          </div>
+          <h3 class="mt-4 text-lg font-semibold">Plan de Cuotas</h3>
+          <p class="mt-2 text-sm leading-relaxed text-text-secondary">
+            Define en cuántas cuotas pagarás cada deuda y el cronograma muestra
+            "cuota 3 de 12" hasta el mes exacto en que la liquidas. 🎉
+          </p>
+        </div>
+
+        <!-- Feature 5: Proyecciones -->
+        <div
+          class="group rounded-2xl border border-border-default bg-surface-50/50 p-6 transition-all duration-300 hover:border-danger-500/30 hover:bg-surface-100/50"
+        >
+          <div
+            class="flex h-12 w-12 items-center justify-center rounded-xl bg-danger-500/15 text-danger-400 transition-colors group-hover:bg-danger-500/25"
+          >
+            <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="1.5"
+                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+              ></path>
+            </svg>
+          </div>
+          <h3 class="mt-4 text-lg font-semibold">Proyección de Amortización</h3>
+          <p class="mt-2 text-sm leading-relaxed text-text-secondary">
+            Visualiza mes a mes cómo baja tu saldo, cuánto pagas en intereses y la
+            fecha exacta en que quedarás libre de deudas.
+          </p>
+        </div>
+
+        <!-- Feature 6: Pagos -->
         <div
           class="group rounded-2xl border border-border-default bg-surface-50/50 p-6 transition-all duration-300 hover:border-accent-500/30 hover:bg-surface-100/50"
         >
@@ -188,113 +404,47 @@ import BaseLayout from '../layouts/BaseLayout.astro';
                 d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
             </svg>
           </div>
-          <h3 class="mt-4 text-lg font-semibold">Bola de Nieve</h3>
+          <h3 class="mt-4 text-lg font-semibold">Control Total de Pagos</h3>
           <p class="mt-2 text-sm leading-relaxed text-text-secondary">
-            Elimina primero las deudas más pequeñas para ganar motivación y
-            liberar flujo de caja rápidamente.
+            Registra abonos con un clic desde el cronograma. ¿Te equivocaste?
+            Edita o elimina el pago y el saldo se corrige solo.
           </p>
         </div>
+      </div>
 
-        <!-- Feature 3 -->
-        <div
-          class="group rounded-2xl border border-border-default bg-surface-50/50 p-6 transition-all duration-300 hover:border-warning-500/30 hover:bg-surface-100/50"
+      <!-- CTA final -->
+      <div class="mt-20 rounded-3xl border border-brand-500/30 bg-gradient-to-r from-brand-500/15 via-surface-50 to-accent-500/10 p-10 text-center">
+        <h2 class="text-2xl font-bold sm:text-3xl">
+          Deja el Excel. <span class="gradient-text">Empieza hoy.</span>
+        </h2>
+        <p class="mx-auto mt-3 max-w-xl text-sm text-text-secondary sm:text-base">
+          Gratis, en español y pensado para cómo se cobra y se paga en Ecuador.
+        </p>
+        <a
+          href="/register"
+          class="mt-6 inline-flex items-center gap-2 rounded-xl bg-brand-500 px-8 py-3.5 text-base font-semibold text-white shadow-xl shadow-brand-500/25 transition-all hover:bg-brand-400 hover:shadow-brand-400/30"
         >
-          <div
-            class="flex h-12 w-12 items-center justify-center rounded-xl bg-warning-500/15 text-warning-400 transition-colors group-hover:bg-warning-500/25"
-          >
-            <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="1.5"
-                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-              ></path>
-            </svg>
-          </div>
-          <h3 class="mt-4 text-lg font-semibold">Proyecciones</h3>
-          <p class="mt-2 text-sm leading-relaxed text-text-secondary">
-            Visualiza mes a mes cómo disminuirán tus deudas y cuándo alcanzarás
-            tu libertad financiera.
-          </p>
-        </div>
-
-        <!-- Feature 4 -->
-        <div
-          class="group rounded-2xl border border-border-default bg-surface-50/50 p-6 transition-all duration-300 hover:border-brand-500/30 hover:bg-surface-100/50"
-        >
-          <div
-            class="flex h-12 w-12 items-center justify-center rounded-xl bg-brand-500/15 text-brand-400 transition-colors group-hover:bg-brand-500/25"
-          >
-            <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="1.5"
-                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-              ></path>
-            </svg>
-          </div>
-          <h3 class="mt-4 text-lg font-semibold">Seguridad Total</h3>
-          <p class="mt-2 text-sm leading-relaxed text-text-secondary">
-            Encriptación Argon2id, aislamiento de datos por usuario, y
-            validación en cada capa del sistema.
-          </p>
-        </div>
-
-        <!-- Feature 5 -->
-        <div
-          class="group rounded-2xl border border-border-default bg-surface-50/50 p-6 transition-all duration-300 hover:border-accent-500/30 hover:bg-surface-100/50"
-        >
-          <div
-            class="flex h-12 w-12 items-center justify-center rounded-xl bg-accent-500/15 text-accent-400 transition-colors group-hover:bg-accent-500/25"
-          >
-            <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="1.5"
-                d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-              ></path>
-            </svg>
-          </div>
-          <h3 class="mt-4 text-lg font-semibold">Recomendaciones Claras</h3>
-          <p class="mt-2 text-sm leading-relaxed text-text-secondary">
-            Cada mes recibes una recomendación exacta: cuánto pagar, a quién, y
-            cuánto ahorraste en intereses.
-          </p>
-        </div>
-
-        <!-- Feature 6 -->
-        <div
-          class="group rounded-2xl border border-border-default bg-surface-50/50 p-6 transition-all duration-300 hover:border-danger-500/30 hover:bg-surface-100/50"
-        >
-          <div
-            class="flex h-12 w-12 items-center justify-center rounded-xl bg-danger-500/15 text-danger-400 transition-colors group-hover:bg-danger-500/25"
-          >
-            <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="1.5"
-                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"
-              ></path>
-            </svg>
-          </div>
-          <h3 class="mt-4 text-lg font-semibold">Alertas Inteligentes</h3>
-          <p class="mt-2 text-sm leading-relaxed text-text-secondary">
-            Te avisamos cuando te acerques a una fecha de pago, cuando gastes de
-            más, o cuando alcances una meta.
-          </p>
-        </div>
+          Crear mi cuenta gratis
+          <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
+          </svg>
+        </a>
       </div>
     </section>
 
     <!-- Footer -->
     <footer class="relative z-10 border-t border-border-default px-6 py-8">
-      <div class="mx-auto flex max-w-6xl items-center justify-between">
-        <span class="text-sm text-text-muted">
-          © 2026 FinanzasAP. Todos los derechos reservados.
-        </span>
+      <div class="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 sm:flex-row">
+        <div class="flex items-center gap-2">
+          <div class="flex h-6 w-6 items-center justify-center rounded-lg bg-brand-500">
+            <svg class="h-3.5 w-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+          </div>
+          <span class="text-sm text-text-muted">
+            © 2026 FinanzasAP. Todos los derechos reservados.
+          </span>
+        </div>
         <div class="flex gap-6">
           <a href="#" class="text-sm text-text-muted hover:text-text-secondary">
             Privacidad
@@ -306,4 +456,28 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       </div>
     </footer>
   </div>
+
+  <!-- Theme toggle script -->
+  <script>
+    const toggle = document.getElementById('theme-toggle-landing');
+    const moon = document.getElementById('landing-icon-moon');
+    const sun = document.getElementById('landing-icon-sun');
+
+    function syncIcons() {
+      const isLight = document.documentElement.dataset.theme === 'light';
+      moon?.classList.toggle('hidden', isLight);
+      sun?.classList.toggle('hidden', !isLight);
+    }
+
+    toggle?.addEventListener('click', () => {
+      const next = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light';
+      document.documentElement.dataset.theme = next;
+      try {
+        localStorage.setItem('finanzas-theme', next);
+      } catch {}
+      syncIcons();
+    });
+
+    syncIcons();
+  </script>
 </BaseLayout>

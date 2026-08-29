@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { signUp } from '@/lib/auth/client';
 import { registerSchema } from '@/modules/financial-engine/validators';
+import PasswordInput from './PasswordInput';
 
 export default function RegisterForm() {
   const [name, setName] = useState('');
@@ -81,16 +82,12 @@ export default function RegisterForm() {
         <label htmlFor="password" className="mb-1.5 block text-sm font-medium text-text-secondary">
           Contraseña
         </label>
-        <input
-          type="password"
+        <PasswordInput
           id="password"
-          name="password"
           value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
+          onChange={setPassword}
           autoComplete="new-password"
           placeholder="Mínimo 8 caracteres"
-          className="w-full rounded-xl border border-border-default bg-surface-100 px-4 py-3 text-sm text-text-primary placeholder:text-text-muted transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
         />
         <p className="mt-1.5 text-xs text-text-muted">
           Incluye mayúsculas, minúsculas y números
@@ -104,16 +101,12 @@ export default function RegisterForm() {
         >
           Confirmar contraseña
         </label>
-        <input
-          type="password"
+        <PasswordInput
           id="confirmPassword"
-          name="confirmPassword"
           value={confirmPassword}
-          onChange={(e) => setConfirmPassword(e.target.value)}
-          required
+          onChange={setConfirmPassword}
           autoComplete="new-password"
           placeholder="Repite tu contraseña"
-          className="w-full rounded-xl border border-border-default bg-surface-100 px-4 py-3 text-sm text-text-primary placeholder:text-text-muted transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
         />
       </div>
 
