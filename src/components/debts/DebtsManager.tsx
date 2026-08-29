@@ -27,21 +27,22 @@ export default function DebtsManager() {
 
   // Form state
   const [name, setName] = useState('');
-  const [creditor, setCreditor] = useState('Banco Pichincha');
-  const [currentBalance, setCurrentBalance] = useState<number>(1200);
-  const [originalBalance, setOriginalBalance] = useState<number>(1500);
-  const [apr, setApr] = useState<number>(24.5);
-  const [minimumPayment, setMinimumPayment] = useState<number>(65);
-  const [dueDay, setDueDay] = useState<number>(15);
+  const [creditor, setCreditor] = useState('');
+  const [currentBalance, setCurrentBalance] = useState<string>('');
+  const [originalBalance, setOriginalBalance] = useState<string>('');
+  const [apr, setApr] = useState<string>('');
+  const [minimumPayment, setMinimumPayment] = useState<string>('');
+  const [dueDay, setDueDay] = useState<string>('15');
   const [type, setType] = useState<string>('credit_card');
   const [paymentTiming, setPaymentTiming] = useState<string>('quincena');
   const [hasInstallmentPlan, setHasInstallmentPlan] = useState(false);
-  const [termMonths, setTermMonths] = useState<number>(12);
+  const [payFullBalance, setPayFullBalance] = useState(false);
+  const [termMonths, setTermMonths] = useState<string>('12');
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Payment form state
-  const [paymentAmount, setPaymentAmount] = useState<number>(65);
+  const [paymentAmount, setPaymentAmount] = useState<string>('');
   const [paymentType, setPaymentType] = useState<'minimum' | 'extra' | 'full'>('minimum');
   const [paymentDate, setPaymentDate] = useState<string>(new Date().toISOString().slice(0, 10));
   const [paymentNotes, setPaymentNotes] = useState('');
@@ -68,16 +69,17 @@ export default function DebtsManager() {
   const handleOpenCreateModal = () => {
     setEditingDebtId(null);
     setName('');
-    setCreditor('Banco Pichincha');
-    setCurrentBalance(1000);
-    setOriginalBalance(1200);
-    setApr(24.5);
-    setMinimumPayment(50);
-    setDueDay(15);
+    setCreditor('');
+    setCurrentBalance('');
+    setOriginalBalance('');
+    setApr('');
+    setMinimumPayment('');
+    setDueDay('15');
     setType('credit_card');
     setPaymentTiming('quincena');
     setHasInstallmentPlan(false);
-    setTermMonths(12);
+    setPayFullBalance(false);
+    setTermMonths('12');
     setErrorMessage(null);
     setShowModal(true);
   };
@@ -85,16 +87,17 @@ export default function DebtsManager() {
   const handleOpenEditModal = (debt: DebtItem) => {
     setEditingDebtId(debt.id);
     setName(debt.name);
-    setCreditor(debt.creditor || 'Banco Pichincha');
-    setCurrentBalance(debt.currentBalance);
-    setOriginalBalance(debt.originalBalance);
-    setApr(debt.apr);
-    setMinimumPayment(debt.minimumPayment);
-    setDueDay(debt.dueDay || 15);
+    setCreditor(debt.creditor || '');
+    setCurrentBalance(String(debt.currentBalance));
+    setOriginalBalance(String(debt.originalBalance));
+    setApr(String(debt.apr));
+    setMinimumPayment(String(debt.minimumPayment));
+    setDueDay(String(debt.dueDay || 15));
     setType(debt.type || 'credit_card');
     setPaymentTiming(debt.paymentTiming || 'quincena');
     setHasInstallmentPlan(!!debt.hasInstallmentPlan);
-    setTermMonths(debt.termMonths || 12);
+    setPayFullBalance(false);
+    setTermMonths(String(debt.termMonths || 12));
     setErrorMessage(null);
     setShowModal(true);
   };
@@ -109,24 +112,33 @@ export default function DebtsManager() {
       const url = '/api/debts';
       const method = isEditing ? 'PUT' : 'POST';
 
+      const bal = parseFloat(currentBalance) || 0;
+      const origBal = parseFloat(originalBalance) || bal;
+      const tm = parseInt(termMonths) || 1;
+
       // Con plan de cuotas, la cuota mensual se deriva del saldo y reemplaza al pago mínimo
       const installmentAmount =
-        hasInstallmentPlan && termMonths > 0
-          ? Math.round((Number(currentBalance) / termMonths) * 100) / 100
+        hasInstallmentPlan && tm > 0
+          ? Math.round((bal / tm) * 100) / 100
           : null;
+
+      // Si paga valor total, el mínimo = saldo actual y termMonths = 1
+      const finalMinimum = payFullBalance
+        ? bal
+        : (installmentAmount ?? (parseFloat(minimumPayment) || 0));
 
       const payload: any = {
         name,
         creditor,
-        currentBalance: Number(currentBalance),
-        originalBalance: Number(originalBalance || currentBalance),
-        apr: Number(apr),
-        minimumPayment: installmentAmount ?? Number(minimumPayment),
-        dueDay: Number(dueDay),
+        currentBalance: bal,
+        originalBalance: origBal,
+        apr: parseFloat(apr) || 0,
+        minimumPayment: finalMinimum,
+        dueDay: parseInt(dueDay) || 15,
         type,
         paymentTiming,
-        hasInstallmentPlan,
-        termMonths: hasInstallmentPlan ? Number(termMonths) : null,
+        hasInstallmentPlan: payFullBalance ? false : hasInstallmentPlan,
+        termMonths: payFullBalance ? 1 : (hasInstallmentPlan ? tm : null),
         currency: 'USD',
         status: 'active',
       };
@@ -168,7 +180,7 @@ export default function DebtsManager() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           debtId: selectedDebt.id,
-          amount: Number(paymentAmount),
+          amount: parseFloat(paymentAmount) || 0,
           type: paymentType,
           paidAt: paymentDate,
           notes: paymentNotes,
@@ -334,7 +346,7 @@ export default function DebtsManager() {
                       <button
                         onClick={() => {
                           setSelectedDebt(debt);
-                          setPaymentAmount(debt.minimumPayment);
+                          setPaymentAmount(String(debt.minimumPayment));
                           setShowPaymentModal(true);
                         }}
                         className="rounded-xl bg-accent-500/10 border border-accent-500/20 px-3 py-2 text-xs font-semibold text-accent-400 hover:bg-accent-500/20 transition-all cursor-pointer"
@@ -430,11 +442,13 @@ export default function DebtsManager() {
                   <label className="mb-1 block text-xs font-medium text-text-secondary">Saldo Actual ($)</label>
                   <input
                     type="number"
+                    inputMode="decimal"
                     step="0.01"
                     min="0"
                     value={currentBalance}
-                    onChange={(e) => setCurrentBalance(parseFloat(e.target.value) || 0)}
+                    onChange={(e) => setCurrentBalance(e.target.value)}
                     required
+                    placeholder="0.00"
                     className="w-full rounded-xl border border-border-default bg-surface-100 px-3 py-2 text-xs text-text-primary focus:border-brand-500 focus:outline-none"
                   />
                 </div>
@@ -443,10 +457,12 @@ export default function DebtsManager() {
                   <label className="mb-1 block text-xs font-medium text-text-secondary">Monto Original ($)</label>
                   <input
                     type="number"
+                    inputMode="decimal"
                     step="0.01"
                     min="0"
                     value={originalBalance}
-                    onChange={(e) => setOriginalBalance(parseFloat(e.target.value) || 0)}
+                    onChange={(e) => setOriginalBalance(e.target.value)}
+                    placeholder="0.00"
                     className="w-full rounded-xl border border-border-default bg-surface-100 px-3 py-2 text-xs text-text-primary focus:border-brand-500 focus:outline-none"
                   />
                 </div>
@@ -457,32 +473,38 @@ export default function DebtsManager() {
                   <label className="mb-1 block text-xs font-medium text-text-secondary">Tasa APR (%)</label>
                   <input
                     type="number"
+                    inputMode="decimal"
                     step="0.1"
                     min="0"
                     max="100"
                     value={apr}
-                    onChange={(e) => setApr(parseFloat(e.target.value) || 0)}
+                    onChange={(e) => setApr(e.target.value)}
                     required
+                    placeholder="0.0"
                     className="w-full rounded-xl border border-border-default bg-surface-100 px-3 py-2 text-xs text-text-primary focus:border-brand-500 focus:outline-none"
                   />
                 </div>
 
                 <div>
                   <label className="mb-1 block text-xs font-medium text-text-secondary">
-                    {hasInstallmentPlan ? 'Cuota Mensual ($)' : 'Pago Mínimo ($)'}
+                    {payFullBalance ? 'Pago Total ($)' : hasInstallmentPlan ? 'Cuota Mensual ($)' : 'Pago Mínimo ($)'}
                   </label>
                   <input
                     type="number"
+                    inputMode="decimal"
                     step="0.01"
                     min="0"
                     value={
-                      hasInstallmentPlan && termMonths > 0
-                        ? Math.round((currentBalance / termMonths) * 100) / 100
-                        : minimumPayment
+                      payFullBalance
+                        ? currentBalance
+                        : hasInstallmentPlan && (parseInt(termMonths) || 0) > 0
+                          ? String(Math.round(((parseFloat(currentBalance) || 0) / (parseInt(termMonths) || 1)) * 100) / 100)
+                          : minimumPayment
                     }
-                    onChange={(e) => setMinimumPayment(parseFloat(e.target.value) || 0)}
+                    onChange={(e) => setMinimumPayment(e.target.value)}
                     required
-                    disabled={hasInstallmentPlan}
+                    disabled={hasInstallmentPlan || payFullBalance}
+                    placeholder="0.00"
                     className="w-full rounded-xl border border-border-default bg-surface-100 px-3 py-2 text-xs text-text-primary focus:border-brand-500 focus:outline-none disabled:opacity-60"
                   />
                 </div>
@@ -491,11 +513,13 @@ export default function DebtsManager() {
                   <label className="mb-1 block text-xs font-medium text-text-secondary">Día de Corte/Pago</label>
                   <input
                     type="number"
+                    inputMode="numeric"
                     min="1"
                     max="31"
                     value={dueDay}
-                    onChange={(e) => setDueDay(parseInt(e.target.value) || 1)}
+                    onChange={(e) => setDueDay(e.target.value)}
                     required
+                    placeholder="15"
                     className="w-full rounded-xl border border-border-default bg-surface-100 px-3 py-2 text-xs text-text-primary focus:border-brand-500 focus:outline-none"
                   />
                 </div>
@@ -530,14 +554,41 @@ export default function DebtsManager() {
                 </div>
               </div>
 
+              {/* Pagar valor total (un solo pago) */}
+              <div className="rounded-xl border border-accent-500/30 bg-accent-500/5 p-3 space-y-3">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="payFullBalance"
+                    checked={payFullBalance}
+                    onChange={(e) => {
+                      setPayFullBalance(e.target.checked);
+                      if (e.target.checked) {
+                        setHasInstallmentPlan(false);
+                      }
+                    }}
+                    className="h-4 w-4 rounded border-accent-500 text-accent-500 focus:ring-accent-500 cursor-pointer"
+                  />
+                  <label htmlFor="payFullBalance" className="text-xs font-bold text-accent-400 cursor-pointer">
+                    💰 Pagar el valor total de esta deuda (un solo pago)
+                  </label>
+                </div>
+                {payFullBalance && (parseFloat(currentBalance) || 0) > 0 && (
+                  <div className="rounded-lg bg-accent-500/10 border border-accent-500/20 px-3 py-2 text-xs text-accent-400">
+                    Se programará 1 pago único de <strong>{formatCurrency(parseFloat(currentBalance) || 0)}</strong>
+                  </div>
+                )}
+              </div>
+
               {/* Plan de cuotas fijas */}
-              <div className="rounded-xl border border-border-default bg-surface-100 p-3 space-y-3">
+              <div className={`rounded-xl border border-border-default bg-surface-100 p-3 space-y-3 ${payFullBalance ? 'opacity-40 pointer-events-none' : ''}`}>
                 <div className="flex items-center gap-2">
                   <input
                     type="checkbox"
                     id="hasInstallmentPlan"
                     checked={hasInstallmentPlan}
                     onChange={(e) => setHasInstallmentPlan(e.target.checked)}
+                    disabled={payFullBalance}
                     className="rounded border-border-default text-brand-500 focus:ring-brand-500"
                   />
                   <label htmlFor="hasInstallmentPlan" className="text-xs font-medium text-text-primary cursor-pointer">
@@ -551,19 +602,21 @@ export default function DebtsManager() {
                       <label className="mb-1 block text-xs font-medium text-text-secondary">Número de Cuotas</label>
                       <input
                         type="number"
+                        inputMode="numeric"
                         min="1"
                         max="360"
                         value={termMonths}
-                        onChange={(e) => setTermMonths(parseInt(e.target.value) || 1)}
+                        onChange={(e) => setTermMonths(e.target.value)}
                         required
+                        placeholder="12"
                         className="w-full rounded-xl border border-border-default bg-surface-50 px-3 py-2 text-xs text-text-primary focus:border-brand-500 focus:outline-none"
                       />
                     </div>
                     <div className="rounded-lg bg-brand-500/10 border border-brand-500/20 px-3 py-2 text-xs text-brand-400">
-                      {termMonths > 0 ? (
+                      {(parseInt(termMonths) || 0) > 0 ? (
                         <>
                           {termMonths} cuota(s) de{' '}
-                          <strong>{formatCurrency(Math.round((currentBalance / termMonths) * 100) / 100)}</strong>
+                          <strong>{formatCurrency(Math.round(((parseFloat(currentBalance) || 0) / (parseInt(termMonths) || 1)) * 100) / 100)}</strong>
                         </>
                       ) : (
                         'Ingresa el número de cuotas'
@@ -618,12 +671,14 @@ export default function DebtsManager() {
                 <label className="mb-1 block text-xs font-medium text-text-secondary">Monto del Pago ($)</label>
                 <input
                   type="number"
+                  inputMode="decimal"
                   step="0.01"
                   min="0.01"
                   max={selectedDebt.currentBalance}
                   value={paymentAmount}
-                  onChange={(e) => setPaymentAmount(parseFloat(e.target.value) || 0)}
+                  onChange={(e) => setPaymentAmount(e.target.value)}
                   required
+                  placeholder="0.00"
                   className="w-full rounded-xl border border-border-default bg-surface-100 px-3 py-2 text-sm text-text-primary focus:border-brand-500 focus:outline-none"
                 />
               </div>
@@ -633,7 +688,7 @@ export default function DebtsManager() {
                   type="button"
                   onClick={() => {
                     setPaymentType('minimum');
-                    setPaymentAmount(selectedDebt.minimumPayment);
+                    setPaymentAmount(String(selectedDebt.minimumPayment));
                   }}
                   className={`rounded-lg border p-2 text-xs font-medium cursor-pointer ${
                     paymentType === 'minimum' ? 'border-brand-500 bg-brand-500/10 text-brand-400' : 'border-border-default bg-surface-100 text-text-muted'
@@ -656,7 +711,7 @@ export default function DebtsManager() {
                   type="button"
                   onClick={() => {
                     setPaymentType('full');
-                    setPaymentAmount(selectedDebt.currentBalance);
+                    setPaymentAmount(String(selectedDebt.currentBalance));
                   }}
                   className={`rounded-lg border p-2 text-xs font-medium cursor-pointer ${
                     paymentType === 'full' ? 'border-warning-500 bg-warning-500/10 text-warning-400' : 'border-border-default bg-surface-100 text-text-muted'
