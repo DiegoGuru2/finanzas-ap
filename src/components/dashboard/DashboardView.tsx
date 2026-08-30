@@ -388,7 +388,7 @@ export default function DashboardView() {
       {/* 🚀 ONBOARDING WIZARD MODAL FOR NEW REGISTERED USERS */}
       {showOnboarding && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-300">
-          <div className="w-full max-w-xl rounded-3xl border border-brand-500/30 bg-surface-50 p-6 sm:p-8 shadow-2xl space-y-6">
+          <div className="w-full max-w-xl max-h-[92vh] overflow-y-auto rounded-3xl border border-brand-500/30 bg-surface-50 p-6 sm:p-8 shadow-2xl space-y-6">
             <div className="text-center space-y-2">
               <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-500/20 text-brand-400 border border-brand-500/30 shadow-lg shadow-brand-500/20 text-2xl">
                 🇪🇨

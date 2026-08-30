@@ -41,7 +41,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
             ></path>
           </svg>
         </div>
-        <span class="text-xl font-bold gradient-text">FinanzasAP</span>
+        <span class="hidden text-xl font-bold gradient-text sm:inline">FinanzasAP</span>
       </div>
 
       <div class="flex items-center gap-2 sm:gap-4">
@@ -76,7 +76,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     <!-- Hero Content -->
     <main class="relative z-10 mx-auto max-w-6xl px-6 pb-20 pt-16 text-center lg:pt-24">
       <!-- Badge -->
-      <div class="mb-8 inline-flex items-center gap-2 rounded-full border border-brand-500/20 bg-brand-500/10 px-4 py-1.5 text-sm font-medium text-brand-400">
+      <div class="animate-fade-up mb-8 inline-flex items-center gap-2 rounded-full border border-brand-500/20 bg-brand-500/10 px-4 py-1.5 text-sm font-medium text-brand-400">
         <span class="relative flex h-2 w-2">
           <span
             class="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand-400 opacity-75"
@@ -87,21 +87,30 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       </div>
 
       <!-- Heading -->
-      <h1 class="mx-auto max-w-4xl text-4xl font-extrabold leading-tight tracking-tight sm:text-5xl lg:text-7xl">
+      <h1
+        class="animate-fade-up mx-auto max-w-4xl text-4xl font-extrabold leading-tight tracking-tight sm:text-5xl lg:text-7xl"
+        style="animation-delay: 0.1s"
+      >
         Paga menos intereses.
         <br />
         <span class="gradient-text">Libérate más rápido.</span>
       </h1>
 
       <!-- Subtitle -->
-      <p class="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-text-secondary sm:text-xl">
+      <p
+        class="animate-fade-up mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-text-secondary sm:text-xl"
+        style="animation-delay: 0.2s"
+      >
         Organiza tus deudas y gastos en un cronograma quincenal — qué pagar el 15,
         qué pagar a fin de mes y cuánto te queda del sueldo — con descuento IESS y
         estrategias de pago comparadas.
       </p>
 
       <!-- CTA Buttons -->
-      <div class="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
+      <div
+        class="animate-fade-up mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row"
+        style="animation-delay: 0.3s"
+      >
         <a
           href="/register"
           class="group flex items-center gap-2 rounded-xl bg-brand-500 px-8 py-3.5 text-base font-semibold text-white shadow-xl shadow-brand-500/25 transition-all hover:bg-brand-400 hover:shadow-brand-400/30"
@@ -129,7 +138,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       </div>
 
       <!-- Product Preview: mini cronograma -->
-      <div class="relative mx-auto mt-16 max-w-4xl">
+      <div class="animate-fade-up relative mx-auto mt-16 max-w-4xl" style="animation-delay: 0.45s">
         <div
           class="pointer-events-none absolute -inset-6 rounded-3xl bg-brand-500/10 blur-2xl"
           aria-hidden="true"
@@ -211,7 +220,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
       <!-- Stats -->
       <div
-        class="mx-auto mt-16 grid max-w-3xl grid-cols-1 gap-8 rounded-2xl border border-border-default bg-surface-50/50 p-8 backdrop-blur-sm sm:grid-cols-3"
+        class="reveal mx-auto mt-16 grid max-w-3xl grid-cols-1 gap-8 rounded-2xl border border-border-default bg-surface-50/50 p-8 backdrop-blur-sm sm:grid-cols-3"
       >
         <div>
           <div class="text-3xl font-bold text-brand-400">15 y 30</div>
@@ -236,11 +245,11 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
     <!-- Cómo funciona -->
     <section class="relative z-10 mx-auto max-w-5xl px-6 py-16">
-      <h2 class="text-center text-3xl font-bold sm:text-4xl">
+      <h2 class="reveal text-center text-3xl font-bold sm:text-4xl">
         En <span class="gradient-text">3 pasos</span> tomas el control
       </h2>
       <div class="mt-12 grid grid-cols-1 gap-6 md:grid-cols-3">
-        <div class="relative rounded-2xl border border-border-default bg-surface-50/50 p-6">
+        <div class="reveal relative rounded-2xl border border-border-default bg-surface-50/50 p-6">
           <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-500 text-base font-extrabold text-white shadow-lg shadow-brand-500/25">1</div>
           <h3 class="mt-4 text-lg font-semibold">Configura tu sueldo</h3>
           <p class="mt-2 text-sm leading-relaxed text-text-secondary">
@@ -248,7 +257,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
             de quincena y el saldo de fin de mes. Décimos y bonos también entran.
           </p>
         </div>
-        <div class="relative rounded-2xl border border-border-default bg-surface-50/50 p-6">
+        <div class="reveal relative rounded-2xl border border-border-default bg-surface-50/50 p-6" style="transition-delay: 0.12s">
           <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-500 text-base font-extrabold text-white shadow-lg shadow-brand-500/25">2</div>
           <h3 class="mt-4 text-lg font-semibold">Añade deudas y gastos</h3>
           <p class="mt-2 text-sm leading-relaxed text-text-secondary">
@@ -256,7 +265,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
             hogar — cada uno con su corte de pago: el 15, fin de mes o repartido.
           </p>
         </div>
-        <div class="relative rounded-2xl border border-border-default bg-surface-50/50 p-6">
+        <div class="reveal relative rounded-2xl border border-border-default bg-surface-50/50 p-6" style="transition-delay: 0.24s">
           <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-500 text-base font-extrabold text-white shadow-lg shadow-brand-500/25">3</div>
           <h3 class="mt-4 text-lg font-semibold">Sigue tu cronograma</h3>
           <p class="mt-2 text-sm leading-relaxed text-text-secondary">
@@ -269,10 +278,10 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
     <!-- Features Section -->
     <section id="features" class="relative z-10 mx-auto max-w-6xl px-6 py-20">
-      <h2 class="text-center text-3xl font-bold sm:text-4xl">
+      <h2 class="reveal text-center text-3xl font-bold sm:text-4xl">
         Todo lo que necesitas para <span class="gradient-text">tomar el control</span>
       </h2>
-      <p class="mx-auto mt-4 max-w-2xl text-center text-text-secondary">
+      <p class="reveal mx-auto mt-4 max-w-2xl text-center text-text-secondary" style="transition-delay: 0.1s">
         Un motor financiero que analiza tu situación y te da recomendaciones
         claras, no opiniones.
       </p>
@@ -280,7 +289,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       <div class="mt-16 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
         <!-- Feature 1: Cronograma -->
         <div
-          class="group rounded-2xl border border-border-default bg-surface-50/50 p-6 transition-all duration-300 hover:border-brand-500/30 hover:bg-surface-100/50"
+          class="reveal group rounded-2xl border border-border-default bg-surface-50/50 p-6 hover:border-brand-500/30 hover:bg-surface-100/50"
         >
           <div
             class="flex h-12 w-12 items-center justify-center rounded-xl bg-brand-500/15 text-brand-400 transition-colors group-hover:bg-brand-500/25"
@@ -302,7 +311,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
         <!-- Feature 2: Nómina EC -->
         <div
-          class="group rounded-2xl border border-border-default bg-surface-50/50 p-6 transition-all duration-300 hover:border-warning-500/30 hover:bg-surface-100/50"
+          class="reveal group rounded-2xl border border-border-default bg-surface-50/50 p-6 hover:border-warning-500/30 hover:bg-surface-100/50" style="transition-delay: 0.1s"
         >
           <div
             class="flex h-12 w-12 items-center justify-center rounded-xl bg-warning-500/15 text-warning-400 transition-colors group-hover:bg-warning-500/25"
@@ -324,7 +333,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
         <!-- Feature 3: Estrategias -->
         <div
-          class="group rounded-2xl border border-border-default bg-surface-50/50 p-6 transition-all duration-300 hover:border-accent-500/30 hover:bg-surface-100/50"
+          class="reveal group rounded-2xl border border-border-default bg-surface-50/50 p-6 hover:border-accent-500/30 hover:bg-surface-100/50" style="transition-delay: 0.15s"
         >
           <div
             class="flex h-12 w-12 items-center justify-center rounded-xl bg-accent-500/15 text-accent-400 transition-colors group-hover:bg-accent-500/25"
@@ -346,7 +355,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
         <!-- Feature 4: Cuotas -->
         <div
-          class="group rounded-2xl border border-border-default bg-surface-50/50 p-6 transition-all duration-300 hover:border-brand-500/30 hover:bg-surface-100/50"
+          class="reveal group rounded-2xl border border-border-default bg-surface-50/50 p-6 hover:border-brand-500/30 hover:bg-surface-100/50"
         >
           <div
             class="flex h-12 w-12 items-center justify-center rounded-xl bg-brand-500/15 text-brand-400 transition-colors group-hover:bg-brand-500/25"
@@ -368,7 +377,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
         <!-- Feature 5: Proyecciones -->
         <div
-          class="group rounded-2xl border border-border-default bg-surface-50/50 p-6 transition-all duration-300 hover:border-danger-500/30 hover:bg-surface-100/50"
+          class="reveal group rounded-2xl border border-border-default bg-surface-50/50 p-6 hover:border-danger-500/30 hover:bg-surface-100/50" style="transition-delay: 0.1s"
         >
           <div
             class="flex h-12 w-12 items-center justify-center rounded-xl bg-danger-500/15 text-danger-400 transition-colors group-hover:bg-danger-500/25"
@@ -391,7 +400,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
         <!-- Feature 6: Pagos -->
         <div
-          class="group rounded-2xl border border-border-default bg-surface-50/50 p-6 transition-all duration-300 hover:border-accent-500/30 hover:bg-surface-100/50"
+          class="reveal group rounded-2xl border border-border-default bg-surface-50/50 p-6 hover:border-accent-500/30 hover:bg-surface-100/50" style="transition-delay: 0.15s"
         >
           <div
             class="flex h-12 w-12 items-center justify-center rounded-xl bg-accent-500/15 text-accent-400 transition-colors group-hover:bg-accent-500/25"
@@ -413,7 +422,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       </div>
 
       <!-- CTA final -->
-      <div class="mt-20 rounded-3xl border border-brand-500/30 bg-gradient-to-r from-brand-500/15 via-surface-50 to-accent-500/10 p-10 text-center">
+      <div class="reveal mt-20 rounded-3xl border border-brand-500/30 bg-gradient-to-r from-brand-500/15 via-surface-50 to-accent-500/10 p-10 text-center">
         <h2 class="text-2xl font-bold sm:text-3xl">
           Deja el Excel. <span class="gradient-text">Empieza hoy.</span>
         </h2>
@@ -479,5 +488,24 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     });
 
     syncIcons();
+
+    // ─── Animaciones al hacer scroll (reveal) ───
+    const revealEls = document.querySelectorAll('.reveal');
+    if ('IntersectionObserver' in window) {
+      const observer = new IntersectionObserver(
+        (entries) => {
+          for (const entry of entries) {
+            if (entry.isIntersecting) {
+              entry.target.classList.add('is-visible');
+              observer.unobserve(entry.target);
+            }
+          }
+        },
+        { threshold: 0.15, rootMargin: '0px 0px -40px 0px' }
+      );
+      revealEls.forEach((el) => observer.observe(el));
+    } else {
+      revealEls.forEach((el) => el.classList.add('is-visible'));
+    }
   </script>
 </BaseLayout>

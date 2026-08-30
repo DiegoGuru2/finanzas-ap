@@ -19,7 +19,7 @@ const initial = currentUser?.name ? currentUser.name[0].toUpperCase() : 'D';
     <Sidebar currentPath={currentPath} />
 
     <!-- Main Content Area -->
-    <div class="flex flex-1 flex-col lg:ml-64">
+    <div class="flex min-w-0 flex-1 flex-col lg:ml-64">
       <!-- Top Header Bar -->
       <header
         class="sticky top-0 z-30 flex h-16 items-center border-b border-border-default bg-surface-0/80 px-4 backdrop-blur-xl lg:px-8"
@@ -125,7 +125,7 @@ const initial = currentUser?.name ? currentUser.name[0].toUpperCase() : 'D';
                 </nav>
                 <div class="border-t border-border-default p-1.5">
                   <a
-                    href="/api/auth/sign-out"
+                    href="/logout"
                     class="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-danger-400 transition-colors hover:bg-danger-500/10"
                   >
                     <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -86,6 +86,15 @@ export const incomes = mysqlTable('incomes', {
   iessPercentage: decimal('iessPercentage', { precision: 5, scale: 2 }).default('9.45'),
   hasProgrammedSavings: boolean('hasProgrammedSavings').default(false),
   programmedSavingsAmount: decimal('programmedSavingsAmount', { precision: 15, scale: 2 }).default('0.00'),
+  // ═══ Beneficios de Ley Ecuador ═══
+  hasFondosReserva: boolean('hasFondosReserva').default(false), // Fondos de reserva (8.33% después de 1 año)
+  fondosReservaMensualizado: boolean('fondosReservaMensualizado').default(true), // true = pago mensual, false = acumulado en IESS
+  decimoTerceroMensualizado: boolean('decimoTerceroMensualizado').default(true), // true = recibo mensual 1/12, false = pago en diciembre
+  decimoCuartoMensualizado: boolean('decimoCuartoMensualizado').default(true), // true = recibo mensual, false = pago anual
+  region: varchar('region', { length: 20 }).default('costa'), // 'costa' | 'sierra' para décimo 14to
+  sbuAmount: decimal('sbuAmount', { precision: 15, scale: 2 }).default('460.00'), // Salario Básico Unificado vigente
+  hasUtilidades: boolean('hasUtilidades').default(true), // La empresa reparte utilidades (15%)
+  utilidadesAmount: decimal('utilidadesAmount', { precision: 15, scale: 2 }).default('0.00'), // Monto estimado anual de utilidades
   date: date('date'),
   category: varchar('category', { length: 100 }),
   isActive: boolean('isActive').default(true),

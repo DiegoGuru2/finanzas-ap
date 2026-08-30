@@ -220,7 +220,7 @@ export default function ExpensesManager() {
             {expenses.map((exp) => (
               <div key={exp.id} className="p-5 flex items-center justify-between hover:bg-surface-100/50 transition-colors">
                 <div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
                     <span className="font-semibold text-text-primary">{exp.name}</span>
                     <span className="text-xs bg-surface-200 px-2 py-0.5 rounded text-text-secondary">
                       {categoryLabels[exp.category] || exp.category}
@@ -287,7 +287,7 @@ export default function ExpensesManager() {
       {/* Modal Crear Gasto */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md rounded-2xl border border-border-default bg-surface-50 p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in duration-200">
+          <div className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl border border-border-default bg-surface-50 p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in duration-200">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-bold">
                 {editingId ? '✏️ Editar Gasto' : 'Registrar Gasto Recurrente'}

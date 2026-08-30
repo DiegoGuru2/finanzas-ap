@@ -227,7 +227,7 @@ export default function IncomesManager() {
             {incomes.map((inc) => (
               <div key={inc.id} className="p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-4 hover:bg-surface-100/50 transition-colors">
                 <div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
                     <span className="font-semibold text-text-primary">{inc.name}</span>
                     {inc.isSalary && (
                       <span className="rounded-md bg-brand-500/10 px-2 py-0.5 text-xs font-medium text-brand-400 border border-brand-500/20">
@@ -287,7 +287,7 @@ export default function IncomesManager() {
       {/* Modal Agregar / Configurar Sueldo */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-lg rounded-2xl border border-border-default bg-surface-50 p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in duration-200">
+          <div className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl border border-border-default bg-surface-50 p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in duration-200">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-bold">Configurar Sueldo / Ingreso</h3>
               <button onClick={() => setShowModal(false)} className="text-text-muted hover:text-text-primary">✕</button>

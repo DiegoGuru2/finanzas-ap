@@ -300,7 +300,7 @@ export default function DebtsManager() {
               return (
                 <div key={debt.id} className="p-5 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 hover:bg-surface-100/50 transition-colors">
                   <div className="space-y-1.5 flex-1">
-                    <div className="flex items-center gap-3">
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
                       <span className="font-semibold text-text-primary text-base">{debt.name}</span>
                       {debt.creditor && (
                         <span className="text-xs bg-surface-200 px-2 py-0.5 rounded text-text-secondary">
@@ -320,7 +320,7 @@ export default function DebtsManager() {
                       ) : null}
                     </div>
 
-                    <div className="flex items-center gap-4 text-xs text-text-muted pt-1">
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-text-muted pt-1">
                       <span>Día de pago: <strong>Día {debt.dueDay}</strong></span>
                       <span>Mínimo requerido: <strong className="text-warning-400">{formatCurrency(debt.minimumPayment)}</strong></span>
                       <span>Progreso pago: <strong>{paidPercent}%</strong></span>
@@ -387,7 +387,7 @@ export default function DebtsManager() {
       {/* Modal Crear / Modificar Deuda */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-lg rounded-2xl border border-border-default bg-surface-50 p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in duration-200">
+          <div className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl border border-border-default bg-surface-50 p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in duration-200">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-bold">
                 {editingDebtId ? '✏️ Modificar Deuda o Crédito' : '➕ Registrar Deuda o Crédito'}
@@ -656,7 +656,7 @@ export default function DebtsManager() {
       {/* Modal Abonar a Deuda */}
       {showPaymentModal && selectedDebt && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md rounded-2xl border border-border-default bg-surface-50 p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in duration-200">
+          <div className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl border border-border-default bg-surface-50 p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in duration-200">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-bold">Registrar Abono</h3>
               <button onClick={() => setShowPaymentModal(false)} className="text-text-muted hover:text-text-primary cursor-pointer">✕</button>
