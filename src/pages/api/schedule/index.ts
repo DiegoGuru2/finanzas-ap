@@ -63,6 +63,15 @@ export const GET: APIRoute = async (ctx) => {
         programmedSavingsAmount: i.programmedSavingsAmount
           ? parseFloat(i.programmedSavingsAmount as string)
           : 0,
+        // Beneficios de Ley
+        hasFondosReserva: !!i.hasFondosReserva,
+        fondosReservaMensualizado: i.fondosReservaMensualizado ?? true,
+        decimoTerceroMensualizado: i.decimoTerceroMensualizado ?? true,
+        decimoCuartoMensualizado: i.decimoCuartoMensualizado ?? true,
+        region: (i.region === 'sierra' ? 'sierra' : 'costa') as 'costa' | 'sierra',
+        sbuAmount: i.sbuAmount ? parseFloat(i.sbuAmount as string) : undefined,
+        hasUtilidades: i.hasUtilidades ?? true,
+        utilidadesAmount: i.utilidadesAmount ? parseFloat(i.utilidadesAmount as string) : 0,
         date: toIsoDate(i.date),
       }));
 

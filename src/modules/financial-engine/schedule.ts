@@ -9,7 +9,9 @@
  * period ("Lo que queda del sueldo").
  */
 
+import { calculateBenefits } from './benefits';
 import { calculateSalaryDetails, normalizeToMonthly } from './cashflow';
+import { round } from './constants';
 import type { Debt, Expense, Income } from './types';
 
 export type PeriodTiming = 'quincena' | 'fin_de_mes';
@@ -54,6 +56,8 @@ export interface PaymentScheduleResult {
   remaining: Record<string, number>; // periodKey -> lo que queda del sueldo
   monthlyIncome: { quincena: number; finDeMes: number };
   monthlyCommitment: { debts: number; expenses: number };
+  /** periodKey -> beneficios anuales (décimos, utilidades) que caen en ese corte */
+  benefitPayouts: Record<string, { label: string; amount: number }[]>;
 }
 
 /**
@@ -132,6 +136,8 @@ export function buildPaymentSchedule(input: ScheduleInput): PaymentScheduleResul
       const details = calculateSalaryDetails(inc);
       quincenaIncome += details.quincenaAmount;
       finDeMesIncome += details.finDeMesAmount;
+      // Beneficios de ley mensualizados llegan con el rol de fin de mes
+      finDeMesIncome += calculateBenefits(inc).monthlyRecurring;
     } else {
       finDeMesIncome += normalizeToMonthly(inc.amount, inc.frequency);
     }
@@ -141,6 +147,22 @@ export function buildPaymentSchedule(input: ScheduleInput): PaymentScheduleResul
     quincena: round(quincenaIncome),
     finDeMes: round(finDeMesIncome),
   });
+
+  // ─── Beneficios anuales (décimos no mensualizados, utilidades) en su mes legal ───
+  const benefitPayouts: Record<string, { label: string; amount: number }[]> = {};
+  for (const inc of input.incomes) {
+    if (inc.frequency === 'once' || !inc.isSalary) continue;
+    for (const payout of calculateBenefits(inc).annualPayouts) {
+      for (const period of periods) {
+        if (period.month !== payout.month || period.timing !== payout.timing) continue;
+        period.incomeAvailable = round(period.incomeAvailable + payout.amount);
+        (benefitPayouts[period.key] ??= []).push({
+          label: payout.label,
+          amount: payout.amount,
+        });
+      }
+    }
+  }
 
   // ─── Ingresos únicos (décimos, fondos de reserva, bonos) en su corte ───
   for (const inc of input.incomes) {
@@ -272,6 +294,7 @@ export function buildPaymentSchedule(input: ScheduleInput): PaymentScheduleResul
     remaining,
     monthlyIncome: { quincena: round(quincenaIncome), finDeMes: round(finDeMesIncome) },
     monthlyCommitment: { debts: round(monthlyDebts), expenses: round(monthlyExpenses) },
+    benefitPayouts,
   };
 }
 
@@ -280,8 +303,4 @@ function toKey(date: Date): string {
   const m = String(date.getMonth() + 1).padStart(2, '0');
   const d = String(date.getDate()).padStart(2, '0');
   return `${y}-${m}-${d}`;
-}
-
-function round(value: number): number {
-  return Math.round(value * 100) / 100;
 }

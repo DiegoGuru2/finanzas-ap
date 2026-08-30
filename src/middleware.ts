@@ -6,7 +6,7 @@ const PUBLIC_ROUTES = [
   '/login',
   '/register',
   '/forgot-password',
-  '/verify-email',
+  '/reset-password',
 ];
 
 const AUTH_API_PREFIX = '/api/auth';

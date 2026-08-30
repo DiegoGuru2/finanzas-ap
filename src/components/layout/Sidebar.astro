@@ -154,24 +154,26 @@ function isActive(href: string): boolean {
 
   <!-- Bottom section -->
   <div class="border-t border-border-default p-3">
-    <a
-      href="/logout"
-      class="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-danger-400 transition-colors hover:bg-danger-500/10"
-    >
-      <svg
-        class="h-5 w-5"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
+    <form method="POST" action="/logout">
+      <button
+        type="submit"
+        class="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-danger-400 transition-colors hover:bg-danger-500/10 cursor-pointer"
       >
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="1.5"
-          d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-        ></path>
-      </svg>
-      Cerrar sesión
-    </a>
+        <svg
+          class="h-5 w-5"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="1.5"
+            d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+          ></path>
+        </svg>
+        Cerrar sesión
+      </button>
+    </form>
   </div>
 </aside>

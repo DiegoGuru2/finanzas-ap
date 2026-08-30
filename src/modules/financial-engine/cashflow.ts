@@ -8,8 +8,10 @@
  */
 
 import type { CashflowInput, CashflowResult, Frequency, Income } from './types';
+import { calculateBenefits } from './benefits';
+import { DEFAULT_IESS_PERCENTAGE, round } from './constants';
 
-export const DEFAULT_IESS_PERCENTAGE = 9.45; // Aporte personal IESS Ecuador (relación de dependencia)
+export { DEFAULT_IESS_PERCENTAGE };
 
 /**
  * Calculate Ecuadorian payroll details for a given salary.
@@ -98,6 +100,7 @@ export function calculateCashflow(input: CashflowInput): CashflowResult {
   let totalIessDeductions = 0;
   let totalProgrammedSavings = 0;
   let totalNetIncome = 0;
+  let totalBenefitsMonthly = 0;
   let quincenaAvailable = 0;
   let finDeMesAvailable = 0;
 
@@ -110,6 +113,14 @@ export function calculateCashflow(input: CashflowInput): CashflowResult {
       totalNetIncome += details.netMonthly;
       quincenaAvailable += details.quincenaAmount;
       finDeMesAvailable += details.finDeMesAmount;
+
+      // Beneficios de ley mensualizados: llegan cada mes en el rol (fin de mes)
+      const benefits = calculateBenefits(inc);
+      if (benefits.monthlyRecurring > 0) {
+        totalBenefitsMonthly += benefits.monthlyRecurring;
+        totalNetIncome += benefits.monthlyRecurring;
+        finDeMesAvailable += benefits.monthlyRecurring;
+      }
     } else {
       const monthly = normalizeToMonthly(inc.amount, inc.frequency);
       totalGrossIncome += monthly;
@@ -158,6 +169,7 @@ export function calculateCashflow(input: CashflowInput): CashflowResult {
     totalIessDeductions: round(totalIessDeductions),
     totalProgrammedSavings: round(totalProgrammedSavings),
     totalNetIncome: round(totalNetIncome),
+    totalBenefitsMonthly: round(totalBenefitsMonthly),
     quincenaAvailable: round(quincenaAvailable),
     finDeMesAvailable: round(finDeMesAvailable),
     totalMonthlyExpenses: round(totalMonthlyExpenses),
@@ -168,8 +180,4 @@ export function calculateCashflow(input: CashflowInput): CashflowResult {
     savingsRate: round(savingsRate),
     status,
   };
-}
-
-function round(value: number): number {
-  return Math.round(value * 100) / 100;
 }

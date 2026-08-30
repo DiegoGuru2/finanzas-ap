@@ -247,16 +247,22 @@ body {
     animation: fade-up 0.7s var(--ease-smooth) both;
   }
 
-  /* Aparece al hacer scroll (con IntersectionObserver que agrega .is-visible) */
-  .reveal {
+  /* Aparece al hacer scroll (con IntersectionObserver que agrega .is-visible).
+     Solo se oculta bajo html.js: sin JavaScript la página se ve completa. */
+  html.js .reveal {
     opacity: 0;
     transform: translateY(28px);
-    transition:
-      opacity 0.7s var(--ease-smooth),
-      transform 0.7s var(--ease-smooth);
   }
 
-  .reveal.is-visible {
+  .reveal {
+    transition:
+      opacity 0.7s var(--ease-smooth),
+      transform 0.7s var(--ease-smooth),
+      border-color 0.25s var(--ease-smooth),
+      background-color 0.25s var(--ease-smooth);
+  }
+
+  html.js .reveal.is-visible {
     opacity: 1;
     transform: translateY(0);
   }

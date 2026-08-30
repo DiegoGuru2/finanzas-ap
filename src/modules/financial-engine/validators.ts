@@ -61,6 +61,23 @@ export const incomeSchema = z.object({
   iessPercentage: z.number().min(0).max(100).default(9.45),
   hasProgrammedSavings: z.boolean().default(false),
   programmedSavingsAmount: z.number().min(0).optional().default(0),
+  // ─── Beneficios de Ley Ecuador ───
+  hasFondosReserva: z.boolean().default(false),
+  fondosReservaMensualizado: z.boolean().default(true),
+  decimoTerceroMensualizado: z.boolean().default(true),
+  decimoCuartoMensualizado: z.boolean().default(true),
+  region: z.enum(['costa', 'sierra']).default('costa'),
+  sbuAmount: z
+    .number()
+    .min(0, 'El SBU no puede ser negativo')
+    .max(99999, 'El SBU excede el límite')
+    .default(460),
+  hasUtilidades: z.boolean().default(true),
+  utilidadesAmount: z
+    .number()
+    .min(0, 'Las utilidades no pueden ser negativas')
+    .max(999999999.99, 'El monto excede el límite')
+    .default(0),
   date: z.string().optional(),
   category: z.string().optional(),
 });

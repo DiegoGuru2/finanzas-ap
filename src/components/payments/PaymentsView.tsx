@@ -34,6 +34,7 @@ interface ScheduleData {
   remaining: Record<string, number>;
   monthlyIncome: { quincena: number; finDeMes: number };
   monthlyCommitment: { debts: number; expenses: number };
+  benefitPayouts?: Record<string, { label: string; amount: number }[]>;
 }
 
 interface PaymentRecord {
@@ -515,11 +516,23 @@ export default function PaymentsView() {
                 <td className="sticky left-0 z-10 bg-surface-100 px-5 py-2.5 text-xs font-semibold text-text-secondary">
                   Ingreso disponible
                 </td>
-                {periods.map((p) => (
-                  <td key={p.key} className={`border-l border-border-default/50 px-3 py-2.5 text-center text-text-secondary${hl(p.key)}`}>
-                    {formatCurrency(p.incomeAvailable)}
-                  </td>
-                ))}
+                {periods.map((p) => {
+                  const payouts = schedule?.benefitPayouts?.[p.key] || [];
+                  return (
+                    <td key={p.key} className={`border-l border-border-default/50 px-3 py-2.5 text-center text-text-secondary${hl(p.key)}`}>
+                      {formatCurrency(p.incomeAvailable)}
+                      {payouts.map((b) => (
+                        <div
+                          key={b.label}
+                          className="mt-0.5 text-[10px] font-semibold text-accent-400"
+                          title={`${b.label}: ${formatCurrency(b.amount)} incluidos en este corte`}
+                        >
+                          🎁 {b.label}
+                        </div>
+                      ))}
+                    </td>
+                  );
+                })}
               </tr>
               <tr className="border-t border-border-default bg-surface-100">
                 <td className="sticky left-0 z-10 bg-surface-100 px-5 py-3 text-xs font-bold text-text-primary">

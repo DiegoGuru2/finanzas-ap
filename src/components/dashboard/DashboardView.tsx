@@ -9,6 +9,7 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { formatCurrency } from '@/lib/utils';
+import { calculateSalaryDetails } from '@/modules/financial-engine/cashflow';
 
 const STRATEGY_LABELS: Record<string, { name: string; desc: string }> = {
   avalanche: { name: 'Avalancha', desc: 'Prioriza la tasa de interés más alta: ahorras más en intereses.' },
@@ -45,20 +46,24 @@ export default function DashboardView() {
   const [savingOnboarding, setSavingOnboarding] = useState(false);
   const [onboardingError, setOnboardingError] = useState<string | null>(null);
 
+  // Vista previa con la misma fórmula del motor financiero (nada duplicado)
+  const onboardingPreview = calculateSalaryDetails({
+    id: '',
+    name: '',
+    amount: onboardingAmount || 0,
+    frequency: 'monthly',
+    isSalary: true,
+    paymentScheme: onboardingScheme,
+    quincenaAmount: 0,
+    finDeMesAmount: 0,
+    deductIess,
+    iessPercentage,
+  });
+
   // Live calculation of IESS and Quincena/Fin de mes for Onboarding
   useEffect(() => {
-    const gross = onboardingAmount || 0;
-    const iess = deductIess ? (gross * (iessPercentage / 100)) : 0;
-    const net = Math.max(0, gross - iess);
-
-    if (onboardingScheme === 'quincena_fin_mes') {
-      const q = Math.round((net / 2) * 100) / 100;
-      setOnboardingQuincena(q);
-      setOnboardingFinDeMes(Math.round((net - q) * 100) / 100);
-    } else {
-      setOnboardingQuincena(0);
-      setOnboardingFinDeMes(net);
-    }
+    setOnboardingQuincena(onboardingPreview.quincenaAmount);
+    setOnboardingFinDeMes(onboardingPreview.finDeMesAmount);
   }, [onboardingAmount, deductIess, iessPercentage, onboardingScheme]);
 
   const fetchDashboard = async () => {
@@ -205,6 +210,11 @@ export default function DashboardView() {
           <div className="mt-1 text-xs text-text-muted">
             Bruto: {formatCurrency(summary.totalGrossIncome || 0)} (IESS: -{formatCurrency(summary.totalIessDeductions || 0)})
           </div>
+          {(summary.totalBenefitsMonthly || 0) > 0 && (
+            <div className="mt-1 text-xs font-semibold text-accent-400">
+              + {formatCurrency(summary.totalBenefitsMonthly)} beneficios de ley mensualizados
+            </div>
+          )}
         </div>
 
         {/* Flujo Quincena / Fin de mes */}
@@ -447,7 +457,7 @@ export default function DashboardView() {
                 {deductIess && (
                   <div className="flex justify-between items-center text-xs pt-2 border-t border-border-default text-text-muted">
                     <span>Descuento IESS retenido:</span>
-                    <strong className="text-warning-400 text-sm">-${((onboardingAmount * iessPercentage) / 100).toFixed(2)}</strong>
+                    <strong className="text-warning-400 text-sm">-${onboardingPreview.iessDeduction.toFixed(2)}</strong>
                   </div>
                 )}
               </div>
@@ -499,10 +509,7 @@ export default function DashboardView() {
                       onChange={(e) => {
                         const q = parseFloat(e.target.value) || 0;
                         setOnboardingQuincena(q);
-                        const gross = onboardingAmount || 0;
-                        const iess = deductIess ? (gross * (iessPercentage / 100)) : 0;
-                        const net = Math.max(0, gross - iess);
-                        setOnboardingFinDeMes(Math.round(Math.max(0, net - q) * 100) / 100);
+                        setOnboardingFinDeMes(Math.round(Math.max(0, onboardingPreview.netMonthly - q) * 100) / 100);
                       }}
                       className="mt-1 w-full rounded-xl border border-border-default bg-surface-50 px-3 py-2 text-xs font-bold text-text-primary focus:border-brand-500 focus:outline-none"
                     />

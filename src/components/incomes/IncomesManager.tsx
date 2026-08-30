@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { formatCurrency } from '@/lib/utils';
+import { calculateSalaryDetails } from '@/modules/financial-engine/cashflow';
 
 interface IncomeItem {
   id: string;
@@ -37,20 +38,24 @@ export default function IncomesManager() {
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  // Vista previa con la misma fórmula del motor financiero (nada duplicado)
+  const salaryPreview = calculateSalaryDetails({
+    id: '',
+    name: '',
+    amount: amount || 0,
+    frequency: 'monthly',
+    isSalary: true,
+    paymentScheme,
+    quincenaAmount: 0,
+    finDeMesAmount: 0,
+    deductIess,
+    iessPercentage,
+  });
+
   // Recalculate preview when amount, iess, or scheme changes
   useEffect(() => {
-    const gross = amount || 0;
-    const iess = deductIess ? (gross * (iessPercentage / 100)) : 0;
-    const net = Math.max(0, gross - iess);
-
-    if (paymentScheme === 'quincena_fin_mes') {
-      const q = Math.round((net / 2) * 100) / 100;
-      setQuincenaAmount(q);
-      setFinDeMesAmount(Math.round((net - q) * 100) / 100);
-    } else {
-      setQuincenaAmount(0);
-      setFinDeMesAmount(net);
-    }
+    setQuincenaAmount(salaryPreview.quincenaAmount);
+    setFinDeMesAmount(salaryPreview.finDeMesAmount);
   }, [amount, deductIess, iessPercentage, paymentScheme]);
 
   const fetchIncomes = async () => {
@@ -390,7 +395,7 @@ export default function IncomesManager() {
                 {deductIess && (
                   <div className="text-xs text-text-muted flex justify-between pt-1 border-t border-border-default">
                     <span>Descuento estimado IESS:</span>
-                    <strong className="text-warning-400">-${((amount * iessPercentage) / 100).toFixed(2)}</strong>
+                    <strong className="text-warning-400">-${salaryPreview.iessDeduction.toFixed(2)}</strong>
                   </div>
                 )}
               </div>
@@ -440,10 +445,7 @@ export default function IncomesManager() {
                       onChange={(e) => {
                         const q = parseFloat(e.target.value) || 0;
                         setQuincenaAmount(q);
-                        const gross = amount || 0;
-                        const iess = deductIess ? (gross * (iessPercentage / 100)) : 0;
-                        const net = Math.max(0, gross - iess);
-                        setFinDeMesAmount(Math.round(Math.max(0, net - q) * 100) / 100);
+                        setFinDeMesAmount(Math.round(Math.max(0, salaryPreview.netMonthly - q) * 100) / 100);
                       }}
                       className="mt-1 w-full rounded-lg border border-border-default bg-surface-50 px-2.5 py-1.5 text-xs text-text-primary focus:border-brand-500 focus:outline-none"
                     />

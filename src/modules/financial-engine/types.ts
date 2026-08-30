@@ -26,6 +26,15 @@ export interface Income {
   programmedSavingsAmount?: number; // Monto de ahorro programado a fin de mes
   netAmount?: number; // Monto líquido en mano
   date?: string | null; // Fecha del ingreso (para frequency 'once': décimos, bonos)
+  // ─── Beneficios de Ley Ecuador ───
+  hasFondosReserva?: boolean; // Fondos de reserva (tras 1 año en la empresa)
+  fondosReservaMensualizado?: boolean; // true = llegan en el rol, false = acumulados en el IESS
+  decimoTerceroMensualizado?: boolean; // true = 1/12 mensual, false = pago en diciembre
+  decimoCuartoMensualizado?: boolean; // true = 1/12 SBU mensual, false = pago anual
+  region?: 'costa' | 'sierra'; // Define el mes de pago del décimo cuarto
+  sbuAmount?: number; // SBU vigente (configurable; cambia cada año)
+  hasUtilidades?: boolean; // La empresa reparte utilidades
+  utilidadesAmount?: number; // Estimado anual de utilidades
 }
 
 // ─── Expense ───
@@ -100,6 +109,7 @@ export interface CashflowResult {
   totalIessDeductions: number;
   totalProgrammedSavings: number; // Ahorro programado retenido a fin de mes
   totalNetIncome: number; // Líquido real disponible
+  totalBenefitsMonthly: number; // Beneficios de ley mensualizados que llegan en el rol
   quincenaAvailable: number; // Disponible en el corte de quincena
   finDeMesAvailable: number; // Disponible en el corte de fin de mes
   totalMonthlyExpenses: number;

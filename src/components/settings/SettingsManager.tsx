@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { formatCurrency } from '@/lib/utils';
-
-const round = (v: number) => Math.round(v * 100) / 100;
+import { calculateSalaryDetails } from '@/modules/financial-engine/cashflow';
+import { calculateBenefits } from '@/modules/financial-engine/benefits';
+import { DEFAULT_SBU, round } from '@/modules/financial-engine/constants';
+import type { Income } from '@/modules/financial-engine/types';
 
 export default function SettingsManager() {
   const [loading, setLoading] = useState(true);
@@ -16,6 +18,8 @@ export default function SettingsManager() {
   const [paymentScheme, setPaymentScheme] = useState<'quincena_fin_mes' | 'monthly'>('quincena_fin_mes');
   const [quincenaAmount, setQuincenaAmount] = useState<number>(500);
   const [finDeMesAmount, setFinDeMesAmount] = useState<number>(586.60);
+  // 'auto' = 50/50 recalculado; 'manual' = el usuario definió su propio anticipo de quincena
+  const [splitMode, setSplitMode] = useState<'auto' | 'manual'>('auto');
   const [deductIess, setDeductIess] = useState(true);
   const [iessPercentage, setIessPercentage] = useState(9.45);
 
@@ -29,26 +33,52 @@ export default function SettingsManager() {
   const [decimoTerceroMensualizado, setDecimoTerceroMensualizado] = useState(true);
   const [decimoCuartoMensualizado, setDecimoCuartoMensualizado] = useState(true);
   const [region, setRegion] = useState<'costa' | 'sierra'>('costa');
-  const [sbuAmount, setSbuAmount] = useState<number>(460);
+  const [sbuInput, setSbuInput] = useState<string>(String(DEFAULT_SBU));
   const [hasUtilidades, setHasUtilidades] = useState(true);
   const [utilidadesAmount, setUtilidadesAmount] = useState<number>(0);
 
-  // Live recalculation
+  const sbuAmount = parseFloat(sbuInput) || 0; // el motor usa el SBU default si queda en 0
+
+  // El mismo objeto Income que usa el motor (una sola fórmula para todo)
+  const draftIncome: Income = {
+    id: salaryId || '',
+    name: salaryName,
+    amount: salaryAmount || 0,
+    frequency: 'monthly',
+    isSalary: true,
+    paymentScheme,
+    quincenaAmount: 0, // el reparto se resuelve abajo según splitMode
+    finDeMesAmount: 0,
+    deductIess,
+    iessPercentage,
+    hasProgrammedSavings,
+    programmedSavingsAmount,
+    hasFondosReserva,
+    fondosReservaMensualizado,
+    decimoTerceroMensualizado,
+    decimoCuartoMensualizado,
+    region,
+    sbuAmount,
+    hasUtilidades,
+    utilidadesAmount,
+  };
+
+  // Live recalculation (motor financiero): en modo manual se respeta el
+  // anticipo de quincena que definió el usuario y solo se ajusta el saldo.
   useEffect(() => {
-    const gross = salaryAmount || 0;
-    const iess = deductIess ? (gross * (iessPercentage / 100)) : 0;
-    const net = Math.max(0, gross - iess);
+    const details = calculateSalaryDetails(draftIncome);
     const savings = (hasProgrammedSavings && programmedSavingsAmount > 0) ? programmedSavingsAmount : 0;
 
-    if (paymentScheme === 'quincena_fin_mes') {
-      const q = round(net / 2);
-      setQuincenaAmount(q);
-      setFinDeMesAmount(round(Math.max(0, net - q - savings)));
-    } else {
+    if (paymentScheme !== 'quincena_fin_mes') {
       setQuincenaAmount(0);
-      setFinDeMesAmount(round(Math.max(0, net - savings)));
+      setFinDeMesAmount(details.finDeMesAmount);
+    } else if (splitMode === 'manual') {
+      setFinDeMesAmount(round(Math.max(0, details.netMonthly - quincenaAmount - savings)));
+    } else {
+      setQuincenaAmount(details.quincenaAmount);
+      setFinDeMesAmount(details.finDeMesAmount);
     }
-  }, [salaryAmount, deductIess, iessPercentage, paymentScheme, hasProgrammedSavings, programmedSavingsAmount]);
+  }, [salaryAmount, deductIess, iessPercentage, paymentScheme, hasProgrammedSavings, programmedSavingsAmount, splitMode, quincenaAmount]);
 
   const fetchData = async () => {
     try {
@@ -56,25 +86,34 @@ export default function SettingsManager() {
       const res = await fetch('/api/incomes');
       const json = await res.json();
 
-      if (json.data && json.data.length > 0) {
-        const principal = json.data.find((i: any) => i.isSalary) || json.data[0];
+      // Solo tocamos el ingreso marcado como sueldo. Si no existe, el
+      // formulario crea uno nuevo sin alterar otros ingresos (bonos, etc.).
+      const principal = (json.data || []).find((i: any) => i.isSalary);
+      if (principal) {
         setSalaryId(principal.id);
         setSalaryName(principal.name || 'Sueldo Principal');
-        setSalaryAmount(Number(principal.amount) || 1200);
+        setSalaryAmount(Number(principal.amount) || 0);
         setPaymentScheme(principal.paymentScheme || 'quincena_fin_mes');
-        setQuincenaAmount(Number(principal.quincenaAmount) || 500);
-        setFinDeMesAmount(Number(principal.finDeMesAmount) || 586.60);
         setDeductIess(principal.deductIess ?? true);
         setIessPercentage(Number(principal.iessPercentage) || 9.45);
         setHasProgrammedSavings(!!principal.hasProgrammedSavings);
         setProgrammedSavingsAmount(Number(principal.programmedSavingsAmount) || 100);
+
+        // Reparto quincena/fin de mes: si difiere del 50/50 automático,
+        // el usuario lo personalizó — se respeta y no se recalcula encima.
+        const q = Number(principal.quincenaAmount) || 0;
+        const netHalf = round((Number(principal.netAmount) || 0) / 2);
+        setQuincenaAmount(q);
+        setFinDeMesAmount(Number(principal.finDeMesAmount) || 0);
+        setSplitMode(q > 0 && Math.abs(q - netHalf) > 0.02 ? 'manual' : 'auto');
+
         // Beneficios de Ley
         setHasFondosReserva(!!principal.hasFondosReserva);
         setFondosReservaMensualizado(principal.fondosReservaMensualizado ?? true);
         setDecimoTerceroMensualizado(principal.decimoTerceroMensualizado ?? true);
         setDecimoCuartoMensualizado(principal.decimoCuartoMensualizado ?? true);
-        setRegion(principal.region || 'costa');
-        setSbuAmount(Number(principal.sbuAmount) || 460);
+        setRegion(principal.region === 'sierra' ? 'sierra' : 'costa');
+        setSbuInput(String(Number(principal.sbuAmount) || DEFAULT_SBU));
         setHasUtilidades(principal.hasUtilidades ?? true);
         setUtilidadesAmount(Number(principal.utilidadesAmount) || 0);
       }
@@ -96,12 +135,11 @@ export default function SettingsManager() {
     setErrorMessage(null);
 
     try {
-      if (salaryId) {
-        await fetch(`/api/incomes?id=${salaryId}`, { method: 'DELETE' });
-      }
-
-      const res = await fetch('/api/incomes', {
-        method: 'POST',
+      // Actualiza en sitio (PUT) si el sueldo ya existe; nunca se borra
+      // antes de guardar, así un fallo no puede perder la configuración.
+      const url = salaryId ? `/api/incomes?id=${salaryId}` : '/api/incomes';
+      const res = await fetch(url, {
+        method: salaryId ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: salaryName,
@@ -109,7 +147,7 @@ export default function SettingsManager() {
           frequency: 'monthly',
           isSalary: true,
           paymentScheme,
-          quincenaAmount: Number(quincenaAmount),
+          quincenaAmount: splitMode === 'manual' ? Number(quincenaAmount) : 0,
           finDeMesAmount: Number(finDeMesAmount),
           deductIess,
           iessPercentage: Number(iessPercentage),
@@ -121,7 +159,7 @@ export default function SettingsManager() {
           decimoTerceroMensualizado,
           decimoCuartoMensualizado,
           region,
-          sbuAmount: Number(sbuAmount),
+          sbuAmount: sbuAmount > 0 ? sbuAmount : DEFAULT_SBU,
           hasUtilidades,
           utilidadesAmount: Number(utilidadesAmount),
           category: 'Sueldo',
@@ -149,19 +187,21 @@ export default function SettingsManager() {
     );
   }
 
-  const iessDeduction = deductIess ? (salaryAmount * (iessPercentage / 100)) : 0;
-  const netSalary = Math.max(0, salaryAmount - iessDeduction);
-  const activeSavings = (hasProgrammedSavings && programmedSavingsAmount > 0) ? programmedSavingsAmount : 0;
+  // Todos los cálculos salen del motor financiero (la misma fórmula que usan
+  // el Dashboard y el Cronograma) — nada se duplica aquí.
+  const salaryDetails = calculateSalaryDetails(draftIncome);
+  const benefits = calculateBenefits(draftIncome);
 
-  // Cálculos de Beneficios de Ley
-  const fondosReservaMensual = hasFondosReserva ? round(salaryAmount * 0.0833) : 0;
-  const decimoTerceroMensual = round(salaryAmount / 12);
-  const decimoCuartoMensual = round(sbuAmount / 12);
-  const utilidadesMensual = hasUtilidades && utilidadesAmount > 0 ? round(utilidadesAmount / 12) : 0;
-  const totalBeneficiosMensual = (hasFondosReserva && fondosReservaMensualizado ? fondosReservaMensual : 0)
-    + (decimoTerceroMensualizado ? decimoTerceroMensual : 0)
-    + (decimoCuartoMensualizado ? decimoCuartoMensual : 0)
-    + utilidadesMensual;
+  const iessDeduction = salaryDetails.iessDeduction;
+  const netSalary = salaryDetails.netMonthly;
+  const activeSavings = salaryDetails.programmedSavings;
+  const fondosReservaMensual = benefits.fondosReservaMonthly;
+  const decimoTerceroMensual = benefits.decimoTerceroMonthly;
+  const decimoCuartoMensual = benefits.decimoCuartoMonthly;
+  const utilidadesMensual = benefits.utilidadesMonthly;
+  // Solo lo que efectivamente llega mensualizado (+ utilidades prorrateadas)
+  const totalBeneficiosMensual = round(benefits.monthlyRecurring + benefits.utilidadesMonthly);
+  const sbuEfectivo = sbuAmount > 0 ? sbuAmount : DEFAULT_SBU;
 
   return (
     <div className="max-w-4xl space-y-8">
@@ -303,8 +343,23 @@ export default function SettingsManager() {
           {paymentScheme === 'quincena_fin_mes' && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 rounded-2xl border border-border-default bg-surface-100 p-4">
               <div>
-                <label className="block text-[11px] font-semibold text-text-secondary mb-1">Anticipo Quincena (Día 15)</label>
-                <input type="number" inputMode="decimal" step="0.01" min="0" value={quincenaAmount} onChange={(e) => { const q = parseFloat(e.target.value) || 0; setQuincenaAmount(q); setFinDeMesAmount(round(Math.max(0, netSalary - q - activeSavings))); }} className="w-full rounded-xl border border-border-default bg-surface-50 px-3 py-2 text-xs font-bold text-text-primary focus:border-brand-500 focus:outline-none" />
+                <div className="mb-1 flex items-center justify-between gap-2">
+                  <label className="block text-[11px] font-semibold text-text-secondary">Anticipo Quincena (Día 15)</label>
+                  {splitMode === 'manual' && (
+                    <button
+                      type="button"
+                      onClick={() => setSplitMode('auto')}
+                      title="Volver al reparto automático 50/50"
+                      className="rounded bg-brand-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-brand-400 hover:bg-brand-500/20 cursor-pointer"
+                    >
+                      ↺ 50/50
+                    </button>
+                  )}
+                </div>
+                <input type="number" inputMode="decimal" step="0.01" min="0" value={quincenaAmount} onChange={(e) => { setSplitMode('manual'); setQuincenaAmount(parseFloat(e.target.value) || 0); }} className="w-full rounded-xl border border-border-default bg-surface-50 px-3 py-2 text-xs font-bold text-text-primary focus:border-brand-500 focus:outline-none" />
+                {splitMode === 'manual' && (
+                  <p className="mt-1 text-[10px] text-text-muted">Reparto personalizado: se conserva al guardar.</p>
+                )}
               </div>
               <div>
                 <label className="block text-[11px] font-semibold text-text-secondary mb-1">Saldo Fin de Mes (Día 30) {hasProgrammedSavings && '(Tras Ahorro)'}</label>
@@ -360,7 +415,7 @@ export default function SettingsManager() {
             </div>
             {hasFondosReserva && (
               <div className="flex justify-between items-center text-xs pt-3 border-t border-brand-500/20 text-text-muted">
-                <span>Fondos de Reserva mensual (8.33% de ${salaryAmount}):</span>
+                <span>Fondos de Reserva mensual (1/12 de {formatCurrency(salaryAmount)}):</span>
                 <strong className="text-brand-400 text-sm">{formatCurrency(fondosReservaMensual)}/mes</strong>
               </div>
             )}
@@ -389,7 +444,7 @@ export default function SettingsManager() {
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div>
                 <span className="text-xs font-bold text-text-primary">📚 Décimo Cuarto Sueldo (Bono Escolar)</span>
-                <p className="text-[11px] text-text-muted">1 SBU = {formatCurrency(sbuAmount)} · Pago en {region === 'costa' ? 'Marzo (Costa)' : 'Agosto (Sierra)'}</p>
+                <p className="text-[11px] text-text-muted">1 SBU = {formatCurrency(sbuEfectivo)} · Pago en {region === 'costa' ? 'Marzo (Costa)' : 'Agosto (Sierra)'}</p>
               </div>
               <div className="flex items-center gap-3">
                 <button type="button" onClick={() => setDecimoCuartoMensualizado(true)} className={`rounded-lg px-3 py-1 text-[11px] font-semibold cursor-pointer ${decimoCuartoMensualizado ? 'bg-warning-500/15 text-warning-400 border border-warning-500' : 'bg-surface-100 text-text-muted border border-border-default'}`}>Mensualizado</button>
@@ -406,12 +461,12 @@ export default function SettingsManager() {
               </div>
               <div>
                 <label className="block text-[11px] font-semibold text-text-secondary mb-1">SBU Vigente ($)</label>
-                <input type="number" inputMode="decimal" step="0.01" min="1" value={sbuAmount} onChange={(e) => setSbuAmount(parseFloat(e.target.value) || 460)} className="w-full rounded-xl border border-border-default bg-surface-50 px-3 py-1.5 text-xs font-bold text-text-primary focus:border-brand-500 focus:outline-none" />
+                <input type="number" inputMode="decimal" step="0.01" min="1" value={sbuInput} onChange={(e) => setSbuInput(e.target.value)} placeholder={String(DEFAULT_SBU)} className="w-full rounded-xl border border-border-default bg-surface-50 px-3 py-1.5 text-xs font-bold text-text-primary focus:border-brand-500 focus:outline-none" />
               </div>
             </div>
             <div className="flex justify-between items-center text-xs text-text-muted">
               <span>{decimoCuartoMensualizado ? 'Recibes cada mes:' : `Recibes en ${region === 'costa' ? 'Marzo' : 'Agosto'} (anual):`}</span>
-              <strong className="text-warning-400 text-sm">{formatCurrency(decimoCuartoMensualizado ? decimoCuartoMensual : sbuAmount)}</strong>
+              <strong className="text-warning-400 text-sm">{formatCurrency(decimoCuartoMensualizado ? decimoCuartoMensual : sbuEfectivo)}</strong>
             </div>
           </div>
 
