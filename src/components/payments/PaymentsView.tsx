@@ -790,35 +790,35 @@ export default function PaymentsView() {
 
                       {activeExpensesInPeriod.length === 0 ? (
                         <div className="rounded-xl border border-dashed border-border-default p-3 text-center text-xs text-text-muted">
-                          Sin gastos en este corte
+                          Sin gastos en este corte 🎉
                         </div>
                       ) : (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                           {activeExpensesInPeriod.map((exp) => {
                             const amount = exp.cells[p.key] || 0;
                             const color = exp.category ? expenseColors[exp.category] : undefined;
                             return (
                               <div
                                 key={exp.id}
-                                className={`flex items-center justify-between rounded-xl border p-3 ${
-                                  color ? 'cat-tint' : 'border-border-default/60 bg-surface-100/40'
+                                className={`flex items-center justify-between rounded-xl border border-border-default/80 bg-surface-100/60 p-3 sm:p-3.5 gap-2.5 shadow-2xs hover:border-brand-500/40 hover:bg-surface-100/80 transition-all ${
+                                  color ? 'cat-tint' : ''
                                 }`}
                                 style={catalogTint(color)}
                               >
                                 <div className="min-w-0 pr-2 flex items-center gap-2">
                                   {color && <span className="cat-dot h-2.5 w-2.5 rounded-full shrink-0" />}
                                   <div className="min-w-0">
-                                    <div className="font-medium text-xs sm:text-sm text-text-primary truncate">{exp.name}</div>
+                                    <div className="font-semibold text-xs sm:text-sm text-text-primary truncate">{exp.name}</div>
                                     <div className="text-[10px] text-text-muted">
                                       {exp.timing === 'quincena'
                                         ? 'Solo el 15'
                                         : exp.timing === 'fin_de_mes'
                                           ? 'Solo fin de mes'
-                                          : 'Repartido'}
+                                          : 'Repartido 15/30'}
                                     </div>
                                   </div>
                                 </div>
-                                <span className="font-semibold text-xs sm:text-sm text-text-secondary shrink-0">
+                                <span className="font-bold text-xs sm:text-sm text-text-primary shrink-0">
                                   {formatCurrency(amount)}
                                 </span>
                               </div>

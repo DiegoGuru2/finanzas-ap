@@ -215,18 +215,21 @@ export default function ExpensesManager() {
             </button>
           </div>
         ) : (
-          <div className="divide-y divide-border-default">
+          <div className="p-4 sm:p-5 space-y-3">
             {expenses.map((exp) => (
-              <div key={exp.id} className="p-5 flex items-center justify-between hover:bg-surface-100/50 transition-colors">
+              <div
+                key={exp.id}
+                className="rounded-2xl border border-border-default bg-surface-100/40 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:border-brand-500/40 hover:bg-surface-100/70 transition-all shadow-xs"
+              >
                 <div>
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-                    <span className="font-semibold text-text-primary">{exp.name}</span>
+                    <span className="font-semibold text-text-primary text-sm sm:text-base">{exp.name}</span>
                     {(() => {
                       const color = categories.find((c) => c.value === exp.category)?.color;
                       return (
                         <span
-                          className={`text-xs px-2 py-0.5 rounded text-text-secondary border ${
-                            color ? 'cat-tint' : 'bg-surface-200 border-transparent'
+                          className={`text-xs px-2.5 py-0.5 rounded-lg text-text-secondary border ${
+                            color ? 'cat-tint' : 'bg-surface-200 border-border-default/60'
                           }`}
                           style={catalogTint(color)}
                         >
@@ -235,15 +238,15 @@ export default function ExpensesManager() {
                       );
                     })()}
                     {exp.isEssential ? (
-                      <span className="text-xs bg-brand-500/10 text-brand-400 border border-brand-500/20 px-2 py-0.5 rounded font-medium">
+                      <span className="text-xs bg-brand-500/10 text-brand-400 border border-brand-500/20 px-2.5 py-0.5 rounded-lg font-medium">
                         Esencial
                       </span>
                     ) : (
-                      <span className="text-xs bg-warning-500/10 text-warning-400 border border-warning-500/20 px-2 py-0.5 rounded font-medium">
+                      <span className="text-xs bg-warning-500/10 text-warning-400 border border-warning-500/20 px-2.5 py-0.5 rounded-lg font-medium">
                         Flexible
                       </span>
                     )}
-                    <span className="text-xs bg-surface-200 px-2 py-0.5 rounded text-text-secondary">
+                    <span className="text-xs bg-surface-200/80 border border-border-default/50 px-2.5 py-0.5 rounded-lg text-text-secondary">
                       {exp.paymentTiming === 'quincena'
                         ? 'Paga el 15'
                         : exp.paymentTiming === 'fin_de_mes'
@@ -252,40 +255,42 @@ export default function ExpensesManager() {
                     </span>
                   </div>
                   {(exp.activeFrom || exp.activeUntil) && (
-                    <p className="text-xs text-warning-400 mt-1">
+                    <p className="text-xs text-warning-400 mt-1.5 font-medium">
                       Vigente {exp.activeFrom ? `desde ${isoDay(exp.activeFrom)}` : ''}
                       {exp.activeFrom && exp.activeUntil ? ' ' : ''}
                       {exp.activeUntil ? `hasta ${isoDay(exp.activeUntil)}` : ''}
                     </p>
                   )}
-                  {exp.description && <p className="text-xs text-text-muted mt-1">{exp.description}</p>}
+                  {exp.description && <p className="text-xs text-text-muted mt-1.5">{exp.description}</p>}
                 </div>
 
-                <div className="flex items-center gap-5">
+                <div className="flex items-center justify-between sm:justify-end gap-5 pt-2 sm:pt-0 border-t sm:border-t-0 border-border-default/60">
                   <div className="text-right">
-                    <div className="text-lg font-bold text-text-primary">{formatCurrency(exp.amount)}</div>
+                    <div className="text-lg sm:text-xl font-extrabold text-text-primary">{formatCurrency(exp.amount)}</div>
                     <div className="text-xs text-text-muted">al mes</div>
                   </div>
 
-                  <button
-                    onClick={() => handleOpenEditModal(exp)}
-                    className="p-2 text-text-muted hover:text-brand-400 transition-colors rounded-lg hover:bg-brand-500/10 cursor-pointer"
-                    title="Editar gasto"
-                  >
-                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                    </svg>
-                  </button>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => handleOpenEditModal(exp)}
+                      className="p-2 text-text-muted hover:text-brand-400 transition-colors rounded-xl hover:bg-brand-500/10 cursor-pointer border border-border-default/60 bg-surface-50"
+                      title="Editar gasto"
+                    >
+                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                    </button>
 
-                  <button
-                    onClick={() => handleDelete(exp.id)}
-                    className="p-2 text-text-muted hover:text-danger-400 transition-colors rounded-lg hover:bg-danger-500/10"
-                    title="Eliminar gasto"
-                  >
-                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                  </button>
+                    <button
+                      onClick={() => handleDelete(exp.id)}
+                      className="p-2 text-text-muted hover:text-danger-400 transition-colors rounded-xl hover:bg-danger-500/10 cursor-pointer border border-border-default/60 bg-surface-50"
+                      title="Eliminar gasto"
+                    >
+                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
