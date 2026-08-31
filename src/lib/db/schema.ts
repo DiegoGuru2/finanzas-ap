@@ -162,6 +162,20 @@ export const payments = mysqlTable('payments', {
   updatedAt: timestamp('updatedAt').notNull().defaultNow().onUpdateNow(),
 });
 
+export const expensePayments = mysqlTable('expense_payments', {
+  id: varchar('id', { length: 36 }).primaryKey(),
+  userId: varchar('userId', { length: 36 })
+    .notNull()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  expenseId: varchar('expenseId', { length: 36 })
+    .notNull()
+    .references(() => expenses.id, { onDelete: 'cascade' }),
+  periodKey: varchar('periodKey', { length: 30 }).notNull(), // e.g. "2026-7-fin_de_mes"
+  amount: decimal('amount', { precision: 15, scale: 2 }).notNull(),
+  paidAt: date('paidAt').notNull(),
+  createdAt: timestamp('createdAt').notNull().defaultNow(),
+});
+
 export const optimizationPlans = mysqlTable('optimization_plans', {
   id: varchar('id', { length: 36 }).primaryKey(),
   userId: varchar('userId', { length: 36 })

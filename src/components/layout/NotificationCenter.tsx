@@ -57,6 +57,7 @@ export default function NotificationCenter() {
   const [isOpen, setIsOpen] = useState(false);
   const [schedule, setSchedule] = useState<ScheduleData | null>(null);
   const [paid, setPaid] = useState<Record<string, Record<string, number>>>({});
+  const [paidExpenses, setPaidExpenses] = useState<Record<string, Record<string, number>>>({});
   const [loading, setLoading] = useState(true);
   const [permissionStatus, setPermissionStatus] = useState<NotificationPermission>('default');
   const containerRef = useRef<HTMLDivElement>(null);
@@ -76,6 +77,7 @@ export default function NotificationCenter() {
       if (res.ok && json.data) {
         setSchedule(json.data.schedule);
         setPaid(json.data.paid || {});
+        setPaidExpenses(json.data.paidExpenses || {});
       }
     } catch (e) {
       console.error('Error fetching schedule for notifications:', e);
@@ -123,7 +125,7 @@ export default function NotificationCenter() {
   const expenseRows = schedule?.rows.filter((r) => r.kind === 'expense') || [];
 
   const activeDebtsInCut = debtRows.filter((r) => (r.cells[nextKey] || 0) > 0 || paid[r.id]?.[nextKey] !== undefined);
-  const activeExpensesInCut = expenseRows.filter((r) => (r.cells[nextKey] || 0) > 0);
+  const activeExpensesInCut = expenseRows.filter((r) => (r.cells[nextKey] || 0) > 0 || paidExpenses[r.id]?.[nextKey] !== undefined);
 
   const paidDebtsInCut = activeDebtsInCut.filter((r) => paid[r.id]?.[nextKey] !== undefined);
   const pendingDebtsInCut = activeDebtsInCut.filter((r) => paid[r.id]?.[nextKey] === undefined);
@@ -191,6 +193,41 @@ export default function NotificationCenter() {
     }
   };
 
+  const handleToggleExpensePay = async (expenseId: string, amount: number) => {
+    if (!nextPeriod) return;
+    try {
+      const isPaid = paidExpenses[expenseId]?.[nextKey] !== undefined;
+      setPaidExpenses((prev) => {
+        const next = { ...prev };
+        if (isPaid) {
+          if (next[expenseId]) {
+            const copy = { ...next[expenseId] };
+            delete copy[nextKey];
+            next[expenseId] = copy;
+          }
+        } else {
+          next[expenseId] = { ...(next[expenseId] || {}), [nextKey]: amount };
+        }
+        return next;
+      });
+
+      await fetch('/api/expenses/pay', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          expenseId,
+          periodKey: nextKey,
+          amount,
+          paidAt: nextPeriod.date,
+          toggle: true,
+        }),
+      });
+      fetchSchedule();
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   return (
     <div className="relative" ref={containerRef}>
       {/* Botón Campana con Badge */}
@@ -223,7 +260,7 @@ export default function NotificationCenter() {
 
       {/* Menú Desplegable / Modal de Notificaciones */}
       {isOpen && (
-        <div className="fixed sm:absolute right-2 sm:right-0 top-16 sm:top-full z-50 mt-1 w-[calc(100vw-1rem)] sm:w-96 max-w-sm rounded-2xl border border-border-default bg-surface-50 shadow-2xl overflow-hidden animate-fade-up">
+        <div className="fixed sm:absolute right-2 sm:right-0 top-16 sm:top-full z-[100] mt-1 w-[calc(100vw-1rem)] sm:w-[410px] max-w-sm rounded-2xl border border-border-default bg-surface-50 shadow-2xl overflow-hidden animate-fade-up">
           {/* Header del panel */}
           <div className="flex items-center justify-between border-b border-border-default px-4 py-3 bg-surface-100/50">
             <div className="flex items-center gap-2">
@@ -310,11 +347,11 @@ export default function NotificationCenter() {
                   </p>
                 </div>
 
-                {/* Pagos Pendientes del Corte */}
+                {/* Deudas del Corte */}
                 <div className="space-y-2">
                   <div className="flex items-center justify-between text-xs">
                     <span className="font-semibold text-text-primary">
-                      Pagos que debes realizar ({pendingDebtsInCut.length} pendientes)
+                      Deudas a pagar ({pendingDebtsInCut.length} pendientes)
                     </span>
                     <span className="text-[10px] text-text-muted">
                       {paidDebtsInCut.length}/{activeDebtsInCut.length} listos
@@ -326,47 +363,116 @@ export default function NotificationCenter() {
                       No tienes deudas programadas en este corte.
                     </div>
                   ) : (
-                    <div className="space-y-1.5">
+                    <div className="space-y-2">
                       {activeDebtsInCut.map((debt) => {
                         const amount = debt.cells[nextKey] || 0;
-                        const isPaid = paid[debt.id]?.[nextKey] !== undefined;
+                        const paidAmount = paid[debt.id]?.[nextKey];
+                        const isPaid = paidAmount !== undefined;
+                        const isPartial = isPaid && amount > 0 && paidAmount < amount;
 
                         return (
                           <div
                             key={debt.id}
-                            className={`flex items-center justify-between rounded-xl border p-2.5 text-xs transition-colors ${
+                            className={`flex flex-col rounded-xl border p-2.5 text-xs transition-colors gap-1.5 ${
                               isPaid
-                                ? 'border-accent-500/20 bg-accent-500/5'
+                                ? 'border-accent-500/30 bg-accent-500/5'
                                 : 'border-border-default bg-surface-100/60'
                             }`}
                           >
-                            <div className="min-w-0 pr-2">
-                              <div className="font-semibold text-text-primary truncate">{debt.name}</div>
-                              <div className="text-[10px] text-text-muted">
-                                Cuota: {formatCurrency(amount)}
+                            <div className="flex items-center justify-between">
+                              <div className="min-w-0 pr-2">
+                                <div className="font-semibold text-text-primary truncate">{debt.name}</div>
+                                <div className="text-[10px] text-text-muted">
+                                  {amount > 0 ? `Cuota programada: ${formatCurrency(amount)}` : 'Sin cuota fija requerida'}
+                                </div>
+                              </div>
+
+                              <div className="shrink-0">
+                                {isPaid ? (
+                                  <span className="inline-flex items-center gap-1 rounded-md bg-accent-500/15 border border-accent-500/30 px-2 py-0.5 text-[10px] font-bold text-accent-400">
+                                    {isPartial ? `✓ Abono: ${formatCurrency(paidAmount)}` : `✓ Pagado (${formatCurrency(paidAmount)})`}
+                                  </span>
+                                ) : (
+                                  <button
+                                    onClick={() => openQuickPay(debt)}
+                                    className="rounded-lg bg-brand-500 px-2.5 py-1 text-[11px] font-bold text-white hover:bg-brand-400 transition-colors cursor-pointer"
+                                  >
+                                    Abonar
+                                  </button>
+                                )}
                               </div>
                             </div>
 
-                            <div className="shrink-0">
-                              {isPaid ? (
-                                <span className="inline-flex items-center gap-1 rounded-md bg-accent-500/15 px-2 py-0.5 text-[10px] font-bold text-accent-400">
-                                  ✓ Pagado
-                                </span>
-                              ) : (
-                                <button
-                                  onClick={() => openQuickPay(debt)}
-                                  className="rounded-lg bg-brand-500 px-2.5 py-1 text-[11px] font-bold text-white hover:bg-brand-400 transition-colors cursor-pointer"
-                                >
-                                  Abonar
-                                </button>
-                              )}
-                            </div>
+                            {/* Información detallada de abono y saldo restante */}
+                            {isPaid && isPartial && (
+                              <div className="flex items-center justify-between text-[10px] bg-warning-500/10 border border-warning-500/20 rounded-lg px-2 py-1 text-warning-400 font-medium">
+                                <span>Resta por cubrir en corte:</span>
+                                <strong>{formatCurrency(amount - paidAmount)}</strong>
+                              </div>
+                            )}
+
+                            {debt.currentBalance !== undefined && (
+                              <div className="text-[10px] text-text-muted flex items-center justify-between border-t border-border-default/40 pt-1">
+                                <span>Saldo pendiente total deuda:</span>
+                                <span className="font-semibold text-text-secondary">{formatCurrency(debt.currentBalance)}</span>
+                              </div>
+                            )}
                           </div>
                         );
                       })}
                     </div>
                   )}
                 </div>
+
+                {/* Gastos Recurrentes del Corte */}
+                {activeExpensesInCut.length > 0 && (
+                  <div className="space-y-2 pt-2 border-t border-border-default/60">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-semibold text-text-primary">
+                        Gastos Recurrentes ({activeExpensesInCut.length})
+                      </span>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      {activeExpensesInCut.map((exp) => {
+                        const amount = exp.cells[nextKey] || 0;
+                        const isPaid = paidExpenses[exp.id]?.[nextKey] !== undefined;
+
+                        return (
+                          <div
+                            key={exp.id}
+                            className={`flex items-center justify-between rounded-xl border p-2 text-xs transition-colors ${
+                              isPaid
+                                ? 'border-accent-500/30 bg-accent-500/5'
+                                : 'border-border-default bg-surface-100/60'
+                            }`}
+                          >
+                            <div className="min-w-0 pr-2">
+                              <div className={`font-semibold truncate ${isPaid ? 'line-through text-text-muted' : 'text-text-primary'}`}>
+                                {exp.name}
+                              </div>
+                              <div className="text-[10px] text-text-muted">
+                                {formatCurrency(amount)}
+                              </div>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => handleToggleExpensePay(exp.id, amount)}
+                              className={`px-2.5 py-0.5 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
+                                isPaid
+                                  ? 'bg-accent-500/20 text-accent-400 border border-accent-500/30'
+                                  : 'bg-surface-200 text-text-secondary hover:bg-accent-500/15 hover:text-accent-400 border border-border-default'
+                              }`}
+                            >
+                              {isPaid ? '✓ Pagado' : 'Marcar pagado'}
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
 
                 {/* Botones de acción útiles */}
                 <div className="space-y-2 pt-1 border-t border-border-default/60">

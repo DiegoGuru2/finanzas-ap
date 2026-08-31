@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { db } from '@/lib/db';
-import { incomes, expenses, debts, payments } from '@/lib/db/schema';
+import { incomes, expenses, debts, payments, expensePayments } from '@/lib/db/schema';
 import { eq, desc } from 'drizzle-orm';
 import { buildPaymentSchedule } from '@/modules/financial-engine/schedule';
 import type { Debt, Expense, Income } from '@/modules/financial-engine/types';
@@ -26,7 +26,7 @@ export const GET: APIRoute = async (ctx) => {
     const monthsParam = parseInt(url.searchParams.get('months') || '6', 10);
     const months = Number.isNaN(monthsParam) ? 6 : Math.min(Math.max(monthsParam, 1), 12);
 
-    const [userIncomes, userExpenses, userDebts, userPayments] = await Promise.all([
+    const [userIncomes, userExpenses, userDebts, userPayments, userExpensePayments] = await Promise.all([
       db.select().from(incomes).where(eq(incomes.userId, user.id)),
       db.select().from(expenses).where(eq(expenses.userId, user.id)),
       db.select().from(debts).where(eq(debts.userId, user.id)),
@@ -44,6 +44,10 @@ export const GET: APIRoute = async (ctx) => {
         .leftJoin(debts, eq(payments.debtId, debts.id))
         .where(eq(payments.userId, user.id))
         .orderBy(desc(payments.paidAt)),
+      db
+        .select()
+        .from(expensePayments)
+        .where(eq(expensePayments.userId, user.id)),
     ]);
 
     const formattedIncomes: Income[] = userIncomes
@@ -132,13 +136,20 @@ export const GET: APIRoute = async (ctx) => {
         (paid[p.debtId][period.key] || 0) + parseFloat(p.amount as string);
     }
 
+    // Mapa de gastos recurrentes marcados como pagados por período
+    const paidExpenses: Record<string, Record<string, number>> = {};
+    for (const ep of userExpensePayments) {
+      paidExpenses[ep.expenseId] = paidExpenses[ep.expenseId] || {};
+      paidExpenses[ep.expenseId][ep.periodKey] = parseFloat(ep.amount as string);
+    }
+
     const history = userPayments.map((p) => ({
       ...p,
       amount: parseFloat(p.amount as string),
     }));
 
     return new Response(
-      JSON.stringify({ data: { schedule, paid, history, months } }),
+      JSON.stringify({ data: { schedule, paid, paidExpenses, history, months } }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     );
   } catch (err: any) {

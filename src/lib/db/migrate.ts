@@ -132,6 +132,22 @@ async function migrateAll() {
   `);
   console.log('✅ Tabla payments (historial de pagos) lista');
 
+  // 5.1 Expense Payments (Marcado de gastos pagados) table
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS \`expense_payments\` (
+      \`id\` VARCHAR(36) PRIMARY KEY,
+      \`userId\` VARCHAR(36) NOT NULL,
+      \`expenseId\` VARCHAR(36) NOT NULL,
+      \`periodKey\` VARCHAR(30) NOT NULL,
+      \`amount\` DECIMAL(15,2) NOT NULL,
+      \`paidAt\` DATE NOT NULL,
+      \`createdAt\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (\`userId\`) REFERENCES \`user\`(\`id\`) ON DELETE CASCADE,
+      FOREIGN KEY (\`expenseId\`) REFERENCES \`expenses\`(\`id\`) ON DELETE CASCADE
+    );
+  `);
+  console.log('✅ Tabla expense_payments lista');
+
   // 6. Savings Goals (Metas de Ahorro) table
   await db.execute(sql`
     CREATE TABLE IF NOT EXISTS \`savings_goals\` (

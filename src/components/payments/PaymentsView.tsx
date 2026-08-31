@@ -93,6 +93,7 @@ export default function PaymentsView() {
     });
   }, []);
   const [paid, setPaid] = useState<Record<string, Record<string, number>>>({});
+  const [paidExpenses, setPaidExpenses] = useState<Record<string, Record<string, number>>>({});
   const [history, setHistory] = useState<PaymentRecord[]>([]);
   const [months, setMonths] = useState(6);
   const [loading, setLoading] = useState(true);
@@ -126,6 +127,49 @@ export default function PaymentsView() {
 
   const refresh = () => setReload((r) => r + 1);
 
+  const handleToggleExpensePay = async (
+    expenseId: string,
+    periodKey: string,
+    amount: number,
+    periodDate: string
+  ) => {
+    try {
+      const isPaid = paidExpenses[expenseId]?.[periodKey] !== undefined;
+      // Optimistic update
+      setPaidExpenses((prev) => {
+        const next = { ...prev };
+        if (isPaid) {
+          if (next[expenseId]) {
+            const copy = { ...next[expenseId] };
+            delete copy[periodKey];
+            next[expenseId] = copy;
+          }
+        } else {
+          next[expenseId] = { ...(next[expenseId] || {}), [periodKey]: amount };
+        }
+        return next;
+      });
+
+      const res = await fetch('/api/expenses/pay', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          expenseId,
+          periodKey,
+          amount,
+          paidAt: periodDate,
+          toggle: true,
+        }),
+      });
+      if (!res.ok) {
+        refresh();
+      }
+    } catch (e) {
+      console.error(e);
+      refresh();
+    }
+  };
+
   useEffect(() => {
     const fetchSchedule = async () => {
       try {
@@ -136,6 +180,7 @@ export default function PaymentsView() {
         if (!res.ok) throw new Error(json.error || 'Error al cargar el cronograma');
         setSchedule(json.data.schedule);
         setPaid(json.data.paid || {});
+        setPaidExpenses(json.data.paidExpenses || {});
         setHistory(json.data.history || []);
       } catch (err: any) {
         setError(err.message || 'Error al cargar el cronograma');
@@ -796,19 +841,24 @@ export default function PaymentsView() {
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                           {activeExpensesInPeriod.map((exp) => {
                             const amount = exp.cells[p.key] || 0;
+                            const isPaid = paidExpenses[exp.id]?.[p.key] !== undefined;
                             const color = exp.category ? expenseColors[exp.category] : undefined;
                             return (
                               <div
                                 key={exp.id}
-                                className={`flex items-center justify-between rounded-xl border border-border-default/80 bg-surface-100/60 p-3 sm:p-3.5 gap-2.5 shadow-2xs hover:border-brand-500/40 hover:bg-surface-100/80 transition-all ${
-                                  color ? 'cat-tint' : ''
-                                }`}
-                                style={catalogTint(color)}
+                                className={`flex items-center justify-between rounded-xl border p-3 sm:p-3.5 gap-2.5 shadow-2xs transition-all ${
+                                  isPaid
+                                    ? 'border-accent-500/40 bg-accent-500/10'
+                                    : 'border-border-default/80 bg-surface-100/60 hover:border-brand-500/40 hover:bg-surface-100/80'
+                                } ${color && !isPaid ? 'cat-tint' : ''}`}
+                                style={!isPaid ? catalogTint(color) : undefined}
                               >
                                 <div className="min-w-0 pr-2 flex items-center gap-2">
                                   {color && <span className="cat-dot h-2.5 w-2.5 rounded-full shrink-0" />}
                                   <div className="min-w-0">
-                                    <div className="font-semibold text-xs sm:text-sm text-text-primary truncate">{exp.name}</div>
+                                    <div className={`font-semibold text-xs sm:text-sm truncate ${isPaid ? 'line-through text-text-muted' : 'text-text-primary'}`}>
+                                      {exp.name}
+                                    </div>
                                     <div className="text-[10px] text-text-muted">
                                       {exp.timing === 'quincena'
                                         ? 'Solo el 15'
@@ -818,9 +868,23 @@ export default function PaymentsView() {
                                     </div>
                                   </div>
                                 </div>
-                                <span className="font-bold text-xs sm:text-sm text-text-primary shrink-0">
-                                  {formatCurrency(amount)}
-                                </span>
+                                <div className="flex items-center gap-2 shrink-0">
+                                  <span className={`font-bold text-xs sm:text-sm ${isPaid ? 'text-accent-400' : 'text-text-primary'}`}>
+                                    {formatCurrency(amount)}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleToggleExpensePay(exp.id, p.key, amount, p.date)}
+                                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                                      isPaid
+                                        ? 'bg-accent-500/20 text-accent-400 border border-accent-500/30 hover:bg-danger-500/10 hover:text-danger-400 hover:border-danger-500/20'
+                                        : 'bg-surface-200/80 border border-border-default text-text-secondary hover:bg-accent-500/15 hover:text-accent-400 hover:border-accent-500/30'
+                                    }`}
+                                    title={isPaid ? 'Clic para desmarcar como pagado' : 'Marcar como pagado'}
+                                  >
+                                    {isPaid ? '✓ Pagado' : 'Marcar pagado'}
+                                  </button>
+                                </div>
                               </div>
                             );
                           })}
@@ -914,10 +978,10 @@ export default function PaymentsView() {
           <div ref={tableContainerRef} className="overflow-x-auto relative max-h-[70vh] overscroll-x-contain">
             <table className="w-full text-xs sm:text-sm border-collapse">
               {/* Encabezados Sticky */}
-              <thead className="sticky top-0 z-30 bg-surface-50 shadow-sm">
+              <thead className="sticky top-0 z-10 bg-surface-50 shadow-sm">
                 <tr className="border-b border-border-default bg-surface-50">
                   {/* Celda superior izquierda fija dual (horizontal & vertical) */}
-                  <th className="sticky left-0 top-0 z-40 bg-surface-50 px-3 sm:px-4 py-2.5 text-left text-xs font-bold text-text-primary min-w-[125px] sm:min-w-[170px] max-w-[145px] sm:max-w-[210px] border-r border-border-default shadow-[3px_0_10px_-2px_rgba(0,0,0,0.4)]">
+                  <th className="sticky left-0 top-0 z-20 bg-surface-50 px-3 sm:px-4 py-2.5 text-left text-xs font-bold text-text-primary min-w-[125px] sm:min-w-[170px] max-w-[145px] sm:max-w-[210px] border-r border-border-default shadow-[3px_0_10px_-2px_rgba(0,0,0,0.4)]">
                     Concepto
                   </th>
                   {filteredMonthGroups.map((g) => (
@@ -931,7 +995,7 @@ export default function PaymentsView() {
                   ))}
                 </tr>
                 <tr className="border-b border-border-default bg-surface-50">
-                  <th className="sticky left-0 top-[37px] z-40 bg-surface-50 px-3 sm:px-4 py-2 min-w-[125px] sm:min-w-[170px] max-w-[145px] sm:max-w-[210px] border-r border-border-default shadow-[3px_0_10px_-2px_rgba(0,0,0,0.4)]" />
+                  <th className="sticky left-0 top-[37px] z-20 bg-surface-50 px-3 sm:px-4 py-2 min-w-[125px] sm:min-w-[170px] max-w-[145px] sm:max-w-[210px] border-r border-border-default shadow-[3px_0_10px_-2px_rgba(0,0,0,0.4)]" />
                   {filteredMatrixPeriods.map((p) => {
                     const isNext = p.key === nextKey;
                     return (
@@ -966,70 +1030,50 @@ export default function PaymentsView() {
                       colSpan={filteredMatrixPeriods.length + 1}
                       className="sticky left-0 z-10 bg-surface-100/90 px-3 sm:px-4 py-1.5 text-xs font-bold uppercase tracking-wide text-danger-400 border-b border-border-default/80"
                     >
-                      💳 Deudas y Créditos
+                      💳 Deudas a Pagar
                     </td>
                   </tr>
                 )}
                 {debtRows.map((row) => (
                   <tr key={row.id} className="border-b border-border-default/50 hover:bg-surface-100/50 transition-colors">
                     {/* Columna Concepto Fija */}
-                    <td className="sticky left-0 z-20 bg-surface-50 px-3 sm:px-4 py-2.5 min-w-[125px] sm:min-w-[170px] max-w-[145px] sm:max-w-[210px] border-r border-border-default shadow-[3px_0_10px_-2px_rgba(0,0,0,0.4)]">
+                    <td className="sticky left-0 z-10 bg-surface-50 px-3 sm:px-4 py-2 min-w-[125px] sm:min-w-[170px] max-w-[145px] sm:max-w-[210px] border-r border-border-default shadow-[3px_0_10px_-2px_rgba(0,0,0,0.4)]">
                       <div className="font-semibold text-text-primary text-xs sm:text-sm truncate" title={row.name}>
                         {row.name}
                       </div>
                       <div className="text-[10px] text-text-muted truncate mt-0.5">
-                        {row.totalInstallments
-                          ? `${row.totalInstallments} cuotas · ${formatCurrency(row.monthlyAmount)}`
-                          : `saldo ${formatCurrency(row.currentBalance ?? 0)}`}
+                        {row.currentBalance ? `Saldo: ${formatCurrency(row.currentBalance)}` : 'Deuda'}
                       </div>
                     </td>
 
                     {/* Celdas de cada corte */}
                     {filteredMatrixPeriods.map((p) => {
                       const amount = row.cells[p.key];
-                      const paidAmount = cellPaid(row.id, p.key);
-                      const isPayoff = row.payoffPeriodKey === p.key;
-                      const cuotaNum = row.installmentNumbers?.[p.key];
-                      const cuotaLabel =
-                        cuotaNum && row.totalInstallments
-                          ? `${cuotaNum}/${row.totalInstallments}`
-                          : null;
                       const isNext = p.key === nextKey;
+                      const paidAmount = cellPaid(row.id, p.key);
+                      const isPaid = paidAmount !== undefined;
 
                       return (
                         <td
                           key={p.key}
-                          className={`border-l border-border-default/50 px-1.5 sm:px-2.5 py-2 text-center align-middle${isNext ? ' bg-brand-500/[0.04]' : ''}`}
+                          className={`border-l border-border-default/50 px-1.5 sm:px-2.5 py-2 text-center text-xs${isNext ? ' bg-brand-500/[0.04]' : ''}`}
                         >
-                          {paidAmount !== undefined ? (
-                            <span className="inline-flex items-center gap-0.5 rounded-lg bg-accent-500/15 border border-accent-500/25 px-2 py-1 text-[11px] sm:text-xs font-bold text-accent-400 shadow-2xs">
-                              ✓ {formatCurrency(paidAmount)}
-                            </span>
-                          ) : amount ? (
-                            <button
-                              onClick={() => openPayCell(row, p.key, p.date)}
-                              title="Toca para registrar abono"
-                              className="group w-full min-h-[36px] flex flex-col items-center justify-center rounded-lg p-1 transition-all hover:bg-brand-500/15 active:scale-95 border border-transparent hover:border-brand-500/30 cursor-pointer bg-surface-100/40"
-                            >
-                              <span
-                                className={`text-[11px] sm:text-xs font-bold ${
-                                  isPayoff ? 'text-accent-400' : 'text-text-primary'
-                                }`}
+                          {amount ? (
+                            isPaid ? (
+                              <div className="inline-flex items-center gap-1 rounded bg-accent-500/15 border border-accent-500/30 px-1.5 py-0.5 text-[10px] font-bold text-accent-400">
+                                ✓ {formatCurrency(paidAmount)}
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => openPayCell(row, p.key, p.date)}
+                                className="font-semibold text-text-primary hover:text-brand-400 hover:underline cursor-pointer"
+                                title="Clic para abonar este corte"
                               >
                                 {formatCurrency(amount)}
-                                {isPayoff && <span className="ml-0.5 text-[10px]">🎉</span>}
-                              </span>
-                              {cuotaLabel && (
-                                <span className="text-[9px] text-text-muted leading-tight font-medium">
-                                  cta {cuotaLabel}
-                                </span>
-                              )}
-                              <span className="hidden text-[9px] font-bold text-brand-400 group-hover:block leading-tight">
-                                abonar
-                              </span>
-                            </button>
+                              </button>
+                            )
                           ) : (
-                            <span className="text-text-muted/30 text-xs">—</span>
+                            <span className="text-text-muted/30">—</span>
                           )}
                         </td>
                       );
@@ -1050,7 +1094,7 @@ export default function PaymentsView() {
                 )}
                 {expenseRows.map((row) => (
                   <tr key={row.id} className="border-b border-border-default/50 hover:bg-surface-100/50 transition-colors">
-                    <td className="sticky left-0 z-20 bg-surface-50 px-3 sm:px-4 py-2 min-w-[125px] sm:min-w-[170px] max-w-[145px] sm:max-w-[210px] border-r border-border-default shadow-[3px_0_10px_-2px_rgba(0,0,0,0.4)]">
+                    <td className="sticky left-0 z-10 bg-surface-50 px-3 sm:px-4 py-2 min-w-[125px] sm:min-w-[170px] max-w-[145px] sm:max-w-[210px] border-r border-border-default shadow-[3px_0_10px_-2px_rgba(0,0,0,0.4)]">
                       <div className="flex items-center gap-1.5 font-semibold text-text-primary text-xs sm:text-sm" title={row.name}>
                         {row.category && expenseColors[row.category] && (
                           <span
@@ -1067,13 +1111,35 @@ export default function PaymentsView() {
                     {filteredMatrixPeriods.map((p) => {
                       const amount = row.cells[p.key];
                       const isNext = p.key === nextKey;
+                      const isPaid = amount ? paidExpenses[row.id]?.[p.key] !== undefined : false;
                       return (
                         <td
                           key={p.key}
-                          className={`border-l border-border-default/50 px-1.5 sm:px-2.5 py-2 text-center text-xs text-text-secondary${isNext ? ' bg-brand-500/[0.04]' : ''}`}
+                          className={`border-l border-border-default/50 px-1 sm:px-1.5 py-1.5 text-center text-xs transition-colors ${
+                            isPaid
+                              ? 'bg-accent-500/10'
+                              : isNext
+                                ? 'bg-brand-500/[0.04]'
+                                : ''
+                          }`}
                         >
                           {amount ? (
-                            <span className="font-medium">{formatCurrency(amount)}</span>
+                            <button
+                              type="button"
+                              onClick={() => handleToggleExpensePay(row.id, p.key, amount, p.date)}
+                              className={`w-full py-1 px-1.5 rounded-lg text-[11px] sm:text-xs font-semibold transition-all cursor-pointer flex items-center justify-center gap-1 ${
+                                isPaid
+                                  ? 'bg-accent-500/20 text-accent-400 border border-accent-500/30 hover:bg-danger-500/10 hover:text-danger-400'
+                                  : 'text-text-secondary hover:bg-accent-500/15 hover:text-accent-400 border border-transparent hover:border-accent-500/30'
+                              }`}
+                              title={isPaid ? '✓ Pagado (Clic para desmarcar)' : 'Marcar como pagado en este corte'}
+                            >
+                              {isPaid ? (
+                                <span className="line-through">✓ {formatCurrency(amount)}</span>
+                              ) : (
+                                <span>{formatCurrency(amount)}</span>
+                              )}
+                            </button>
                           ) : (
                             <span className="text-text-muted/30">—</span>
                           )}
