@@ -27,7 +27,12 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         <img
           src="/images/logo-icon.png"
           alt="ProyecAhorro Logo"
-          class="h-8 w-8 sm:h-10 sm:w-10 object-contain rounded-xl shadow-md shrink-0"
+          class="h-8 w-8 sm:h-10 sm:w-10 object-contain rounded-xl shadow-md shrink-0 dark-hidden"
+        />
+        <img
+          src="/images/logo-dark.png"
+          alt="ProyecAhorro Logo"
+          class="h-8 w-8 sm:h-10 sm:w-10 object-contain rounded-xl shadow-md shrink-0 light-hidden"
         />
         <div class="flex flex-col">
           <span class="text-base sm:text-xl font-black tracking-tight text-text-primary whitespace-nowrap">
@@ -455,11 +460,18 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       <div class="mx-auto max-w-6xl space-y-8">
         <div class="flex flex-col md:flex-row items-center justify-between gap-6 pb-6 border-b border-border-default/60">
           <div class="flex flex-col sm:flex-row items-center gap-4 text-center sm:text-left">
-            <img
-              src="/images/logo-footer.png"
-              alt="ProyecAhorro Logo Footer"
-              class="h-14 w-auto object-contain opacity-90 hover:opacity-100 transition-opacity"
-            />
+            <div class="flex items-center gap-3">
+              <img
+                src="/images/logo-icon.png"
+                alt="ProyecAhorro Logo Footer"
+                class="h-12 w-12 sm:h-14 sm:w-14 object-contain rounded-2xl shadow-md dark-hidden hover:scale-105 transition-transform"
+              />
+              <img
+                src="/images/logo-dark.png"
+                alt="ProyecAhorro Logo Footer"
+                class="h-12 w-12 sm:h-14 sm:w-14 object-contain rounded-2xl shadow-md light-hidden hover:scale-105 transition-transform"
+              />
+            </div>
             <div>
               <div class="text-lg font-black tracking-tight text-text-primary">
                 Proyec<span class="text-accent-400">Ahorro</span>

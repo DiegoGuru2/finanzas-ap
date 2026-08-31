@@ -283,3 +283,28 @@ input[type='number'] {
     animation: float-slow 7s ease-in-out infinite;
   }
 }
+
+/* ─── Dark / Light Logo switching ─── */
+[data-theme="light"] .light-hidden {
+  display: none !important;
+}
+[data-theme="light"] .dark-hidden {
+  display: block !important;
+}
+:root:not([data-theme="light"]) .dark-hidden {
+  display: none !important;
+}
+:root:not([data-theme="light"]) .light-hidden {
+  display: block !important;
+}
+
+/* ─── Preloader Indeterminate Bar ─── */
+@keyframes indeterminate {
+  0% { transform: translateX(-100%); width: 40%; }
+  50% { transform: translateX(100%); width: 70%; }
+  100% { transform: translateX(250%); width: 40%; }
+}
+
+.animate-indeterminate {
+  animation: indeterminate 1.4s infinite cubic-bezier(0.65, 0.815, 0.735, 0.395);
+}

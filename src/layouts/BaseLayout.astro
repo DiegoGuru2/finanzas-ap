@@ -52,6 +52,53 @@ const {
     <title>{title} | ProyecAhorro</title>
   </head>
   <body class="min-h-screen bg-surface-0 text-text-primary antialiased">
+    <!-- Global Preloader -->
+    <div
+      id="global-preloader"
+      class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-surface-0 transition-opacity duration-300 ease-out"
+    >
+      <div class="relative flex flex-col items-center gap-3">
+        <!-- Glowing ring + Logo -->
+        <div class="relative flex items-center justify-center">
+          <div class="absolute -inset-2 rounded-2xl bg-gradient-to-tr from-brand-500/40 to-accent-400/40 blur-md animate-pulse"></div>
+          <div class="relative flex h-16 w-16 items-center justify-center rounded-2xl bg-surface-50 border border-border-default shadow-xl">
+            <img src="/images/logo-icon.png" alt="ProyecAhorro Logo" class="h-11 w-11 object-contain dark-hidden animate-pulse" />
+            <img src="/images/logo-dark.png" alt="ProyecAhorro Logo" class="h-11 w-11 object-contain light-hidden animate-pulse" />
+          </div>
+        </div>
+
+        <div class="flex flex-col items-center">
+          <span class="text-base font-black tracking-tight text-text-primary">
+            Proyec<span class="text-accent-400">Ahorro</span>
+          </span>
+        </div>
+
+        <!-- Progress bar -->
+        <div class="w-24 h-1 bg-surface-200 rounded-full overflow-hidden mt-1">
+          <div class="h-full bg-gradient-to-r from-brand-500 to-accent-400 rounded-full animate-indeterminate"></div>
+        </div>
+      </div>
+    </div>
+
+    <script is:inline>
+      // Fast smooth dismiss of preloader
+      window.addEventListener('load', () => {
+        const p = document.getElementById('global-preloader');
+        if (p) {
+          p.classList.add('opacity-0', 'pointer-events-none');
+          setTimeout(() => p.remove(), 350);
+        }
+      });
+      // Fallback timeout in case window load takes long
+      setTimeout(() => {
+        const p = document.getElementById('global-preloader');
+        if (p) {
+          p.classList.add('opacity-0', 'pointer-events-none');
+          setTimeout(() => p.remove(), 350);
+        }
+      }, 1500);
+    </script>
+
     <slot />
 
     <!-- Service Worker registration -->

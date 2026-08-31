@@ -1,7 +1,8 @@
 import type { APIRoute } from 'astro';
 import { db } from '@/lib/db';
-import { user, debts, savingsGoals } from '@/lib/db/schema';
-import { eq, desc } from 'drizzle-orm';
+import { user, account, debts, savingsGoals } from '@/lib/db/schema';
+import { eq, and, desc } from 'drizzle-orm';
+import { hashPassword } from 'better-auth/crypto';
 
 export const GET: APIRoute = async (ctx) => {
   const currentUser = ctx.locals.user as any;
@@ -16,6 +17,7 @@ export const GET: APIRoute = async (ctx) => {
         name: user.name,
         email: user.email,
         role: user.role,
+        birthDate: user.birthDate,
         emailVerified: user.emailVerified,
         createdAt: user.createdAt,
       })
@@ -52,15 +54,40 @@ export const PUT: APIRoute = async (ctx) => {
 
   try {
     const body = await ctx.request.json();
-    const { userId, role } = body;
+    const { userId, name, email, role, birthDate, newPassword } = body;
 
-    if (!userId || !['admin', 'user'].includes(role)) {
-      return new Response(JSON.stringify({ error: 'Parámetros inválidos' }), { status: 400 });
+    if (!userId) {
+      return new Response(JSON.stringify({ error: 'ID de usuario requerido' }), { status: 400 });
     }
 
-    await db.update(user).set({ role }).where(eq(user.id, userId));
+    const updates: any = {};
+    if (name) updates.name = name;
+    if (email) updates.email = email;
+    if (role && ['admin', 'user'].includes(role)) updates.role = role;
+    if (birthDate !== undefined) updates.birthDate = birthDate;
 
-    return new Response(JSON.stringify({ success: true }), {
+    if (Object.keys(updates).length > 0) {
+      await db.update(user).set(updates).where(eq(user.id, userId));
+    }
+
+    // If email changed, update account table accountId as well
+    if (email) {
+      await db
+        .update(account)
+        .set({ accountId: email })
+        .where(and(eq(account.userId, userId), eq(account.providerId, 'credential')));
+    }
+
+    // If password update requested
+    if (newPassword && typeof newPassword === 'string' && newPassword.length >= 8) {
+      const hashedPassword = await hashPassword(newPassword);
+      await db
+        .update(account)
+        .set({ password: hashedPassword })
+        .where(and(eq(account.userId, userId), eq(account.providerId, 'credential')));
+    }
+
+    return new Response(JSON.stringify({ success: true, message: 'Usuario actualizado exitosamente' }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     });
