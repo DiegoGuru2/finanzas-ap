@@ -109,6 +109,7 @@ export default function LoginForm() {
         {loading ? 'Iniciando sesión...' : 'Iniciar sesión'}
       </button>
 
+      {/* Google OAuth (Comentado temporalmente)
       <div className="relative my-3 flex items-center justify-center">
         <div className="absolute inset-0 flex items-center">
           <div className="w-full border-t border-border-default"></div>
@@ -132,6 +133,7 @@ export default function LoginForm() {
         </svg>
         <span>Continuar con Google</span>
       </button>
+      */}
     </form>
   );
 }

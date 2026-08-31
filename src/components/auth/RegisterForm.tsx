@@ -152,7 +152,7 @@ export default function RegisterForm() {
         </div>
       )}
 
-      <div className="pt-2 space-y-3">
+      <div className="pt-2">
         <button
           type="submit"
           disabled={loading}
@@ -161,6 +161,7 @@ export default function RegisterForm() {
           {loading ? 'Creando cuenta...' : 'Crear cuenta'}
         </button>
 
+        {/* Google OAuth (Comentado temporalmente)
         <div className="relative my-2 flex items-center justify-center">
           <div className="absolute inset-0 flex items-center">
             <div className="w-full border-t border-border-default"></div>
@@ -195,6 +196,7 @@ export default function RegisterForm() {
           </svg>
           <span>Continuar con Google</span>
         </button>
+        */}
       </div>
     </form>
   );
