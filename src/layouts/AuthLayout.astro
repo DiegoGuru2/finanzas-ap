@@ -10,7 +10,7 @@ const { title, description } = Astro.props;
 ---
 
 <BaseLayout title={title} description={description}>
-  <main class="flex min-h-screen items-center justify-center px-4 py-12">
+  <main class="flex min-h-screen flex-col items-center justify-center px-4 py-12">
     <!-- Background gradient decoration -->
     <div
       class="pointer-events-none fixed inset-0 overflow-hidden"
@@ -29,6 +29,12 @@ const { title, description } = Astro.props;
     <!-- Auth content -->
     <div class="relative z-10 w-full max-w-md">
       <slot />
+
+      <!-- Footer credit -->
+      <div class="mt-6 text-center text-xs text-text-muted">
+        <span>© 2026 ProyecAhorro · Desarrollado por </span>
+        <strong class="font-semibold text-text-secondary">DG design</strong>
+      </div>
     </div>
   </main>
 </BaseLayout>

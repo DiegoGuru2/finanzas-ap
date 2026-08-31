@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { formatCurrency } from '@/lib/utils';
 import ScheduleConfig from './ScheduleConfig';
+import { generateIcsCalendar, downloadIcsFile } from '@/lib/calendar';
 
 interface SchedulePeriod {
   key: string;
@@ -87,12 +88,16 @@ export default function PaymentsView() {
   const [reload, setReload] = useState(0);
   const [showConfig, setShowConfig] = useState(false);
 
-  // Modo de visualización: 'cards' (Vista por Corte) o 'table' (Matriz)
+  // Modo de visualización: 'cards' (Por corte) o 'table' (Matriz)
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
   const [selectedPeriodKey, setSelectedPeriodKey] = useState<string | null>(null);
   const [showAllCards, setShowAllCards] = useState(false);
 
-  // Abonar desde una celda del cronograma
+  // Filtro de mes para la Matriz (permite enfocar 1 mes o ver todos sin scroll masivo en móvil)
+  const [matrixMonthFilter, setMatrixMonthFilter] = useState<'all' | string>('all');
+  const tableContainerRef = useRef<HTMLDivElement>(null);
+
+  // Modal: Abonar desde una celda del cronograma
   const [payCell, setPayCell] = useState<PayCell | null>(null);
   const [payAmount, setPayAmount] = useState(0);
   const [payDate, setPayDate] = useState('');
@@ -100,7 +105,7 @@ export default function PaymentsView() {
   const [submitting, setSubmitting] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
 
-  // Editar un pago del historial
+  // Modal: Editar un pago del historial
   const [editPayment, setEditPayment] = useState<PaymentRecord | null>(null);
   const [editAmount, setEditAmount] = useState(0);
   const [editDate, setEditDate] = useState('');
@@ -234,6 +239,14 @@ export default function PaymentsView() {
     }
   };
 
+  const scrollToNextCut = () => {
+    if (!nextKey) return;
+    const target = document.getElementById(`matrix-col-${nextKey}`);
+    if (target && tableContainerRef.current) {
+      target.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
@@ -256,15 +269,46 @@ export default function PaymentsView() {
   const debtRows = rows.filter((r) => r.kind === 'debt');
   const expenseRows = rows.filter((r) => r.kind === 'expense');
 
-  // Agrupar períodos por mes para el encabezado de la matriz
-  const monthGroups: { label: string; span: number }[] = [];
-  for (const p of periods) {
+  // Corte más próximo
+  const todayIso = localIso(new Date());
+  const nextPeriod = periods.find((p) => p.date >= todayIso) || periods[0];
+  const nextKey = nextPeriod?.key;
+  const hl = (k: string) => (k === nextKey ? ' bg-brand-500/[0.08]' : '');
+
+  const cellPaid = (rowId: string, periodKey: string): number | undefined =>
+    paid[rowId]?.[periodKey];
+
+  // Lista única de meses disponibles en el cronograma
+  const uniqueMonths: { key: string; label: string; month: number; year: number }[] = [];
+  periods.forEach((p) => {
+    const k = `${p.month}-${p.year}`;
+    if (!uniqueMonths.some((m) => m.key === k)) {
+      uniqueMonths.push({
+        key: k,
+        label: `${MONTH_SHORT[p.month]} ${p.year}`,
+        month: p.month,
+        year: p.year,
+      });
+    }
+  });
+
+  // Períodos filtrados para la Matriz
+  const filteredMatrixPeriods =
+    matrixMonthFilter === 'all'
+      ? periods
+      : matrixMonthFilter === 'next'
+        ? periods.filter((p) => nextPeriod && p.month === nextPeriod.month && p.year === nextPeriod.year)
+        : periods.filter((p) => `${p.month}-${p.year}` === matrixMonthFilter);
+
+  // Agrupar períodos por mes para el encabezado superior de la Matriz filtrada
+  const filteredMonthGroups: { label: string; span: number }[] = [];
+  for (const p of filteredMatrixPeriods) {
     const label = `${MONTH_NAMES[p.month]} ${p.year}`;
-    const last = monthGroups[monthGroups.length - 1];
+    const last = filteredMonthGroups[filteredMonthGroups.length - 1];
     if (last && last.label === label) {
       last.span += 1;
     } else {
-      monthGroups.push({ label, span: 1 });
+      filteredMonthGroups.push({ label, span: 1 });
     }
   }
 
@@ -273,21 +317,106 @@ export default function PaymentsView() {
     : 0;
   const totalCommitment = monthlyCommitment.debts + monthlyCommitment.expenses;
 
-  // Corte más próximo
-  const todayIso = localIso(new Date());
-  const nextKey = periods.find((p) => p.date >= todayIso)?.key;
-  const hl = (k: string) => (k === nextKey ? ' bg-brand-500/[0.08]' : '');
+  const handleExportCalendar = () => {
+    if (!schedule) return;
+    const events = schedule.periods.map((p) => {
+      const pDebts = debtRows.filter((r) => (r.cells[p.key] || 0) > 0);
+      const pExp = expenseRows.filter((r) => (r.cells[p.key] || 0) > 0);
+      const toPay = schedule.totals[p.key] || 0;
+      const left = schedule.remaining[p.key] || 0;
 
-  const cellPaid = (rowId: string, periodKey: string): number | undefined =>
-    paid[rowId]?.[periodKey];
+      const debtList = pDebts.map((d) => `• ${d.name}: ${formatCurrency(d.cells[p.key])}`).join('\n');
+      const expList = pExp.map((e) => `• ${e.name}: ${formatCurrency(e.cells[p.key])}`).join('\n');
 
-  // Períodos a renderizar en modo tarjeta
+      const desc = [
+        `📅 Corte de Pagos ProyecAhorro (${p.timing === 'quincena' ? 'Día 15' : 'Fin de mes'})`,
+        `💰 Ingreso disponible: ${formatCurrency(p.incomeAvailable)}`,
+        `💳 Total a pagar: ${formatCurrency(toPay)}`,
+        `💵 Lo que te queda: ${formatCurrency(left)}`,
+        '',
+        '--- DEUDAS ---',
+        debtList || 'Ninguna',
+        '',
+        '--- GASTOS ---',
+        expList || 'Ninguno',
+      ].join('\n');
+
+      return {
+        title: `💳 ProyecAhorro: Corte de Pagos (${formatCurrency(toPay)})`,
+        description: desc,
+        date: p.date,
+        amount: toPay,
+      };
+    });
+
+    const ics = generateIcsCalendar(events);
+    downloadIcsFile(ics);
+  };
+
+  const handleExportCsv = () => {
+    if (!schedule) return;
+
+    const headerRow = [
+      'Concepto',
+      'Tipo',
+      'Monto Mensual',
+      ...periods.map((p) => `${p.timing === 'quincena' ? '15' : 'Fin'} ${MONTH_SHORT[p.month]} ${p.year}`),
+    ];
+
+    const csvRows: string[][] = [headerRow];
+
+    rows.forEach((r) => {
+      const rowData = [
+        `"${r.name.replace(/"/g, '""')}"`,
+        r.kind === 'debt' ? 'Deuda' : 'Gasto',
+        r.monthlyAmount.toFixed(2),
+        ...periods.map((p) => (r.cells[p.key] || 0).toFixed(2)),
+      ];
+      csvRows.push(rowData);
+    });
+
+    const totalsRow = [
+      '"TOTAL A PAGAR"',
+      '-',
+      '-',
+      ...periods.map((p) => (totals[p.key] || 0).toFixed(2)),
+    ];
+    csvRows.push(totalsRow);
+
+    const remainingRow = [
+      '"SALDO DISPONIBLE"',
+      '-',
+      '-',
+      ...periods.map((p) => (remaining[p.key] || 0).toFixed(2)),
+    ];
+    csvRows.push(remainingRow);
+
+    const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + csvRows.map((e) => e.join(',')).join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `cronograma_proyecahorro_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // Diferencia de días al próximo corte
+  let daysDiff = 0;
+  if (nextPeriod) {
+    const todayD = new Date();
+    todayD.setHours(0, 0, 0, 0);
+    const pDate = new Date(`${nextPeriod.date}T00:00:00`);
+    daysDiff = Math.ceil((pDate.getTime() - todayD.getTime()) / (1000 * 60 * 60 * 24));
+  }
+
+  // Períodos a renderizar en vista de Tarjetas
   const activePeriod = periods.find((p) => p.key === selectedPeriodKey) || periods[0];
-  const periodsToRender = showAllCards ? periods : activePeriod ? [activePeriod] : [];
+  const periodsToRenderCards = showAllCards ? periods : activePeriod ? [activePeriod] : [];
 
   return (
     <div className="space-y-6">
-      {/* Header & Controls */}
+      {/* Header & Main Controls */}
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <h2 className="text-xl sm:text-2xl font-bold text-text-primary">Cronograma de Pagos</h2>
@@ -344,6 +473,30 @@ export default function PaymentsView() {
             ))}
           </div>
 
+          {/* Botón Exportar CSV / Excel */}
+          <button
+            onClick={handleExportCsv}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-border-default bg-surface-50 px-3 py-2 text-xs font-semibold text-text-secondary transition-all hover:text-text-primary hover:border-border-hover cursor-pointer"
+            title="Descargar matriz del cronograma en formato CSV para Excel"
+          >
+            <svg className="h-4 w-4 text-accent-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <span className="hidden sm:inline">Exportar Excel</span>
+          </button>
+
+          {/* Botón Exportar Calendario */}
+          <button
+            onClick={handleExportCalendar}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-border-default bg-surface-50 px-3 py-2 text-xs font-semibold text-text-secondary transition-all hover:text-text-primary hover:border-border-hover cursor-pointer"
+            title="Descargar eventos con alarmas para Google Calendar / Apple Calendar / Outlook"
+          >
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            <span className="hidden sm:inline">Calendario .ics</span>
+          </button>
+
           {/* Botón Configurar */}
           <button
             onClick={() => setShowConfig(true)}
@@ -357,6 +510,75 @@ export default function PaymentsView() {
           </button>
         </div>
       </div>
+
+      {/* Banner de Alerta Inteligente del Corte */}
+      {nextPeriod && (
+        <div
+          className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border p-4 transition-all ${
+            daysDiff === 0
+              ? 'border-danger-500/30 bg-danger-500/10'
+              : daysDiff <= 3
+                ? 'border-warning-500/30 bg-warning-500/10'
+                : 'border-brand-500/30 bg-brand-500/10'
+          }`}
+        >
+          <div className="flex items-start sm:items-center gap-3">
+            <div
+              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-lg ${
+                daysDiff === 0
+                  ? 'bg-danger-500/20 text-danger-400'
+                  : daysDiff <= 3
+                    ? 'bg-warning-500/20 text-warning-400'
+                    : 'bg-brand-500/20 text-brand-400'
+              }`}
+            >
+              🔔
+            </div>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span
+                  className={`text-xs font-bold uppercase tracking-wider ${
+                    daysDiff === 0
+                      ? 'text-danger-400'
+                      : daysDiff <= 3
+                        ? 'text-warning-400'
+                        : 'text-brand-400'
+                  }`}
+                >
+                  {daysDiff === 0
+                    ? '🚨 ¡Hoy es el corte de pago!'
+                    : daysDiff === 1
+                      ? '⏰ El corte es mañana'
+                      : `📅 Próximo corte en ${daysDiff} días`}
+                </span>
+                <span className="text-xs font-semibold text-text-primary">
+                  ({nextPeriod.day} de {MONTH_NAMES[nextPeriod.month]})
+                </span>
+              </div>
+              <p className="text-xs text-text-secondary mt-0.5">
+                {(remaining[nextKey] ?? 0) >= 0 ? (
+                  <>
+                    Compromisos: <strong className="text-text-primary">{formatCurrency(totals[nextKey] || 0)}</strong>. Te quedarán{' '}
+                    <strong className="text-accent-400 font-bold">{formatCurrency(remaining[nextKey] || 0)}</strong> libres de tu ingreso en este corte.
+                  </>
+                ) : (
+                  <>
+                    Compromisos: <strong className="text-text-primary">{formatCurrency(totals[nextKey] || 0)}</strong>. Atención:{' '}
+                    <strong className="text-danger-400 font-bold">Faltan {formatCurrency(Math.abs(remaining[nextKey] || 0))}</strong> para cubrir los pagos.
+                  </>
+                )}
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={handleExportCalendar}
+            className="self-start sm:self-auto shrink-0 inline-flex items-center gap-1.5 rounded-xl border border-border-default bg-surface-50 px-3 py-1.5 text-xs font-semibold text-text-primary hover:bg-surface-100 transition-colors cursor-pointer"
+          >
+            <span>📅 Guardar con Alarma</span>
+          </button>
+        </div>
+      )}
 
       {/* Summary KPI Cards */}
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
@@ -409,7 +631,7 @@ export default function PaymentsView() {
         </div>
       </div>
 
-      {/* ═══ VISTA 1: POR CORTE / TARJETAS (Mobile-friendly timeline) ═══ */}
+      {/* ═══ VISTA 1: POR CORTE / TARJETAS ═══ */}
       {viewMode === 'cards' && (
         <div className="space-y-4">
           {/* Navegador horizontal de cortes */}
@@ -466,16 +688,17 @@ export default function PaymentsView() {
             </div>
           </div>
 
-          {/* Tarjetas de cortes seleccionados */}
+          {/* Tarjetas de cortes */}
           <div className="space-y-4">
-            {periodsToRender.map((p) => {
+            {periodsToRenderCards.map((p) => {
               const isNext = p.key === nextKey;
               const periodTotals = totals[p.key] ?? 0;
               const periodRemaining = remaining[p.key] ?? 0;
               const payouts = schedule?.benefitPayouts?.[p.key] || [];
 
-              // Deudas que tienen valor en este corte
-              const activeDebtsInPeriod = debtRows.filter((r) => (r.cells[p.key] || 0) > 0 || cellPaid(r.id, p.key) !== undefined);
+              const activeDebtsInPeriod = debtRows.filter(
+                (r) => (r.cells[p.key] || 0) > 0 || cellPaid(r.id, p.key) !== undefined
+              );
               const activeExpensesInPeriod = expenseRows.filter((r) => (r.cells[p.key] || 0) > 0);
 
               return (
@@ -511,7 +734,7 @@ export default function PaymentsView() {
                                 : 'bg-accent-500/15 text-accent-400'
                             }`}
                           >
-                            {p.timing === 'quincena' ? 'Quincena (Día 15)' : 'Fin de Mes'}
+                            {p.timing === 'quincena' ? 'Quincena (15)' : 'Fin de Mes'}
                           </span>
                           {isNext && (
                             <span className="rounded-md bg-brand-500 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white shadow-sm">
@@ -520,7 +743,7 @@ export default function PaymentsView() {
                           )}
                         </div>
                         <p className="text-xs text-text-muted mt-0.5">
-                          Fecha límite de pago estimada: {p.date}
+                          Fecha estimada: {p.date}
                         </p>
                       </div>
                     </div>
@@ -540,7 +763,7 @@ export default function PaymentsView() {
                     )}
                   </div>
 
-                  {/* Resumen financiero del corte */}
+                  {/* Resumen financiero */}
                   <div className="grid grid-cols-3 border-b border-border-default/60 bg-surface-100/30 p-3 sm:p-4 text-center divide-x divide-border-default/60">
                     <div className="px-1 sm:px-2">
                       <span className="block text-[10px] sm:text-xs text-text-muted font-medium">Ingreso</span>
@@ -566,15 +789,13 @@ export default function PaymentsView() {
                     </div>
                   </div>
 
-                  {/* Detalle de pagos del corte */}
+                  {/* Detalle */}
                   <div className="p-4 sm:p-5 space-y-4">
                     {/* Deudas */}
                     <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <h4 className="text-xs font-semibold uppercase tracking-wide text-danger-400">
-                          Deudas a pagar ({activeDebtsInPeriod.length})
-                        </h4>
-                      </div>
+                      <h4 className="text-xs font-semibold uppercase tracking-wide text-danger-400 mb-2">
+                        Deudas a pagar ({activeDebtsInPeriod.length})
+                      </h4>
 
                       {activeDebtsInPeriod.length === 0 ? (
                         <div className="rounded-xl border border-dashed border-border-default p-3 text-center text-xs text-text-muted">
@@ -644,11 +865,9 @@ export default function PaymentsView() {
 
                     {/* Gastos */}
                     <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <h4 className="text-xs font-semibold uppercase tracking-wide text-warning-400">
-                          Gastos recurrentes ({activeExpensesInPeriod.length})
-                        </h4>
-                      </div>
+                      <h4 className="text-xs font-semibold uppercase tracking-wide text-warning-400 mb-2">
+                        Gastos recurrentes ({activeExpensesInPeriod.length})
+                      </h4>
 
                       {activeExpensesInPeriod.length === 0 ? (
                         <div className="rounded-xl border border-dashed border-border-default p-3 text-center text-xs text-text-muted">
@@ -690,80 +909,157 @@ export default function PaymentsView() {
         </div>
       )}
 
-      {/* ═══ VISTA 2: MATRIZ COMPLETA (TABLA) ═══ */}
+      {/* ═══ VISTA 2: MATRIZ DE CRONOGRAMA 100% RESPONSIVE ═══ */}
       {viewMode === 'table' && (
-        <div className="rounded-2xl border border-border-default bg-surface-50 overflow-hidden">
-          <div className="flex items-center justify-between border-b border-border-default px-4 sm:px-5 py-4">
-            <div>
-              <h3 className="font-semibold text-sm sm:text-base text-text-primary">Matriz de Pagos por Quincena</h3>
-              <p className="text-xs text-text-muted mt-0.5">
-                Celdas verdes: abono registrado. Clic en cualquier celda de deuda para abonar.
-              </p>
+        <div className="rounded-2xl border border-border-default bg-surface-50 overflow-hidden shadow-sm">
+          {/* Header de la matriz con barra de filtros rápidos por mes */}
+          <div className="border-b border-border-default p-4 sm:p-5 space-y-3 bg-surface-50">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <div>
+                <h3 className="font-bold text-base sm:text-lg text-text-primary">Matriz de Pagos Quincenales</h3>
+                <p className="text-xs text-text-muted mt-0.5">
+                  Visualiza y proyecta todos los cortes. Clic en cualquier celda para abonar.
+                </p>
+              </div>
+
+              {/* Botón rápido para saltar al corte actual */}
+              {matrixMonthFilter === 'all' && (
+                <button
+                  onClick={scrollToNextCut}
+                  className="self-start sm:self-auto inline-flex items-center gap-1.5 rounded-lg border border-brand-500/30 bg-brand-500/10 px-3 py-1.5 text-xs font-semibold text-brand-400 hover:bg-brand-500/20 transition-all cursor-pointer"
+                >
+                  <span>⚡ Ir al corte próximo</span>
+                </button>
+              )}
+            </div>
+
+            {/* Selector de meses para móvil / desktop */}
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 pt-1 no-scrollbar">
+              <span className="text-[11px] font-semibold text-text-muted mr-1 shrink-0">Filtrar vista:</span>
+              <button
+                onClick={() => setMatrixMonthFilter('all')}
+                className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-all shrink-0 cursor-pointer ${
+                  matrixMonthFilter === 'all'
+                    ? 'bg-brand-500 text-white shadow-sm font-semibold'
+                    : 'border border-border-default bg-surface-100 text-text-secondary hover:text-text-primary'
+                }`}
+              >
+                Todos ({periods.length} cortes)
+              </button>
+
+              <button
+                onClick={() => setMatrixMonthFilter('next')}
+                className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-all shrink-0 cursor-pointer ${
+                  matrixMonthFilter === 'next'
+                    ? 'bg-brand-500 text-white shadow-sm font-semibold'
+                    : 'border border-brand-500/30 bg-brand-500/10 text-brand-400 hover:bg-brand-500/20'
+                }`}
+              >
+                ⚡ Mes actual
+              </button>
+
+              {uniqueMonths.map((m) => (
+                <button
+                  key={m.key}
+                  onClick={() => setMatrixMonthFilter(m.key)}
+                  className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-all shrink-0 cursor-pointer ${
+                    matrixMonthFilter === m.key
+                      ? 'bg-brand-500 text-white shadow-sm font-semibold'
+                      : 'border border-border-default bg-surface-100 text-text-secondary hover:text-text-primary'
+                  }`}
+                >
+                  {m.label}
+                </button>
+              ))}
             </div>
           </div>
 
-          {/* Banner indicador de scroll horizontal para móviles */}
-          <div className="flex items-center justify-between border-b border-border-default bg-brand-500/5 px-4 py-2 text-[11px] text-brand-400 md:hidden">
-            <span>👉 Desliza horizontalmente para ver todos los meses</span>
-            <span>↔</span>
-          </div>
+          {/* Banner indicador de scroll horizontal solo si hay más de 2 columnas visibles */}
+          {filteredMatrixPeriods.length > 2 && (
+            <div className="flex items-center justify-between border-b border-border-default bg-surface-100/80 px-4 py-2 text-[11px] text-text-secondary md:hidden">
+              <span className="flex items-center gap-1.5">
+                <span>👉</span> Desliza horizontalmente para ver todos los cortes
+              </span>
+              <span className="font-mono text-xs">↔</span>
+            </div>
+          )}
 
-          <div className="overflow-x-auto relative">
-            <table className="w-full min-w-max text-xs sm:text-sm">
-              <thead>
+          {/* Contenedor de la tabla con scroll suave y sticky headers */}
+          <div ref={tableContainerRef} className="overflow-x-auto relative max-h-[70vh] overscroll-x-contain">
+            <table className="w-full text-xs sm:text-sm border-collapse">
+              {/* Encabezados Sticky */}
+              <thead className="sticky top-0 z-30 bg-surface-50 shadow-sm">
                 <tr className="border-b border-border-default bg-surface-50">
-                  <th className="sticky left-0 z-20 bg-surface-50 px-3 sm:px-5 py-2.5 text-left text-xs font-medium text-text-muted min-w-[130px] sm:min-w-[180px] max-w-[160px] sm:max-w-[220px] shadow-[4px_0_10px_-2px_rgba(0,0,0,0.3)] border-r border-border-default">
+                  {/* Celda superior izquierda fija dual (horizontal & vertical) */}
+                  <th className="sticky left-0 top-0 z-40 bg-surface-50 px-3 sm:px-4 py-2.5 text-left text-xs font-bold text-text-primary min-w-[125px] sm:min-w-[170px] max-w-[145px] sm:max-w-[210px] border-r border-border-default shadow-[3px_0_10px_-2px_rgba(0,0,0,0.4)]">
                     Concepto
                   </th>
-                  {monthGroups.map((g) => (
+                  {filteredMonthGroups.map((g) => (
                     <th
                       key={g.label}
                       colSpan={g.span}
-                      className="border-l border-border-default px-3 py-2 text-center text-xs font-semibold text-text-secondary"
+                      className="border-l border-border-default px-3 py-2 text-center text-xs font-bold text-text-primary bg-surface-100/50"
                     >
                       {g.label}
                     </th>
                   ))}
                 </tr>
                 <tr className="border-b border-border-default bg-surface-50">
-                  <th className="sticky left-0 z-20 bg-surface-50 px-3 sm:px-5 py-2 min-w-[130px] sm:min-w-[180px] max-w-[160px] sm:max-w-[220px] shadow-[4px_0_10px_-2px_rgba(0,0,0,0.3)] border-r border-border-default" />
-                  {periods.map((p) => (
-                    <th
-                      key={p.key}
-                      className={`px-2.5 sm:px-3 py-2 text-center text-xs font-medium min-w-[90px] sm:min-w-[105px] ${
-                        p.timing === 'quincena' ? 'text-brand-400' : 'text-accent-400'
-                      } border-l border-border-default${hl(p.key)}`}
-                    >
-                      {p.timing === 'quincena' ? 'Día 15' : 'Fin de mes'}
-                      {p.key === nextKey && (
-                        <div className="text-[9px] font-bold uppercase tracking-wide text-brand-400">⚡ próximo</div>
-                      )}
-                    </th>
-                  ))}
+                  <th className="sticky left-0 top-[37px] z-40 bg-surface-50 px-3 sm:px-4 py-2 min-w-[125px] sm:min-w-[170px] max-w-[145px] sm:max-w-[210px] border-r border-border-default shadow-[3px_0_10px_-2px_rgba(0,0,0,0.4)]" />
+                  {filteredMatrixPeriods.map((p) => {
+                    const isNext = p.key === nextKey;
+                    return (
+                      <th
+                        id={`matrix-col-${p.key}`}
+                        key={p.key}
+                        className={`px-2 sm:px-3 py-2 text-center text-xs font-semibold min-w-[88px] sm:min-w-[105px] ${
+                          p.timing === 'quincena' ? 'text-brand-400' : 'text-accent-400'
+                        } border-l border-border-default${isNext ? ' bg-brand-500/15 ring-1 ring-inset ring-brand-500/30' : ''}`}
+                      >
+                        <div className="flex flex-col items-center">
+                          <span>{p.timing === 'quincena' ? 'Día 15' : 'Fin mes'}</span>
+                          <span className="text-[10px] text-text-muted font-normal">{p.day} {MONTH_SHORT[p.month]}</span>
+                          {isNext && (
+                            <span className="mt-0.5 rounded bg-brand-500 px-1 py-0.2 text-[8px] font-bold uppercase tracking-wider text-white">
+                              Próximo
+                            </span>
+                          )}
+                        </div>
+                      </th>
+                    );
+                  })}
                 </tr>
               </thead>
+
+              {/* Filas del cuerpo */}
               <tbody>
+                {/* Sección Deudas */}
                 {debtRows.length > 0 && (
                   <tr>
                     <td
-                      colSpan={periods.length + 1}
-                      className="sticky left-0 z-10 bg-surface-100/70 px-3 sm:px-5 py-1.5 text-xs font-semibold uppercase tracking-wide text-danger-400"
+                      colSpan={filteredMatrixPeriods.length + 1}
+                      className="sticky left-0 z-10 bg-surface-100/90 px-3 sm:px-4 py-1.5 text-xs font-bold uppercase tracking-wide text-danger-400 border-b border-border-default/80"
                     >
-                      Deudas y Créditos
+                      💳 Deudas y Créditos
                     </td>
                   </tr>
                 )}
                 {debtRows.map((row) => (
-                  <tr key={row.id} className="border-b border-border-default/50 hover:bg-surface-100/40">
-                    <td className="sticky left-0 z-20 bg-surface-50 px-3 sm:px-5 py-2.5 min-w-[130px] sm:min-w-[180px] max-w-[160px] sm:max-w-[220px] shadow-[4px_0_10px_-2px_rgba(0,0,0,0.3)] border-r border-border-default">
-                      <div className="font-medium text-text-primary truncate" title={row.name}>{row.name}</div>
-                      <div className="text-[11px] text-text-muted truncate">
+                  <tr key={row.id} className="border-b border-border-default/50 hover:bg-surface-100/50 transition-colors">
+                    {/* Columna Concepto Fija */}
+                    <td className="sticky left-0 z-20 bg-surface-50 px-3 sm:px-4 py-2.5 min-w-[125px] sm:min-w-[170px] max-w-[145px] sm:max-w-[210px] border-r border-border-default shadow-[3px_0_10px_-2px_rgba(0,0,0,0.4)]">
+                      <div className="font-semibold text-text-primary text-xs sm:text-sm truncate" title={row.name}>
+                        {row.name}
+                      </div>
+                      <div className="text-[10px] text-text-muted truncate mt-0.5">
                         {row.totalInstallments
-                          ? `${row.totalInstallments} ctas · ${formatCurrency(row.monthlyAmount)}`
+                          ? `${row.totalInstallments} cuotas · ${formatCurrency(row.monthlyAmount)}`
                           : `saldo ${formatCurrency(row.currentBalance ?? 0)}`}
                       </div>
                     </td>
-                    {periods.map((p) => {
+
+                    {/* Celdas de cada corte */}
+                    {filteredMatrixPeriods.map((p) => {
                       const amount = row.cells[p.key];
                       const paidAmount = cellPaid(row.id, p.key);
                       const isPayoff = row.payoffPeriodKey === p.key;
@@ -772,31 +1068,42 @@ export default function PaymentsView() {
                         cuotaNum && row.totalInstallments
                           ? `${cuotaNum}/${row.totalInstallments}`
                           : null;
+                      const isNext = p.key === nextKey;
+
                       return (
-                        <td key={p.key} className={`border-l border-border-default/50 px-2 sm:px-3 py-2 text-center${hl(p.key)}`}>
+                        <td
+                          key={p.key}
+                          className={`border-l border-border-default/50 px-1.5 sm:px-2.5 py-2 text-center align-middle${isNext ? ' bg-brand-500/[0.04]' : ''}`}
+                        >
                           {paidAmount !== undefined ? (
-                            <span className="inline-flex items-center gap-1 rounded-md bg-accent-500/15 px-2 py-0.5 text-xs font-semibold text-accent-400">
+                            <span className="inline-flex items-center gap-0.5 rounded-lg bg-accent-500/15 border border-accent-500/25 px-2 py-1 text-[11px] sm:text-xs font-bold text-accent-400 shadow-2xs">
                               ✓ {formatCurrency(paidAmount)}
                             </span>
                           ) : amount ? (
                             <button
                               onClick={() => openPayCell(row, p.key, p.date)}
-                              title="Registrar este pago"
-                              className="group w-full cursor-pointer rounded-lg px-1.5 py-1 transition-colors hover:bg-brand-500/15"
+                              title="Toca para registrar abono"
+                              className="group w-full min-h-[36px] flex flex-col items-center justify-center rounded-lg p-1 transition-all hover:bg-brand-500/15 active:scale-95 border border-transparent hover:border-brand-500/30 cursor-pointer bg-surface-100/40"
                             >
-                              <span className={isPayoff ? 'font-semibold text-accent-400' : 'text-text-primary'}>
+                              <span
+                                className={`text-[11px] sm:text-xs font-bold ${
+                                  isPayoff ? 'text-accent-400' : 'text-text-primary'
+                                }`}
+                              >
                                 {formatCurrency(amount)}
-                                {isPayoff && <span className="ml-0.5 text-xs">🎉</span>}
+                                {isPayoff && <span className="ml-0.5 text-[10px]">🎉</span>}
                               </span>
                               {cuotaLabel && (
-                                <div className="text-[10px] leading-tight text-text-muted">cta {cuotaLabel}</div>
+                                <span className="text-[9px] text-text-muted leading-tight font-medium">
+                                  cta {cuotaLabel}
+                                </span>
                               )}
-                              <div className="hidden text-[10px] font-semibold leading-tight text-brand-400 group-hover:block">
+                              <span className="hidden text-[9px] font-bold text-brand-400 group-hover:block leading-tight">
                                 abonar
-                              </div>
+                              </span>
                             </button>
                           ) : (
-                            <span className="text-text-muted/40">—</span>
+                            <span className="text-text-muted/30 text-xs">—</span>
                           )}
                         </td>
                       );
@@ -804,32 +1111,39 @@ export default function PaymentsView() {
                   </tr>
                 ))}
 
+                {/* Sección Gastos */}
                 {expenseRows.length > 0 && (
                   <tr>
                     <td
-                      colSpan={periods.length + 1}
-                      className="sticky left-0 z-10 bg-surface-100/70 px-3 sm:px-5 py-1.5 text-xs font-semibold uppercase tracking-wide text-warning-400"
+                      colSpan={filteredMatrixPeriods.length + 1}
+                      className="sticky left-0 z-10 bg-surface-100/90 px-3 sm:px-4 py-1.5 text-xs font-bold uppercase tracking-wide text-warning-400 border-b border-border-default/80"
                     >
-                      Gastos Recurrentes
+                      🧾 Gastos Recurrentes
                     </td>
                   </tr>
                 )}
                 {expenseRows.map((row) => (
-                  <tr key={row.id} className="border-b border-border-default/50 hover:bg-surface-100/40">
-                    <td className="sticky left-0 z-20 bg-surface-50 px-3 sm:px-5 py-2.5 min-w-[130px] sm:min-w-[180px] max-w-[160px] sm:max-w-[220px] shadow-[4px_0_10px_-2px_rgba(0,0,0,0.3)] border-r border-border-default">
-                      <div className="font-medium text-text-primary truncate" title={row.name}>{row.name}</div>
-                      <div className="text-[11px] text-text-muted truncate">
+                  <tr key={row.id} className="border-b border-border-default/50 hover:bg-surface-100/50 transition-colors">
+                    <td className="sticky left-0 z-20 bg-surface-50 px-3 sm:px-4 py-2 min-w-[125px] sm:min-w-[170px] max-w-[145px] sm:max-w-[210px] border-r border-border-default shadow-[3px_0_10px_-2px_rgba(0,0,0,0.4)]">
+                      <div className="font-semibold text-text-primary text-xs sm:text-sm truncate" title={row.name}>
+                        {row.name}
+                      </div>
+                      <div className="text-[10px] text-text-muted truncate">
                         {formatCurrency(row.monthlyAmount)}/mes
                       </div>
                     </td>
-                    {periods.map((p) => {
+                    {filteredMatrixPeriods.map((p) => {
                       const amount = row.cells[p.key];
+                      const isNext = p.key === nextKey;
                       return (
-                        <td key={p.key} className={`border-l border-border-default/50 px-2 sm:px-3 py-2 text-center text-text-secondary${hl(p.key)}`}>
+                        <td
+                          key={p.key}
+                          className={`border-l border-border-default/50 px-1.5 sm:px-2.5 py-2 text-center text-xs text-text-secondary${isNext ? ' bg-brand-500/[0.04]' : ''}`}
+                        >
                           {amount ? (
-                            <span>{formatCurrency(amount)}</span>
+                            <span className="font-medium">{formatCurrency(amount)}</span>
                           ) : (
-                            <span className="text-text-muted/40">—</span>
+                            <span className="text-text-muted/30">—</span>
                           )}
                         </td>
                       );
@@ -837,30 +1151,45 @@ export default function PaymentsView() {
                   </tr>
                 ))}
               </tbody>
+
+              {/* Totales y Resultados */}
               <tfoot>
-                <tr className="border-t border-border-default bg-surface-100/60">
-                  <td className="sticky left-0 z-20 bg-surface-100 px-3 sm:px-5 py-2.5 text-xs font-semibold text-text-secondary min-w-[130px] sm:min-w-[180px] max-w-[160px] sm:max-w-[220px] shadow-[4px_0_10px_-2px_rgba(0,0,0,0.3)] border-r border-border-default">
+                {/* Total a pagar */}
+                <tr className="border-t-2 border-border-default bg-surface-100/70 font-semibold">
+                  <td className="sticky left-0 z-20 bg-surface-100 px-3 sm:px-4 py-2.5 text-xs text-text-secondary min-w-[125px] sm:min-w-[170px] max-w-[145px] sm:max-w-[210px] border-r border-border-default shadow-[3px_0_10px_-2px_rgba(0,0,0,0.4)] font-bold">
                     Total a pagar
                   </td>
-                  {periods.map((p) => (
-                    <td key={p.key} className={`border-l border-border-default/50 px-2 sm:px-3 py-2 text-center font-semibold text-warning-400${hl(p.key)}`}>
-                      {formatCurrency(totals[p.key] ?? 0)}
-                    </td>
-                  ))}
+                  {filteredMatrixPeriods.map((p) => {
+                    const isNext = p.key === nextKey;
+                    return (
+                      <td
+                        key={p.key}
+                        className={`border-l border-border-default/50 px-2 sm:px-3 py-2.5 text-center font-bold text-warning-400 text-xs sm:text-sm${isNext ? ' bg-brand-500/[0.06]' : ''}`}
+                      >
+                        {formatCurrency(totals[p.key] ?? 0)}
+                      </td>
+                    );
+                  })}
                 </tr>
-                <tr className="bg-surface-100/60">
-                  <td className="sticky left-0 z-20 bg-surface-100 px-3 sm:px-5 py-2.5 text-xs font-semibold text-text-secondary min-w-[130px] sm:min-w-[180px] max-w-[160px] sm:max-w-[220px] shadow-[4px_0_10px_-2px_rgba(0,0,0,0.3)] border-r border-border-default">
+
+                {/* Ingreso disponible */}
+                <tr className="border-t border-border-default/50 bg-surface-100/50">
+                  <td className="sticky left-0 z-20 bg-surface-100 px-3 sm:px-4 py-2.5 text-xs text-text-secondary min-w-[125px] sm:min-w-[170px] max-w-[145px] sm:max-w-[210px] border-r border-border-default shadow-[3px_0_10px_-2px_rgba(0,0,0,0.4)]">
                     Ingreso disponible
                   </td>
-                  {periods.map((p) => {
+                  {filteredMatrixPeriods.map((p) => {
                     const payouts = schedule?.benefitPayouts?.[p.key] || [];
+                    const isNext = p.key === nextKey;
                     return (
-                      <td key={p.key} className={`border-l border-border-default/50 px-2 sm:px-3 py-2 text-center text-text-secondary${hl(p.key)}`}>
-                        {formatCurrency(p.incomeAvailable)}
+                      <td
+                        key={p.key}
+                        className={`border-l border-border-default/50 px-2 sm:px-3 py-2 text-center text-xs text-text-secondary${isNext ? ' bg-brand-500/[0.06]' : ''}`}
+                      >
+                        <div className="font-semibold text-text-primary">{formatCurrency(p.incomeAvailable)}</div>
                         {payouts.map((b) => (
                           <div
                             key={b.label}
-                            className="mt-0.5 text-[10px] font-semibold text-accent-400"
+                            className="mt-0.5 text-[9px] font-bold text-accent-400 truncate"
                             title={`${b.label}: ${formatCurrency(b.amount)}`}
                           >
                             🎁 {b.label}
@@ -870,18 +1199,21 @@ export default function PaymentsView() {
                     );
                   })}
                 </tr>
-                <tr className="border-t border-border-default bg-surface-100">
-                  <td className="sticky left-0 z-20 bg-surface-100 px-3 sm:px-5 py-3 text-xs font-bold text-text-primary min-w-[130px] sm:min-w-[180px] max-w-[160px] sm:max-w-[220px] shadow-[4px_0_10px_-2px_rgba(0,0,0,0.3)] border-r border-border-default">
-                    Lo que queda
+
+                {/* Saldo neto restante */}
+                <tr className="border-t-2 border-border-default bg-surface-100">
+                  <td className="sticky left-0 z-20 bg-surface-100 px-3 sm:px-4 py-3 text-xs font-bold text-text-primary min-w-[125px] sm:min-w-[170px] max-w-[145px] sm:max-w-[210px] border-r border-border-default shadow-[3px_0_10px_-2px_rgba(0,0,0,0.4)]">
+                    Te queda del sueldo
                   </td>
-                  {periods.map((p) => {
+                  {filteredMatrixPeriods.map((p) => {
                     const value = remaining[p.key] ?? 0;
+                    const isNext = p.key === nextKey;
                     return (
                       <td
                         key={p.key}
-                        className={`border-l border-border-default/50 px-2 sm:px-3 py-3 text-center font-bold ${
-                          value < 0 ? 'text-danger-400' : 'text-accent-400'
-                        }${hl(p.key)}`}
+                        className={`border-l border-border-default/50 px-2 sm:px-3 py-3 text-center font-black text-xs sm:text-sm ${
+                          value < 0 ? 'text-danger-400 bg-danger-500/10' : 'text-accent-400'
+                        }${isNext && value >= 0 ? ' bg-brand-500/[0.08]' : ''}`}
                       >
                         {formatCurrency(value)}
                       </td>
@@ -891,13 +1223,32 @@ export default function PaymentsView() {
               </tfoot>
             </table>
           </div>
+
+          {/* Leyenda y notas al pie de la matriz */}
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border-default bg-surface-100/40 p-3 sm:p-4 text-[11px] text-text-muted">
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="inline-flex items-center gap-1">
+                <span className="h-2 w-2 rounded-full bg-accent-500"></span>
+                <span>Verde: Pago realizado</span>
+              </span>
+              <span className="inline-flex items-center gap-1">
+                <span className="h-2 w-2 rounded-full bg-brand-500"></span>
+                <span>Próximo corte activo</span>
+              </span>
+              <span className="inline-flex items-center gap-1">
+                <span>🎉</span>
+                <span>Última cuota programada</span>
+              </span>
+            </div>
+            <span>💡 Haz clic sobre cualquier valor de deuda para abonar.</span>
+          </div>
         </div>
       )}
 
       {/* ═══ HISTORIAL DE PAGOS RESPONSIVE ═══ */}
-      <div className="rounded-2xl border border-border-default bg-surface-50 overflow-hidden">
+      <div className="rounded-2xl border border-border-default bg-surface-50 overflow-hidden shadow-sm">
         <div className="border-b border-border-default px-4 sm:px-5 py-4">
-          <h3 className="font-semibold text-sm sm:text-base text-text-primary">Historial de Pagos</h3>
+          <h3 className="font-bold text-base sm:text-lg text-text-primary">Historial de Pagos</h3>
           <p className="text-xs text-text-muted mt-0.5">
             Abonos registrados a tus deudas y créditos.
           </p>
@@ -905,8 +1256,8 @@ export default function PaymentsView() {
 
         {history.length === 0 ? (
           <div className="px-5 py-10 text-center text-sm text-text-muted">
-            Aún no has registrado pagos. Puedes abonar directamente desde las tarjetas del cronograma o en{' '}
-            <a href="/app/debts" className="text-brand-400 font-medium hover:underline">
+            Aún no has registrado pagos. Puedes abonar directamente desde el cronograma o en{' '}
+            <a href="/app/debts" className="text-brand-400 font-semibold hover:underline">
               Deudas
             </a>.
           </div>
@@ -921,7 +1272,7 @@ export default function PaymentsView() {
                       <span className="text-xs font-semibold text-text-secondary">
                         {String(p.paidAt).slice(0, 10)}
                       </span>
-                      <span className="rounded-md bg-surface-100 px-2 py-0.5 text-[10px] font-medium text-text-muted">
+                      <span className="rounded-md bg-surface-100 px-2 py-0.5 text-[10px] font-semibold text-text-muted">
                         {PAYMENT_TYPE_LABELS[p.type] || p.type}
                       </span>
                     </div>
@@ -970,29 +1321,29 @@ export default function PaymentsView() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border-default text-left text-xs text-text-muted">
-                    <th className="px-5 py-2.5 font-medium">Fecha</th>
-                    <th className="px-5 py-2.5 font-medium">Deuda</th>
-                    <th className="px-5 py-2.5 font-medium">Tipo</th>
-                    <th className="px-5 py-2.5 text-right font-medium">Monto</th>
-                    <th className="px-5 py-2.5 font-medium">Notas</th>
-                    <th className="px-5 py-2.5 text-right font-medium">Acciones</th>
+                    <th className="px-5 py-2.5 font-semibold">Fecha</th>
+                    <th className="px-5 py-2.5 font-semibold">Deuda</th>
+                    <th className="px-5 py-2.5 font-semibold">Tipo</th>
+                    <th className="px-5 py-2.5 text-right font-semibold">Monto</th>
+                    <th className="px-5 py-2.5 font-semibold">Notas</th>
+                    <th className="px-5 py-2.5 text-right font-semibold">Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
                   {history.map((p) => (
-                    <tr key={p.id} className="border-b border-border-default/50 hover:bg-surface-100/40">
+                    <tr key={p.id} className="border-b border-border-default/50 hover:bg-surface-100/40 transition-colors">
                       <td className="px-5 py-2.5 text-text-secondary">
                         {String(p.paidAt).slice(0, 10)}
                       </td>
-                      <td className="px-5 py-2.5 font-medium text-text-primary">
+                      <td className="px-5 py-2.5 font-semibold text-text-primary">
                         {p.debtName || '(deuda eliminada)'}
                       </td>
                       <td className="px-5 py-2.5">
-                        <span className="rounded-md bg-surface-100 px-2 py-0.5 text-xs text-text-secondary">
+                        <span className="rounded-md bg-surface-100 px-2 py-0.5 text-xs text-text-secondary font-medium">
                           {PAYMENT_TYPE_LABELS[p.type] || p.type}
                         </span>
                       </td>
-                      <td className="px-5 py-2.5 text-right font-semibold text-accent-400">
+                      <td className="px-5 py-2.5 text-right font-bold text-accent-400">
                         {formatCurrency(p.amount)}
                       </td>
                       <td className="max-w-48 truncate px-5 py-2.5 text-xs text-text-muted">

@@ -3,30 +3,28 @@ import AuthLayout from '../layouts/AuthLayout.astro';
 import RegisterForm from '@/components/auth/RegisterForm';
 ---
 
-<AuthLayout title="Crear cuenta" description="Crea tu cuenta gratuita en FinanzasAP">
+<AuthLayout title="Crear cuenta" description="Crea tu cuenta gratuita en ProyecAhorro">
   <div class="glass rounded-2xl p-8 shadow-2xl">
     <!-- Logo -->
-    <div class="mb-8 text-center">
-      <div
-        class="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-brand-500 shadow-lg shadow-brand-500/25"
-      >
-        <svg
-          class="h-7 w-7 text-white"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-          ></path>
-        </svg>
-      </div>
-      <h1 class="mt-4 text-2xl font-bold">Crea tu cuenta</h1>
-      <p class="mt-1 text-sm text-text-secondary">
-        Comienza a optimizar tus finanzas hoy
+    <div class="mb-6 text-center">
+      <a href="/" class="inline-flex flex-col items-center gap-2 group">
+        <img
+          src="/images/logo-icon.png"
+          alt="ProyecAhorro Logo"
+          class="h-14 w-14 object-contain rounded-xl shadow-lg transition-transform group-hover:scale-105"
+        />
+        <div class="flex flex-col items-center">
+          <span class="text-xl font-black tracking-tight text-text-primary">
+            Proyec<span class="text-accent-400">Ahorro</span>
+          </span>
+          <span class="text-[10px] text-text-muted font-semibold tracking-wider uppercase -mt-0.5">
+            Gestiona hoy, proyecta tu mañana
+          </span>
+        </div>
+      </a>
+      <h1 class="mt-4 text-xl font-bold text-text-primary">Crea tu cuenta</h1>
+      <p class="mt-0.5 text-xs text-text-secondary">
+        Comienza a optimizar tus ingresos y gastos hoy
       </p>
     </div>
 
@@ -34,9 +32,9 @@ import RegisterForm from '@/components/auth/RegisterForm';
     <RegisterForm client:load />
 
     <!-- Login link -->
-    <p class="mt-6 text-center text-sm text-text-muted">
+    <p class="mt-6 text-center text-xs text-text-muted">
       ¿Ya tienes cuenta?{' '}
-      <a href="/login" class="font-medium text-brand-400 hover:text-brand-300">
+      <a href="/login" class="font-semibold text-brand-400 hover:text-brand-300">
         Iniciar sesión
       </a>
     </p>

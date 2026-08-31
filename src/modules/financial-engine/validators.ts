@@ -163,6 +163,41 @@ export const paymentSchema = z.object({
   notes: z.string().max(500, 'Las notas no pueden exceder 500 caracteres').optional(),
 });
 
+// ─── Savings Goal ───
+
+export const savingsGoalCategorySchema = z.enum([
+  'emergency',
+  'vacation',
+  'education',
+  'housing',
+  'vehicle',
+  'retirement',
+  'other',
+]);
+
+export const savingsGoalSchema = z.object({
+  name: z
+    .string()
+    .min(1, 'El nombre de la meta es requerido')
+    .max(255, 'El nombre no puede exceder 255 caracteres'),
+  targetAmount: z
+    .number()
+    .positive('El monto objetivo debe ser mayor a 0')
+    .max(999999999.99, 'El monto excede el límite'),
+  currentAmount: z.number().min(0).default(0),
+  monthlyContribution: z
+    .number()
+    .min(0, 'La contribución mensual no puede ser negativa')
+    .max(999999999.99, 'El monto excede el límite')
+    .default(0),
+  startDate: z.string().min(1, 'Fecha de inicio requerida'),
+  targetDate: z.string().nullable().optional(),
+  category: savingsGoalCategorySchema.default('other'),
+  icon: z.string().max(10).default('🎯'),
+  priority: z.number().int().min(1).max(10).default(1),
+  status: z.enum(['active', 'completed', 'paused']).default('active'),
+});
+
 // ─── Auth ───
 
 export const loginSchema = z.object({
@@ -201,5 +236,7 @@ export type IncomeInput = z.infer<typeof incomeSchema>;
 export type ExpenseInput = z.infer<typeof expenseSchema>;
 export type DebtInput = z.infer<typeof debtSchema>;
 export type PaymentInput = z.infer<typeof paymentSchema>;
+export type SavingsGoalInput = z.infer<typeof savingsGoalSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type RegisterInput = z.infer<typeof registerSchema>;
+

@@ -8,7 +8,7 @@ interface Props {
 
 const {
   title,
-  description = 'Plataforma de gestión financiera personal con motor de optimización de deudas.',
+  description = 'ProyecAhorro — Gestiona hoy, proyecta tu mañana. Organiza tus ingresos, ahorra mejor y alcanza tus metas.',
 } = Astro.props;
 ---
 
@@ -23,8 +23,6 @@ const {
     <!-- Aplicar el tema guardado ANTES del primer render para evitar parpadeo -->
     <script is:inline>
       (function () {
-        // Marca que hay JS: las animaciones .reveal solo ocultan contenido
-        // cuando esta clase existe (sin JS la página se ve completa).
         document.documentElement.classList.add('js');
         try {
           if (localStorage.getItem('finanzas-theme') === 'light') {
@@ -38,18 +36,32 @@ const {
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap"
       rel="stylesheet"
     />
 
-    <!-- Security: los headers reales (X-Frame-Options, nosniff) los envía el
-         middleware por HTTP; aquí solo va lo que es válido en HTML. -->
     <meta name="referrer" content="strict-origin-when-cross-origin" />
 
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <title>{title} | FinanzasAP</title>
+    <link rel="icon" type="image/png" href="/images/logo-icon.png" />
+    <link rel="apple-touch-icon" href="/images/logo-icon.png" />
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="ProyecAhorro" />
+
+    <title>{title} | ProyecAhorro</title>
   </head>
   <body class="min-h-screen bg-surface-0 text-text-primary antialiased">
     <slot />
+
+    <!-- Service Worker registration -->
+    <script is:inline>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js').catch(() => {});
+        });
+      }
+    </script>
   </body>
 </html>
+

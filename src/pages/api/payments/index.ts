@@ -60,47 +60,51 @@ export const POST: APIRoute = async (ctx) => {
     }
 
     const { debtId, amount, type, paidAt, notes } = parsed.data;
-
-    // Fetch debt to verify ownership and update balance
-    const [targetDebt] = await db
-      .select()
-      .from(debts)
-      .where(and(eq(debts.id, debtId), eq(debts.userId, user.id)));
-
-    if (!targetDebt) {
-      return new Response(JSON.stringify({ error: 'Deuda no encontrada' }), { status: 404 });
-    }
-
-    const currentBal = parseFloat(targetDebt.currentBalance as string);
-    const newBal = Math.max(0, currentBal - amount);
-
     const newId = generateId();
 
-    // Insert payment record
-    await db.insert(payments).values({
-      id: newId,
-      userId: user.id,
-      debtId,
-      amount: amount.toString(),
-      type,
-      paidAt: new Date(paidAt) as any,
-      notes: notes || '',
+    // ─── Transacción atómica: insertar pago + actualizar saldo ───
+    const result = await db.transaction(async (tx) => {
+      const [targetDebt] = await tx
+        .select()
+        .from(debts)
+        .where(and(eq(debts.id, debtId), eq(debts.userId, user.id)));
+
+      if (!targetDebt) {
+        throw new Error('DEBT_NOT_FOUND');
+      }
+
+      const currentBal = parseFloat(targetDebt.currentBalance as string);
+      const newBal = Math.max(0, Math.round((currentBal - amount) * 100) / 100);
+
+      await tx.insert(payments).values({
+        id: newId,
+        userId: user.id,
+        debtId,
+        amount: amount.toString(),
+        type,
+        paidAt: new Date(paidAt) as any,
+        notes: notes || '',
+      });
+
+      await tx
+        .update(debts)
+        .set({
+          currentBalance: newBal.toString(),
+          status: newBal === 0 ? 'paid_off' : 'active',
+        })
+        .where(eq(debts.id, debtId));
+
+      return { newBal };
     });
 
-    // Update debt current balance
-    await db
-      .update(debts)
-      .set({
-        currentBalance: newBal.toString(),
-        status: newBal === 0 ? 'paid_off' : 'active',
-      })
-      .where(eq(debts.id, debtId));
-
-    return new Response(JSON.stringify({ success: true, id: newId, remainingBalance: newBal }), {
-      status: 201,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return new Response(
+      JSON.stringify({ success: true, id: newId, remainingBalance: result.newBal }),
+      { status: 201, headers: { 'Content-Type': 'application/json' } }
+    );
   } catch (err: any) {
+    if (err.message === 'DEBT_NOT_FOUND') {
+      return new Response(JSON.stringify({ error: 'Deuda no encontrada' }), { status: 404 });
+    }
     return new Response(JSON.stringify({ error: err.message }), { status: 500 });
   }
 };
@@ -127,55 +131,65 @@ export const PUT: APIRoute = async (ctx) => {
       );
     }
 
-    const [existing] = await db
-      .select()
-      .from(payments)
-      .where(and(eq(payments.id, id), eq(payments.userId, user.id)));
-
-    if (!existing) {
-      return new Response(JSON.stringify({ error: 'Pago no encontrado' }), { status: 404 });
-    }
-
     const { amount, type, paidAt, notes } = parsed.data;
 
-    // El monto solo puede cambiar contra la misma deuda; se ajusta el saldo por la diferencia
-    const [targetDebt] = await db
-      .select()
-      .from(debts)
-      .where(and(eq(debts.id, existing.debtId), eq(debts.userId, user.id)));
+    // ─── Transacción atómica: actualizar pago + ajustar saldo ───
+    const result = await db.transaction(async (tx) => {
+      const [existing] = await tx
+        .select()
+        .from(payments)
+        .where(and(eq(payments.id, id), eq(payments.userId, user.id)));
 
-    if (!targetDebt) {
+      if (!existing) {
+        throw new Error('PAYMENT_NOT_FOUND');
+      }
+
+      const [targetDebt] = await tx
+        .select()
+        .from(debts)
+        .where(and(eq(debts.id, existing.debtId), eq(debts.userId, user.id)));
+
+      if (!targetDebt) {
+        throw new Error('DEBT_NOT_FOUND');
+      }
+
+      const oldAmount = parseFloat(existing.amount as string);
+      const delta = amount - oldAmount;
+      const currentBal = parseFloat(targetDebt.currentBalance as string);
+      const newBal = Math.max(0, Math.round((currentBal - delta) * 100) / 100);
+
+      await tx
+        .update(payments)
+        .set({
+          amount: amount.toString(),
+          type,
+          paidAt: new Date(paidAt) as any,
+          notes: notes || '',
+        })
+        .where(and(eq(payments.id, id), eq(payments.userId, user.id)));
+
+      await tx
+        .update(debts)
+        .set({
+          currentBalance: newBal.toString(),
+          status: newBal === 0 ? 'paid_off' : 'active',
+        })
+        .where(eq(debts.id, existing.debtId));
+
+      return { newBal };
+    });
+
+    return new Response(
+      JSON.stringify({ success: true, remainingBalance: result.newBal }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } }
+    );
+  } catch (err: any) {
+    if (err.message === 'PAYMENT_NOT_FOUND') {
+      return new Response(JSON.stringify({ error: 'Pago no encontrado' }), { status: 404 });
+    }
+    if (err.message === 'DEBT_NOT_FOUND') {
       return new Response(JSON.stringify({ error: 'Deuda del pago no encontrada' }), { status: 404 });
     }
-
-    const oldAmount = parseFloat(existing.amount as string);
-    const delta = amount - oldAmount;
-    const currentBal = parseFloat(targetDebt.currentBalance as string);
-    const newBal = Math.max(0, Math.round((currentBal - delta) * 100) / 100);
-
-    await db
-      .update(payments)
-      .set({
-        amount: amount.toString(),
-        type,
-        paidAt: new Date(paidAt) as any,
-        notes: notes || '',
-      })
-      .where(and(eq(payments.id, id), eq(payments.userId, user.id)));
-
-    await db
-      .update(debts)
-      .set({
-        currentBalance: newBal.toString(),
-        status: newBal === 0 ? 'paid_off' : 'active',
-      })
-      .where(eq(debts.id, existing.debtId));
-
-    return new Response(JSON.stringify({ success: true, remainingBalance: newBal }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  } catch (err: any) {
     return new Response(JSON.stringify({ error: err.message }), { status: 500 });
   }
 };
@@ -193,38 +207,46 @@ export const DELETE: APIRoute = async (ctx) => {
       return new Response(JSON.stringify({ error: 'ID requerido' }), { status: 400 });
     }
 
-    const [existing] = await db
-      .select()
-      .from(payments)
-      .where(and(eq(payments.id, id), eq(payments.userId, user.id)));
+    // ─── Transacción atómica: revertir saldo + eliminar pago ───
+    await db.transaction(async (tx) => {
+      const [existing] = await tx
+        .select()
+        .from(payments)
+        .where(and(eq(payments.id, id), eq(payments.userId, user.id)));
 
-    if (!existing) {
-      return new Response(JSON.stringify({ error: 'Pago no encontrado' }), { status: 404 });
-    }
+      if (!existing) {
+        throw new Error('PAYMENT_NOT_FOUND');
+      }
 
-    // Revertir el abono en el saldo de la deuda antes de eliminar el registro
-    const [targetDebt] = await db
-      .select()
-      .from(debts)
-      .where(and(eq(debts.id, existing.debtId), eq(debts.userId, user.id)));
+      const [targetDebt] = await tx
+        .select()
+        .from(debts)
+        .where(and(eq(debts.id, existing.debtId), eq(debts.userId, user.id)));
 
-    if (targetDebt) {
-      const restored =
-        Math.round(
+      if (targetDebt) {
+        const restored = Math.round(
           (parseFloat(targetDebt.currentBalance as string) +
             parseFloat(existing.amount as string)) *
             100
         ) / 100;
-      await db
-        .update(debts)
-        .set({ currentBalance: restored.toString(), status: restored > 0 ? 'active' : 'paid_off' })
-        .where(eq(debts.id, existing.debtId));
-    }
 
-    await db.delete(payments).where(and(eq(payments.id, id), eq(payments.userId, user.id)));
+        await tx
+          .update(debts)
+          .set({
+            currentBalance: restored.toString(),
+            status: restored > 0 ? 'active' : 'paid_off',
+          })
+          .where(eq(debts.id, existing.debtId));
+      }
+
+      await tx.delete(payments).where(and(eq(payments.id, id), eq(payments.userId, user.id)));
+    });
 
     return new Response(JSON.stringify({ success: true }), { status: 200 });
   } catch (err: any) {
+    if (err.message === 'PAYMENT_NOT_FOUND') {
+      return new Response(JSON.stringify({ error: 'Pago no encontrado' }), { status: 404 });
+    }
     return new Response(JSON.stringify({ error: err.message }), { status: 500 });
   }
 };

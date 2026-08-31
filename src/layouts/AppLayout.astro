@@ -1,6 +1,7 @@
 ---
 import BaseLayout from './BaseLayout.astro';
 import Sidebar from '@/components/layout/Sidebar.astro';
+import NotificationCenter from '@/components/layout/NotificationCenter';
 
 interface Props {
   title: string;
@@ -49,6 +50,9 @@ const initial = currentUser?.name ? currentUser.name[0].toUpperCase() : 'D';
 
           <!-- User actions -->
           <div class="flex items-center gap-2">
+            <!-- Notification Center (Alerts, payment due reminders, leftover cash) -->
+            <NotificationCenter client:load />
+
             <!-- Theme toggle -->
             <button
               id="theme-toggle"

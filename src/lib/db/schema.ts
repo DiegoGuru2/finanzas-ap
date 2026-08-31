@@ -187,3 +187,27 @@ export const alerts = mysqlTable('alerts', {
   createdAt: timestamp('createdAt').notNull().defaultNow(),
   updatedAt: timestamp('updatedAt').notNull().defaultNow().onUpdateNow(),
 });
+
+// ═══════════════════════════════════════════
+// Savings Goals — Metas de Ahorro
+// ═══════════════════════════════════════════
+
+export const savingsGoals = mysqlTable('savings_goals', {
+  id: varchar('id', { length: 36 }).primaryKey(),
+  userId: varchar('userId', { length: 36 })
+    .notNull()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  name: varchar('name', { length: 255 }).notNull(),
+  targetAmount: decimal('targetAmount', { precision: 15, scale: 2 }).notNull(),
+  currentAmount: decimal('currentAmount', { precision: 15, scale: 2 }).notNull().default('0.00'),
+  monthlyContribution: decimal('monthlyContribution', { precision: 15, scale: 2 }).notNull().default('0.00'),
+  startDate: date('startDate').notNull(),
+  targetDate: date('targetDate'),
+  category: varchar('category', { length: 50 }).notNull().default('other'), // 'emergency', 'vacation', 'education', 'housing', 'vehicle', 'retirement', 'other'
+  icon: varchar('icon', { length: 10 }).default('🎯'),
+  priority: int('priority').default(1), // 1 = highest
+  status: varchar('status', { length: 50 }).notNull().default('active'), // 'active', 'completed', 'paused'
+  createdAt: timestamp('createdAt').notNull().defaultNow(),
+  updatedAt: timestamp('updatedAt').notNull().defaultNow().onUpdateNow(),
+});
+

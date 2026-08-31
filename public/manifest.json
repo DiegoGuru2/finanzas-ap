@@ -1,0 +1,27 @@
+{
+  "name": "ProyecAhorro — Gestión Financiera Personal",
+  "short_name": "ProyecAhorro",
+  "description": "Aplicación de gestión financiera personal con metas de ahorro, cronogramas de pago y proyecciones inteligentes.",
+  "start_url": "/app/dashboard",
+  "display": "standalone",
+  "background_color": "#0a0f1a",
+  "theme_color": "#6366f1",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/images/logo-icon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/images/logo-icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["finance", "productivity"],
+  "lang": "es",
+  "dir": "ltr"
+}
