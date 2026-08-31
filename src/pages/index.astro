@@ -39,10 +39,11 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         </div>
       </a>
 
-      <div class="flex items-center gap-1.5 sm:gap-3 shrink-0">
+      <div class="flex items-center gap-2 sm:gap-3 shrink-0">
+        <!-- Theme toggle -->
         <button
           id="theme-toggle-landing"
-          class="rounded-lg p-1.5 sm:p-2 text-text-secondary transition-colors hover:bg-surface-100 hover:text-text-primary cursor-pointer shrink-0"
+          class="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-xl border border-border-default bg-surface-50 text-text-secondary transition-all hover:bg-surface-100 hover:text-text-primary cursor-pointer shrink-0"
           title="Cambiar tema claro / oscuro"
           aria-label="Cambiar tema"
         >
@@ -53,15 +54,28 @@ import BaseLayout from '../layouts/BaseLayout.astro';
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
           </svg>
         </button>
-        <a
-          href="/login"
-          class="rounded-lg px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm font-semibold text-text-secondary transition-colors hover:text-text-primary hover:bg-surface-100/60 whitespace-nowrap shrink-0"
-        >
-          Iniciar sesión
-        </a>
+
+        <!-- Iniciar sesión con icono y tooltip en hover -->
+        <div class="relative group shrink-0">
+          <a
+            href="/login"
+            class="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-xl border border-border-default bg-surface-50 text-text-secondary transition-all hover:bg-surface-100 hover:text-brand-400 hover:border-brand-500/40 cursor-pointer shadow-xs"
+            aria-label="Iniciar sesión"
+            title="Iniciar sesión"
+          >
+            <svg class="h-4 w-4 sm:h-5 sm:w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
+          </a>
+          <div class="pointer-events-none absolute left-1/2 top-full mt-2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-surface-200 border border-border-default px-2.5 py-1 text-[11px] font-semibold text-text-primary opacity-0 shadow-lg transition-all duration-200 group-hover:opacity-100 group-hover:translate-y-0 translate-y-1 z-50">
+            Iniciar sesión
+          </div>
+        </div>
+
+        <!-- Empezar gratis button -->
         <a
           href="/register"
-          class="rounded-xl bg-brand-500 px-3 py-1.5 sm:px-5 sm:py-2.5 text-xs sm:text-sm font-semibold text-white shadow-md shadow-brand-500/25 transition-all hover:bg-brand-400 hover:shadow-brand-400/30 whitespace-nowrap shrink-0"
+          class="rounded-xl bg-brand-500 px-3.5 py-2 sm:px-5 sm:py-2.5 text-xs sm:text-sm font-semibold text-white shadow-md shadow-brand-500/25 transition-all hover:bg-brand-400 hover:shadow-brand-400/30 whitespace-nowrap shrink-0"
         >
           Empezar gratis
         </a>
@@ -471,9 +485,9 @@ import BaseLayout from '../layouts/BaseLayout.astro';
           <div>
             © 2026 <strong>ProyecAhorro</strong>. Todos los derechos reservados.
           </div>
-          <div className="flex items-center gap-1.5 font-medium">
+          <div class="flex items-center gap-1.5 text-xs text-text-muted font-medium">
             <span>Diseñado y desarrollado por</span>
-            <span class="rounded-lg bg-surface-100 border border-border-default px-2.5 py-1 text-text-primary font-bold shadow-2xs">
+            <span class="font-bold text-accent-400 hover:text-accent-300 transition-colors">
               DG design
             </span>
           </div>
