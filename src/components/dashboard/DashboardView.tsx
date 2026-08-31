@@ -141,7 +141,7 @@ export default function DashboardView() {
   const optimization = data?.optimization || {};
   const projection = data?.projection || {};
   const debts = data?.debts || [];
-  const userName = data?.user?.name || 'Diego Gurumendi';
+  const userName = data?.user?.name || 'Usuario';
 
   // Chart data format
   const chartData = projection.snapshots?.map((s: any) => ({

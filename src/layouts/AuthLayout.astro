@@ -29,19 +29,6 @@ const { title, description, maxWidth = 'max-w-md' } = Astro.props;
 
     <!-- Auth content -->
     <div class:list={['relative z-10 w-full', maxWidth]}>
-      <!-- Return to home button -->
-      <div class="mb-3">
-        <a
-          href="/"
-          class="inline-flex items-center gap-2 rounded-xl bg-surface-100/60 border border-border-default/80 px-3.5 py-1.5 text-xs font-semibold text-text-secondary hover:text-text-primary hover:bg-surface-100 hover:border-brand-500/30 transition-all group"
-        >
-          <svg class="h-3.5 w-3.5 transition-transform group-hover:-translate-x-0.5 text-text-muted group-hover:text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-          </svg>
-          <span>Volver a la página principal</span>
-        </a>
-      </div>
-
       <slot />
 
       <!-- Footer credit -->

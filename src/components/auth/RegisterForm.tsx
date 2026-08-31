@@ -70,7 +70,7 @@ export default function RegisterForm() {
             onChange={(e) => setName(e.target.value)}
             required
             autoComplete="name"
-            placeholder="Diego Gurumendi"
+            placeholder="Ej. Juan Pérez"
             className="w-full rounded-xl border border-border-default bg-surface-100 px-3.5 py-2.5 text-xs text-text-primary placeholder:text-text-muted transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
           />
         </div>
@@ -88,7 +88,7 @@ export default function RegisterForm() {
             onChange={(e) => setEmail(e.target.value)}
             required
             autoComplete="email"
-            placeholder="diego@finanzas.app"
+            placeholder="ejemplo@correo.com"
             className="w-full rounded-xl border border-border-default bg-surface-100 px-3.5 py-2.5 text-xs text-text-primary placeholder:text-text-muted transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
           />
         </div>
