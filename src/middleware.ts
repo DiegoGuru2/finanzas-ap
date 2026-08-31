@@ -36,14 +36,27 @@ export const onRequest = defineMiddleware(async (context, next) => {
   context.locals.user = session ? session.user : null;
   context.locals.session = session ? session.session : null;
 
-  // If user is logged in and visits login or register, redirect to dashboard
+  const currentUser = session?.user as any;
+  const isAdmin = currentUser?.role === 'admin';
+
+  // ─── Logged-in user visiting login / register / root ───
   if (session && (pathname === '/login' || pathname === '/register')) {
-    return context.redirect('/app/dashboard');
+    return context.redirect(isAdmin ? '/admin/dashboard' : '/app/dashboard');
   }
 
-  // If user is NOT logged in and visits a protected route (/app/*)
+  // ─── If user is NOT logged in and visits a protected route ───
   if (!isPublicRoute && !session) {
     return context.redirect('/login');
+  }
+
+  // ─── Admin role visiting personal /app/* routes -> redirect to /admin/dashboard ───
+  if (session && isAdmin && pathname.startsWith('/app')) {
+    return context.redirect('/admin/dashboard');
+  }
+
+  // ─── Standard user trying to visit /admin/* routes -> redirect to /app/dashboard ───
+  if (session && !isAdmin && pathname.startsWith('/admin')) {
+    return context.redirect('/app/dashboard');
   }
 
   // ─── Set security headers on response ───

@@ -1,0 +1,8 @@
+---
+import AdminLayout from '@/layouts/AdminLayout.astro';
+import AdminUsersManager from '@/components/admin/AdminUsersManager';
+---
+
+<AdminLayout title="Gestión de Usuarios y Roles">
+  <AdminUsersManager client:load />
+</AdminLayout>

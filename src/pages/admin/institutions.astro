@@ -1,0 +1,8 @@
+---
+import AdminLayout from '@/layouts/AdminLayout.astro';
+import AdminInstitutionsManager from '@/components/admin/AdminInstitutionsManager';
+---
+
+<AdminLayout title="Catálogo de Entidades Financieras">
+  <AdminInstitutionsManager client:load />
+</AdminLayout>
