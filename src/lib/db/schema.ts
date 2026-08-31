@@ -21,6 +21,7 @@ export const user = mysqlTable('user', {
   emailVerified: boolean('emailVerified').notNull().default(false),
   image: text('image'),
   role: varchar('role', { length: 50 }).default('user'),
+  birthDate: varchar('birthDate', { length: 20 }),
   createdAt: timestamp('createdAt').notNull().defaultNow(),
   updatedAt: timestamp('updatedAt').notNull().defaultNow().onUpdateNow(),
 });

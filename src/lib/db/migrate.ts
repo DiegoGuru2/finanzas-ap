@@ -5,13 +5,17 @@ import { sql } from 'drizzle-orm';
 async function migrateAll() {
   console.log('🚀 Configurando todas las tablas en la base de datos finanzas_ap...');
 
-  // 1. Ensure user columns
+  // 1. Ensure user columns (role, birthDate)
   try {
-    const userCols: any = await db.execute(sql`DESC \`user\``);
-    const hasRole = userCols.rows.some((r: any) => r.Field === 'role');
-    if (!hasRole) {
+    const [cols]: any = await db.execute(sql`DESC \`user\``);
+    const colNames = Array.isArray(cols) ? cols.map((r: any) => r.Field) : [];
+    if (!colNames.includes('role')) {
       await db.execute(sql`ALTER TABLE \`user\` ADD COLUMN \`role\` VARCHAR(50) DEFAULT 'user';`);
       console.log('✅ Added role column to user table');
+    }
+    if (!colNames.includes('birthDate')) {
+      await db.execute(sql`ALTER TABLE \`user\` ADD COLUMN \`birthDate\` VARCHAR(20);`);
+      console.log('✅ Added birthDate column to user table');
     }
   } catch (e: any) {
     console.error('User table check error:', e.message);

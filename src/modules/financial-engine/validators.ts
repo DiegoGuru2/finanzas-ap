@@ -220,6 +220,7 @@ export const registerSchema = z.object({
     .string()
     .email('Correo electrónico inválido')
     .max(255, 'El correo no puede exceder 255 caracteres'),
+  birthDate: z.string().optional(),
   password: z
     .string()
     .min(8, 'La contraseña debe tener al menos 8 caracteres')

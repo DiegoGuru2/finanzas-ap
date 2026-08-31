@@ -6,6 +6,7 @@ import PasswordInput from './PasswordInput';
 export default function RegisterForm() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [birthDate, setBirthDate] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -15,7 +16,7 @@ export default function RegisterForm() {
     e.preventDefault();
     setErrorMessage(null);
 
-    const validation = registerSchema.safeParse({ name, email, password, confirmPassword });
+    const validation = registerSchema.safeParse({ name, email, birthDate, password, confirmPassword });
     if (!validation.success) {
       setErrorMessage(validation.error.issues[0]?.message || 'Datos inválidos');
       return;
@@ -33,6 +34,17 @@ export default function RegisterForm() {
         setErrorMessage(res.error.message || 'Error al registrar usuario');
         setLoading(false);
         return;
+      }
+
+      // Enviar correo de bienvenida y registrar fecha de nacimiento
+      try {
+        await fetch('/api/auth/send-welcome', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, name, birthDate: birthDate || null }),
+        });
+      } catch (emailErr) {
+        console.error('No se pudo enviar el correo de bienvenida:', emailErr);
       }
 
       window.location.href = '/app/dashboard';
@@ -75,6 +87,20 @@ export default function RegisterForm() {
           autoComplete="email"
           placeholder="diego@finanzas.app"
           className="w-full rounded-xl border border-border-default bg-surface-100 px-4 py-3 text-sm text-text-primary placeholder:text-text-muted transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+        />
+      </div>
+
+      <div>
+        <label htmlFor="birthDate" className="mb-1.5 block text-sm font-medium text-text-secondary">
+          Fecha de nacimiento <span className="text-xs text-text-muted">(Opcional)</span>
+        </label>
+        <input
+          type="date"
+          id="birthDate"
+          name="birthDate"
+          value={birthDate}
+          onChange={(e) => setBirthDate(e.target.value)}
+          className="w-full rounded-xl border border-border-default bg-surface-100 px-4 py-3 text-sm text-text-primary transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
         />
       </div>
 

@@ -2,6 +2,7 @@ import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { db } from '../db';
 import * as schema from '../db/schema';
+import { sendPasswordResetEmail } from '../email';
 
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
@@ -19,35 +20,14 @@ export const auth = betterAuth({
     minPasswordLength: 8,
     resetPasswordTokenExpiresIn: 60 * 60, // 1 hora
     sendResetPassword: async ({ user, url }) => {
-      const apiKey = process.env.RESEND_API_KEY;
-      if (!apiKey) {
-        // Sin proveedor de correo configurado (ej. desarrollo local):
-        // el enlace se imprime en la consola del servidor.
-        console.log(`[FinanzasAP] Enlace de recuperación para ${user.email}: ${url}`);
-        return;
-      }
-
-      const res = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          from: process.env.EMAIL_FROM || 'FinanzasAP <onboarding@resend.dev>',
-          to: [user.email],
-          subject: 'Restablece tu contraseña de FinanzasAP',
-          html: `
-            <div style="font-family:sans-serif;max-width:480px;margin:0 auto">
-              <h2>Restablecer contraseña</h2>
-              <p>Hola ${user.name || ''}, recibimos una solicitud para restablecer tu contraseña.</p>
-              <p><a href="${url}" style="display:inline-block;background:#4f6ef7;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none">Crear nueva contraseña</a></p>
-              <p style="color:#666;font-size:13px">El enlace expira en 1 hora. Si no fuiste tú, ignora este correo: tu contraseña no cambia.</p>
-            </div>`,
-        }),
-      });
-      if (!res.ok) {
-        throw new Error(`No se pudo enviar el correo de recuperación (${res.status})`);
+      try {
+        await sendPasswordResetEmail({
+          to: user.email,
+          name: user.name,
+          resetUrl: url,
+        });
+      } catch (err: any) {
+        console.error('[ProyecAhorro] Error enviando correo de recuperación:', err.message || err);
       }
     },
   },
@@ -58,6 +38,11 @@ export const auth = betterAuth({
         required: false,
         defaultValue: 'user',
         input: false,
+      },
+      birthDate: {
+        type: 'string',
+        required: false,
+        input: true,
       },
     },
   },
