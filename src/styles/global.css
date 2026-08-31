@@ -200,6 +200,23 @@ input[type='number'] {
   border: 1px solid oklch(0.25 0.01 250 / 0.5);
 }
 
+/* ─── Tinte pastel por categoría (catálogos administrables) ───
+   El componente asigna el color con style="--cat-color: #hex" y esta clase
+   lo aplica con la intensidad adecuada para cada tema. */
+.cat-tint {
+  background: color-mix(in srgb, var(--cat-color, transparent) 13%, transparent);
+  border-color: color-mix(in srgb, var(--cat-color, currentColor) 38%, var(--color-border-default));
+}
+
+html[data-theme='light'] .cat-tint {
+  background: color-mix(in srgb, var(--cat-color, transparent) 26%, white);
+  border-color: color-mix(in srgb, var(--cat-color, currentColor) 55%, var(--color-border-default));
+}
+
+.cat-dot {
+  background: var(--cat-color, var(--color-surface-300));
+}
+
 /* Gradient text */
 .gradient-text {
   background: linear-gradient(135deg, var(--color-brand-400), var(--color-accent-400));

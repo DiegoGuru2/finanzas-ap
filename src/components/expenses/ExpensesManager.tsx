@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { formatCurrency } from '@/lib/utils';
-import { DEFAULT_CATALOGS, fetchCatalog, type CatalogOption } from '@/lib/catalogs';
+import { catalogTint, DEFAULT_CATALOGS, fetchCatalog, type CatalogOption } from '@/lib/catalogs';
 
 interface ExpenseItem {
   id: string;
@@ -221,9 +221,19 @@ export default function ExpensesManager() {
                 <div>
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
                     <span className="font-semibold text-text-primary">{exp.name}</span>
-                    <span className="text-xs bg-surface-200 px-2 py-0.5 rounded text-text-secondary">
-                      {categoryLabels[exp.category] || exp.category}
-                    </span>
+                    {(() => {
+                      const color = categories.find((c) => c.value === exp.category)?.color;
+                      return (
+                        <span
+                          className={`text-xs px-2 py-0.5 rounded text-text-secondary border ${
+                            color ? 'cat-tint' : 'bg-surface-200 border-transparent'
+                          }`}
+                          style={catalogTint(color)}
+                        >
+                          {categoryLabels[exp.category] || exp.category}
+                        </span>
+                      );
+                    })()}
                     {exp.isEssential ? (
                       <span className="text-xs bg-brand-500/10 text-brand-400 border border-brand-500/20 px-2 py-0.5 rounded font-medium">
                         Esencial

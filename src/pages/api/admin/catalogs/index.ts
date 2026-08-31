@@ -29,11 +29,15 @@ async function seedIfEmpty(catalog: CatalogKey) {
       value: opt.value,
       label: opt.label,
       icon: opt.icon ?? null,
+      color: opt.color ?? null,
       sortOrder: order++,
       isActive: true,
     });
   }
 }
+
+const isValidColor = (c: unknown) =>
+  c === null || c === '' || (typeof c === 'string' && /^#[0-9a-fA-F]{6}$/.test(c));
 
 export const GET: APIRoute = async (ctx) => {
   if (!isAdmin(ctx)) {
@@ -65,7 +69,11 @@ export const POST: APIRoute = async (ctx) => {
 
   try {
     const body = await ctx.request.json();
-    const { catalog, value, label, icon, sortOrder } = body;
+    const { catalog, value, label, icon, sortOrder, color } = body;
+
+    if (color !== undefined && !isValidColor(color)) {
+      return new Response(JSON.stringify({ error: 'Color inválido (formato #RRGGBB)' }), { status: 400 });
+    }
 
     if (!isValidCatalog(catalog)) {
       return new Response(JSON.stringify({ error: 'Catálogo inválido' }), { status: 400 });
@@ -96,6 +104,7 @@ export const POST: APIRoute = async (ctx) => {
       value,
       label,
       icon: icon || null,
+      color: color || null,
       sortOrder: Number.isFinite(Number(sortOrder)) ? Number(sortOrder) : 999,
       isActive: true,
     });
@@ -122,6 +131,12 @@ export const PUT: APIRoute = async (ctx) => {
     const updates: Record<string, unknown> = {};
     if (typeof body.label === 'string' && body.label && body.label.length <= 150) updates.label = body.label;
     if (body.icon !== undefined) updates.icon = body.icon || null;
+    if (body.color !== undefined) {
+      if (!isValidColor(body.color)) {
+        return new Response(JSON.stringify({ error: 'Color inválido (formato #RRGGBB)' }), { status: 400 });
+      }
+      updates.color = body.color || null;
+    }
     if (Number.isFinite(Number(body.sortOrder))) updates.sortOrder = Number(body.sortOrder);
     if (typeof body.isActive === 'boolean') updates.isActive = body.isActive;
 

@@ -38,6 +38,7 @@ export interface ScheduleRow {
   id: string;
   name: string;
   kind: 'debt' | 'expense';
+  category?: string; // Categoría del gasto (para colorear por catálogo en la UI)
   timing: PeriodTiming | 'ambas';
   monthlyAmount: number; // Compromiso mensual
   totalScheduled: number; // Suma en el horizonte
@@ -270,6 +271,7 @@ export function buildPaymentSchedule(input: ScheduleInput): PaymentScheduleResul
       id: expense.id,
       name: expense.name,
       kind: 'expense',
+      category: expense.category,
       timing,
       monthlyAmount: monthly,
       totalScheduled: round(totalScheduled),

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { formatCurrency } from '@/lib/utils';
+import { catalogTint, fetchCatalog, type CatalogOption } from '@/lib/catalogs';
 import ScheduleConfig from './ScheduleConfig';
 import { exportScheduleToExcel } from '@/lib/excel-export';
 
@@ -17,6 +18,7 @@ interface ScheduleRow {
   id: string;
   name: string;
   kind: 'debt' | 'expense';
+  category?: string;
   timing: string;
   monthlyAmount: number;
   totalScheduled: number;
@@ -80,6 +82,16 @@ const localIso = (d: Date) => {
 
 export default function PaymentsView() {
   const [schedule, setSchedule] = useState<ScheduleData | null>(null);
+  // Colores pastel por categoría de gasto (catálogo administrable)
+  const [expenseColors, setExpenseColors] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    fetchCatalog('expense_category').then((opts: CatalogOption[]) => {
+      const map: Record<string, string> = {};
+      for (const o of opts) if (o.color) map[o.value] = o.color;
+      setExpenseColors(map);
+    });
+  }, []);
   const [paid, setPaid] = useState<Record<string, Record<string, number>>>({});
   const [history, setHistory] = useState<PaymentRecord[]>([]);
   const [months, setMonths] = useState(6);
@@ -784,19 +796,26 @@ export default function PaymentsView() {
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                           {activeExpensesInPeriod.map((exp) => {
                             const amount = exp.cells[p.key] || 0;
+                            const color = exp.category ? expenseColors[exp.category] : undefined;
                             return (
                               <div
                                 key={exp.id}
-                                className="flex items-center justify-between rounded-xl border border-border-default/60 bg-surface-100/40 p-3"
+                                className={`flex items-center justify-between rounded-xl border p-3 ${
+                                  color ? 'cat-tint' : 'border-border-default/60 bg-surface-100/40'
+                                }`}
+                                style={catalogTint(color)}
                               >
-                                <div className="min-w-0 pr-2">
-                                  <div className="font-medium text-xs sm:text-sm text-text-primary truncate">{exp.name}</div>
-                                  <div className="text-[10px] text-text-muted">
-                                    {exp.timing === 'quincena'
-                                      ? 'Solo el 15'
-                                      : exp.timing === 'fin_de_mes'
-                                        ? 'Solo fin de mes'
-                                        : 'Repartido'}
+                                <div className="min-w-0 pr-2 flex items-center gap-2">
+                                  {color && <span className="cat-dot h-2.5 w-2.5 rounded-full shrink-0" />}
+                                  <div className="min-w-0">
+                                    <div className="font-medium text-xs sm:text-sm text-text-primary truncate">{exp.name}</div>
+                                    <div className="text-[10px] text-text-muted">
+                                      {exp.timing === 'quincena'
+                                        ? 'Solo el 15'
+                                        : exp.timing === 'fin_de_mes'
+                                          ? 'Solo fin de mes'
+                                          : 'Repartido'}
+                                    </div>
                                   </div>
                                 </div>
                                 <span className="font-semibold text-xs sm:text-sm text-text-secondary shrink-0">
@@ -1032,8 +1051,14 @@ export default function PaymentsView() {
                 {expenseRows.map((row) => (
                   <tr key={row.id} className="border-b border-border-default/50 hover:bg-surface-100/50 transition-colors">
                     <td className="sticky left-0 z-20 bg-surface-50 px-3 sm:px-4 py-2 min-w-[125px] sm:min-w-[170px] max-w-[145px] sm:max-w-[210px] border-r border-border-default shadow-[3px_0_10px_-2px_rgba(0,0,0,0.4)]">
-                      <div className="font-semibold text-text-primary text-xs sm:text-sm truncate" title={row.name}>
-                        {row.name}
+                      <div className="flex items-center gap-1.5 font-semibold text-text-primary text-xs sm:text-sm" title={row.name}>
+                        {row.category && expenseColors[row.category] && (
+                          <span
+                            className="cat-dot h-2 w-2 rounded-full shrink-0"
+                            style={catalogTint(expenseColors[row.category])}
+                          />
+                        )}
+                        <span className="truncate">{row.name}</span>
                       </div>
                       <div className="text-[10px] text-text-muted truncate">
                         {formatCurrency(row.monthlyAmount)}/mes

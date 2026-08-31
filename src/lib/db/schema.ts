@@ -227,6 +227,7 @@ export const catalogOptions = mysqlTable('catalog_options', {
   value: varchar('value', { length: 100 }).notNull(), // clave estable guardada en los registros
   label: varchar('label', { length: 150 }).notNull(), // texto visible en la app
   icon: varchar('icon', { length: 10 }), // emoji opcional
+  color: varchar('color', { length: 20 }), // color pastel (hex) para las tarjetas
   sortOrder: int('sortOrder').default(0),
   isActive: boolean('isActive').default(true),
   createdAt: timestamp('createdAt').notNull().defaultNow(),

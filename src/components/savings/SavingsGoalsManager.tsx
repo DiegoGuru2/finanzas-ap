@@ -2,14 +2,14 @@ import { useState, useEffect, useCallback } from 'react';
 import { formatCurrency } from '@/lib/utils';
 import { calculateMonthlyNeeded, calculateCompletionDate } from '@/modules/financial-engine/savings';
 import { normalizeToMonthly } from '@/modules/financial-engine/cashflow';
-import { DEFAULT_CATALOGS, fetchCatalog, type CatalogOption } from '@/lib/catalogs';
+import { catalogTint, DEFAULT_CATALOGS, fetchCatalog, type CatalogOption } from '@/lib/catalogs';
 
 // ─── Category config ───
 // Las categorías vienen del catálogo administrable (/admin/catalogs);
 // estos colores se asignan cíclicamente a las opciones.
 const COLOR_CYCLE = ['text-danger-400', 'text-brand-400', 'text-accent-400', 'text-warning-400', 'text-text-secondary'];
 
-type CategoryMap = Record<string, { label: string; icon: string; color: string }>;
+type CategoryMap = Record<string, { label: string; icon: string; color: string; hex: string | null }>;
 
 const buildCategoryMap = (options: CatalogOption[]): CategoryMap => {
   const map: CategoryMap = {};
@@ -18,9 +18,10 @@ const buildCategoryMap = (options: CatalogOption[]): CategoryMap => {
       label: opt.label,
       icon: opt.icon || '🎯',
       color: COLOR_CYCLE[i % COLOR_CYCLE.length],
+      hex: opt.color || null,
     };
   });
-  if (!map.other) map.other = { label: 'Otro', icon: '🎯', color: 'text-text-secondary' };
+  if (!map.other) map.other = { label: 'Otro', icon: '🎯', color: 'text-text-secondary', hex: null };
   return map;
 };
 
@@ -385,7 +386,12 @@ export default function SavingsGoalsManager() {
               <div className="p-4 sm:p-5">
                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                   <div className="flex items-start gap-3">
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-accent-500/15 text-xl">
+                    <div
+                      className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-xl border ${
+                        cat.hex ? 'cat-tint' : 'bg-accent-500/15 border-transparent'
+                      }`}
+                      style={catalogTint(cat.hex)}
+                    >
                       {cat.icon}
                     </div>
                     <div>
@@ -591,9 +597,12 @@ export default function SavingsGoalsManager() {
                       onClick={() => { setCategory(key); setIcon(val.icon); }}
                       className={`flex flex-col items-center gap-0.5 rounded-xl p-2 text-center transition-all cursor-pointer ${
                         category === key
-                          ? 'bg-accent-500/15 border-2 border-accent-500/50 shadow-sm'
+                          ? val.hex
+                            ? 'cat-tint border-2 shadow-sm'
+                            : 'bg-accent-500/15 border-2 border-accent-500/50 shadow-sm'
                           : 'bg-surface-100 border border-border-default hover:bg-surface-200'
                       }`}
+                      style={category === key ? catalogTint(val.hex) : undefined}
                     >
                       <span className="text-lg">{val.icon}</span>
                       <span className="text-[9px] font-medium text-text-secondary leading-tight">{val.label}</span>

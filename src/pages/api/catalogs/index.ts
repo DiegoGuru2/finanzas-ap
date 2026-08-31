@@ -28,15 +28,16 @@ export const GET: APIRoute = async (ctx) => {
       .from(catalogOptions)
       .orderBy(asc(catalogOptions.sortOrder), asc(catalogOptions.label));
 
-    const data: Record<string, { value: string; label: string; icon: string | null }[]> = {};
+    const data: Record<string, { value: string; label: string; icon: string | null; color: string | null }[]> = {};
     for (const key of keys) {
       const options = rows
         .filter((r) => r.catalog === key && r.isActive !== false)
-        .map((r) => ({ value: r.value, label: r.label, icon: r.icon }));
+        .map((r) => ({ value: r.value, label: r.label, icon: r.icon, color: r.color }));
       data[key] = options.length > 0 ? options : DEFAULT_CATALOGS[key].map((o) => ({
         value: o.value,
         label: o.label,
         icon: o.icon ?? null,
+        color: o.color ?? null,
       }));
     }
 

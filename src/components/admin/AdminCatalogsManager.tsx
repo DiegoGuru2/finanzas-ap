@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { CATALOG_KEYS, CATALOG_META, type CatalogKey } from '@/lib/catalogs';
+import { CATALOG_KEYS, CATALOG_META, PASTEL_PALETTE, type CatalogKey } from '@/lib/catalogs';
 
 interface CatalogRow {
   id: string;
@@ -7,6 +7,7 @@ interface CatalogRow {
   value: string;
   label: string;
   icon: string | null;
+  color: string | null;
   sortOrder: number;
   isActive: boolean;
 }
@@ -23,6 +24,7 @@ export default function AdminCatalogsManager() {
   const [formValue, setFormValue] = useState('');
   const [formLabel, setFormLabel] = useState('');
   const [formIcon, setFormIcon] = useState('');
+  const [formColor, setFormColor] = useState('');
   const [formOrder, setFormOrder] = useState('0');
   const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -51,6 +53,7 @@ export default function AdminCatalogsManager() {
     setFormValue('');
     setFormLabel('');
     setFormIcon('');
+    setFormColor(PASTEL_PALETTE[tabRows.length % PASTEL_PALETTE.length].hex);
     setFormOrder(String(tabRows.length));
     setFormError(null);
     setShowModal(true);
@@ -61,6 +64,7 @@ export default function AdminCatalogsManager() {
     setFormValue(r.value);
     setFormLabel(r.label);
     setFormIcon(r.icon || '');
+    setFormColor(r.color || '');
     setFormOrder(String(r.sortOrder ?? 0));
     setFormError(null);
     setShowModal(true);
@@ -77,8 +81,8 @@ export default function AdminCatalogsManager() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(
           isEdit
-            ? { label: formLabel, icon: formIcon, sortOrder: Number(formOrder) }
-            : { catalog: activeTab, value: formValue.trim(), label: formLabel, icon: formIcon, sortOrder: Number(formOrder) }
+            ? { label: formLabel, icon: formIcon, color: formColor || null, sortOrder: Number(formOrder) }
+            : { catalog: activeTab, value: formValue.trim(), label: formLabel, icon: formIcon, color: formColor || null, sortOrder: Number(formOrder) }
         ),
       });
       const json = await res.json();
@@ -176,8 +180,13 @@ export default function AdminCatalogsManager() {
               {tabRows.map((r) => (
                 <tr key={r.id} className={`border-b border-border-default/50 ${!r.isActive ? 'opacity-50' : ''}`}>
                   <td className="px-5 py-2.5">
-                    <span className="text-base mr-2">{r.icon || '·'}</span>
-                    <span className="font-semibold text-text-primary">{r.label}</span>
+                    <span
+                      className="inline-block h-3 w-3 rounded-full mr-2 align-middle border border-black/10"
+                      style={{ background: r.color || 'transparent' }}
+                      title={r.color || 'Sin color'}
+                    />
+                    <span className="text-base mr-2 align-middle">{r.icon || '·'}</span>
+                    <span className="font-semibold text-text-primary align-middle">{r.label}</span>
                   </td>
                   <td className="px-3 py-2.5 font-mono text-[11px] text-text-muted">{r.value}</td>
                   <td className="px-3 py-2.5 text-center text-text-secondary">{r.sortOrder}</td>
@@ -286,8 +295,39 @@ export default function AdminCatalogsManager() {
                 </div>
               </div>
 
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-text-secondary">Color pastel</label>
+                <div className="flex flex-wrap items-center gap-2">
+                  {PASTEL_PALETTE.map((p) => (
+                    <button
+                      key={p.hex}
+                      type="button"
+                      onClick={() => setFormColor(p.hex)}
+                      title={p.name}
+                      className={`h-7 w-7 rounded-full border-2 transition-all cursor-pointer ${
+                        formColor === p.hex
+                          ? 'border-brand-500 scale-110 shadow-md'
+                          : 'border-transparent hover:scale-105'
+                      }`}
+                      style={{ background: p.hex }}
+                    />
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => setFormColor('')}
+                    title="Sin color"
+                    className={`h-7 w-7 rounded-full border-2 text-[10px] text-text-muted bg-surface-100 cursor-pointer ${
+                      formColor === '' ? 'border-brand-500 scale-110' : 'border-border-default hover:scale-105'
+                    }`}
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+
               <p className="text-[10px] text-text-muted">
                 La clave interna es la que se guarda en los registros de los usuarios — no cambia al editar la etiqueta.
+                El color pinta las tarjetas de esa categoría en toda la app.
               </p>
 
               <div className="flex gap-3 pt-1">

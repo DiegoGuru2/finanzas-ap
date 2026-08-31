@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { formatCurrency } from '@/lib/utils';
+import { catalogTint, fetchCatalog, type CatalogOption } from '@/lib/catalogs';
 
 interface DebtRow {
   id: string;
@@ -48,6 +49,11 @@ export default function ScheduleConfig({ onClose, onSaved }: Props) {
   const [savingId, setSavingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
+  const [expenseCatalog, setExpenseCatalog] = useState<CatalogOption[]>([]);
+
+  useEffect(() => {
+    fetchCatalog('expense_category').then(setExpenseCatalog);
+  }, []);
 
   useEffect(() => {
     const load = async () => {
@@ -274,15 +280,23 @@ export default function ScheduleConfig({ onClose, onSaved }: Props) {
                   {expenses.length === 0 && (
                     <p className="text-xs text-text-muted py-2">No tienes gastos recurrentes registrados.</p>
                   )}
-                  {expenses.map((e) => (
+                  {expenses.map((e) => {
+                    const catOpt = expenseCatalog.find((c) => c.value === e.category);
+                    return (
                     <div
                       key={e.id}
-                      className="rounded-xl border border-border-default bg-surface-100/50 p-3.5 space-y-3"
+                      className={`rounded-xl border p-3.5 space-y-3 ${
+                        catOpt?.color ? 'cat-tint' : 'border-border-default bg-surface-100/50'
+                      }`}
+                      style={catalogTint(catOpt?.color)}
                     >
                       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
-                        <div className="font-medium text-sm text-text-primary">{e.name}</div>
+                        <div className="flex items-center gap-2 font-medium text-sm text-text-primary">
+                          {catOpt?.color && <span className="cat-dot h-2.5 w-2.5 rounded-full shrink-0" />}
+                          {e.name}
+                        </div>
                         <div className="text-xs text-text-muted">
-                          Categoría: <span className="text-text-secondary">{e.category}</span>
+                          Categoría: <span className="text-text-secondary">{catOpt ? `${catOpt.icon ? catOpt.icon + ' ' : ''}${catOpt.label}` : e.category}</span>
                         </div>
                       </div>
 
@@ -343,7 +357,8 @@ export default function ScheduleConfig({ onClose, onSaved }: Props) {
                         </div>
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </>
