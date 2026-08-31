@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { db } from '@/lib/db';
-import { expenses } from '@/lib/db/schema';
+import { expenses, savingsGoals } from '@/lib/db/schema';
 import { eq, and, desc } from 'drizzle-orm';
 import { expenseSchema } from '@/modules/financial-engine/validators';
 import { generateId } from '@/lib/utils';
@@ -156,6 +156,12 @@ export const DELETE: APIRoute = async (ctx) => {
     if (!id) {
       return new Response(JSON.stringify({ error: 'ID requerido' }), { status: 400 });
     }
+
+    // Desvincular las metas de ahorro que se alimentaban de este gasto
+    await db
+      .update(savingsGoals)
+      .set({ linkedExpenseId: null, linkedSince: null })
+      .where(and(eq(savingsGoals.linkedExpenseId, id), eq(savingsGoals.userId, user.id)));
 
     await db
       .delete(expenses)

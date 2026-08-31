@@ -1,10 +1,22 @@
 import type { APIRoute } from 'astro';
 import { db } from '@/lib/db';
-import { savingsGoals } from '@/lib/db/schema';
+import { savingsGoals, expenses } from '@/lib/db/schema';
 import { eq, and, desc } from 'drizzle-orm';
 import { savingsGoalSchema } from '@/modules/financial-engine/validators';
-import { projectSavingsGoal, type SavingsGoal } from '@/modules/financial-engine/savings';
+import {
+  calculateLinkedAccrual,
+  projectSavingsGoal,
+  type SavingsGoal,
+} from '@/modules/financial-engine/savings';
+import { normalizeToMonthly } from '@/modules/financial-engine/cashflow';
 import { generateId } from '@/lib/utils';
+
+const toIso = (v: unknown): string | null => {
+  if (!v) return null;
+  const d = new Date(v as any);
+  if (Number.isNaN(d.getTime())) return null;
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
 
 const toGoal = (row: typeof savingsGoals.$inferSelect): SavingsGoal => ({
   id: row.id,
@@ -17,6 +29,8 @@ const toGoal = (row: typeof savingsGoals.$inferSelect): SavingsGoal => ({
   category: row.category,
   icon: row.icon || '🎯',
   status: row.status,
+  linkedExpenseId: row.linkedExpenseId || null,
+  linkedSince: toIso(row.linkedSince),
 });
 
 export const GET: APIRoute = async (ctx) => {
@@ -26,16 +40,65 @@ export const GET: APIRoute = async (ctx) => {
   }
 
   try {
-    const rows = await db
-      .select()
-      .from(savingsGoals)
-      .where(eq(savingsGoals.userId, user.id))
-      .orderBy(desc(savingsGoals.createdAt));
+    const [rows, userExpenses] = await Promise.all([
+      db
+        .select()
+        .from(savingsGoals)
+        .where(eq(savingsGoals.userId, user.id))
+        .orderBy(desc(savingsGoals.createdAt)),
+      db.select().from(expenses).where(eq(expenses.userId, user.id)),
+    ]);
 
     const enriched = rows.map((row) => {
       const goal = toGoal(row);
+
+      // ─── Meta vinculada a un gasto: acumula sola con el tiempo ───
+      // El "Ya ahorrado" manual queda como base; cada mes cumplido desde
+      // linkedSince suma el monto mensual del gasto vinculado.
+      const linkedExpense = goal.linkedExpenseId
+        ? userExpenses.find((e) => e.id === goal.linkedExpenseId)
+        : null;
+
+      if (linkedExpense) {
+        const monthlyAmount = normalizeToMonthly(
+          parseFloat(linkedExpense.amount as string),
+          (linkedExpense.frequency as any) || 'monthly'
+        );
+        const since = goal.linkedSince || goal.startDate;
+        const accrual = calculateLinkedAccrual(since, monthlyAmount);
+
+        const baseAmount = goal.currentAmount;
+        const effectiveAmount = Math.min(
+          goal.targetAmount,
+          Math.round((baseAmount + accrual.accrued) * 100) / 100
+        );
+
+        const effectiveGoal: SavingsGoal = {
+          ...goal,
+          currentAmount: effectiveAmount,
+          monthlyContribution: accrual.monthlyAmount,
+        };
+        const projection = projectSavingsGoal(effectiveGoal);
+
+        return {
+          ...effectiveGoal,
+          // La meta se muestra completada cuando el acumulado la alcanza
+          status: goal.status === 'active' && effectiveAmount >= goal.targetAmount ? 'completed' : goal.status,
+          baseAmount,
+          linked: {
+            expenseId: linkedExpense.id,
+            expenseName: linkedExpense.name,
+            monthlyAmount: accrual.monthlyAmount,
+            monthsElapsed: accrual.monthsElapsed,
+            accrued: accrual.accrued,
+            since,
+          },
+          projection,
+        };
+      }
+
       const projection = projectSavingsGoal(goal);
-      return { ...goal, projection };
+      return { ...goal, baseAmount: goal.currentAmount, linked: null, projection };
     });
 
     // Aggregates
@@ -86,6 +149,19 @@ export const POST: APIRoute = async (ctx) => {
     const data = parsed.data;
     const newId = generateId();
 
+    // El gasto vinculado debe existir y ser del usuario
+    let linkedExpenseId: string | null = null;
+    if (data.linkedExpenseId) {
+      const [exp] = await db
+        .select({ id: expenses.id })
+        .from(expenses)
+        .where(and(eq(expenses.id, data.linkedExpenseId), eq(expenses.userId, user.id)));
+      if (!exp) {
+        return new Response(JSON.stringify({ error: 'El gasto vinculado no existe' }), { status: 400 });
+      }
+      linkedExpenseId = exp.id;
+    }
+
     await db.insert(savingsGoals).values({
       id: newId,
       userId: user.id,
@@ -99,6 +175,10 @@ export const POST: APIRoute = async (ctx) => {
       icon: data.icon,
       priority: data.priority,
       status: data.status,
+      linkedExpenseId,
+      linkedSince: linkedExpenseId
+        ? (new Date(data.linkedSince || new Date().toISOString().slice(0, 10)) as any)
+        : null,
     });
 
     return new Response(
@@ -143,8 +223,23 @@ export const PUT: APIRoute = async (ctx) => {
 
     const data = parsed.data;
 
-    // Auto-complete if currentAmount >= targetAmount
-    const autoStatus = data.currentAmount >= data.targetAmount ? 'completed' : data.status;
+    // El gasto vinculado debe existir y ser del usuario
+    let linkedExpenseId: string | null = null;
+    if (data.linkedExpenseId) {
+      const [exp] = await db
+        .select({ id: expenses.id })
+        .from(expenses)
+        .where(and(eq(expenses.id, data.linkedExpenseId), eq(expenses.userId, user.id)));
+      if (!exp) {
+        return new Response(JSON.stringify({ error: 'El gasto vinculado no existe' }), { status: 400 });
+      }
+      linkedExpenseId = exp.id;
+    }
+
+    // Auto-complete if currentAmount >= targetAmount (sin vínculo; con vínculo
+    // el estado efectivo se calcula al leer, incluyendo lo acumulado)
+    const autoStatus =
+      !linkedExpenseId && data.currentAmount >= data.targetAmount ? 'completed' : data.status;
 
     await db
       .update(savingsGoals)
@@ -159,6 +254,10 @@ export const PUT: APIRoute = async (ctx) => {
         icon: data.icon,
         priority: data.priority,
         status: autoStatus,
+        linkedExpenseId,
+        linkedSince: linkedExpenseId
+          ? (new Date(data.linkedSince || new Date().toISOString().slice(0, 10)) as any)
+          : null,
       })
       .where(and(eq(savingsGoals.id, id), eq(savingsGoals.userId, user.id)));
 

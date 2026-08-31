@@ -1,0 +1,8 @@
+---
+import AdminLayout from '@/layouts/AdminLayout.astro';
+import AdminCatalogsManager from '@/components/admin/AdminCatalogsManager';
+---
+
+<AdminLayout title="Catálogos de la Aplicación">
+  <AdminCatalogsManager client:load />
+</AdminLayout>

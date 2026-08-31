@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { formatCurrency } from '@/lib/utils';
+import { DEFAULT_CATALOGS, fetchCatalog, type CatalogOption } from '@/lib/catalogs';
 
 interface DebtItem {
   id: string;
@@ -20,6 +21,12 @@ interface DebtItem {
 export default function DebtsManager() {
   const [debts, setDebts] = useState<DebtItem[]>([]);
   const [loading, setLoading] = useState(true);
+  // Tipos de deuda administrables desde el panel de admin
+  const [debtTypes, setDebtTypes] = useState<CatalogOption[]>(DEFAULT_CATALOGS.debt_type);
+
+  useEffect(() => {
+    fetchCatalog('debt_type').then(setDebtTypes);
+  }, []);
   const [showModal, setShowModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedDebt, setSelectedDebt] = useState<DebtItem | null>(null);
@@ -434,12 +441,11 @@ export default function DebtsManager() {
                     onChange={(e) => setType(e.target.value)}
                     className="w-full rounded-xl border border-border-default bg-surface-100 px-3 py-2 text-xs text-text-primary focus:border-brand-500 focus:outline-none"
                   >
-                    <option value="credit_card">Tarjeta de Crédito</option>
-                    <option value="biess_quirografario">BIESS Quirografario</option>
-                    <option value="biess_hipotecario">BIESS Hipotecario</option>
-                    <option value="personal_loan">Préstamo Personal / Bancario</option>
-                    <option value="auto_loan">Crédito Automotriz</option>
-                    <option value="other">Otro</option>
+                    {debtTypes.map((t) => (
+                      <option key={t.value} value={t.value}>
+                        {t.icon ? `${t.icon} ` : ''}{t.label}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>

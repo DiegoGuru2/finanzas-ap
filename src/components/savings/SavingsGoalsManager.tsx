@@ -1,31 +1,60 @@
 import { useState, useEffect, useCallback } from 'react';
 import { formatCurrency } from '@/lib/utils';
 import { calculateMonthlyNeeded, calculateCompletionDate } from '@/modules/financial-engine/savings';
+import { normalizeToMonthly } from '@/modules/financial-engine/cashflow';
+import { DEFAULT_CATALOGS, fetchCatalog, type CatalogOption } from '@/lib/catalogs';
 
 // ─── Category config ───
-const CATEGORIES: Record<string, { label: string; icon: string; color: string }> = {
-  emergency: { label: 'Fondo de Emergencia', icon: '🛡️', color: 'text-danger-400' },
-  vacation: { label: 'Vacaciones', icon: '✈️', color: 'text-brand-400' },
-  education: { label: 'Educación', icon: '🎓', color: 'text-accent-400' },
-  housing: { label: 'Vivienda', icon: '🏠', color: 'text-warning-400' },
-  vehicle: { label: 'Vehículo', icon: '🚗', color: 'text-brand-400' },
-  retirement: { label: 'Jubilación', icon: '🏖️', color: 'text-accent-400' },
-  other: { label: 'Otro', icon: '🎯', color: 'text-text-secondary' },
+// Las categorías vienen del catálogo administrable (/admin/catalogs);
+// estos colores se asignan cíclicamente a las opciones.
+const COLOR_CYCLE = ['text-danger-400', 'text-brand-400', 'text-accent-400', 'text-warning-400', 'text-text-secondary'];
+
+type CategoryMap = Record<string, { label: string; icon: string; color: string }>;
+
+const buildCategoryMap = (options: CatalogOption[]): CategoryMap => {
+  const map: CategoryMap = {};
+  options.forEach((opt, i) => {
+    map[opt.value] = {
+      label: opt.label,
+      icon: opt.icon || '🎯',
+      color: COLOR_CYCLE[i % COLOR_CYCLE.length],
+    };
+  });
+  if (!map.other) map.other = { label: 'Otro', icon: '🎯', color: 'text-text-secondary' };
+  return map;
 };
 
 const MONTH_SHORT = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+
+interface ExpenseOption {
+  id: string;
+  name: string;
+  amount: number;
+  frequency: string;
+}
 
 interface GoalData {
   id: string;
   name: string;
   targetAmount: number;
-  currentAmount: number;
+  currentAmount: number; // efectivo (base + acumulado automático si hay vínculo)
+  baseAmount: number; // lo depositado/registrado manualmente
   monthlyContribution: number;
   startDate: string;
   targetDate: string | null;
   category: string;
   icon: string;
   status: string;
+  linkedExpenseId?: string | null;
+  linkedSince?: string | null;
+  linked: {
+    expenseId: string;
+    expenseName: string;
+    monthlyAmount: number;
+    monthsElapsed: number;
+    accrued: number;
+    since: string;
+  } | null;
   projection: {
     snapshots: { month: number; date: string; accumulated: number; percentComplete: number; remaining: number }[];
     estimatedCompletionDate: string | null;
@@ -52,6 +81,10 @@ export default function SavingsGoalsManager() {
   const [summary, setSummary] = useState<Summary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [CATEGORIES, setCategories] = useState<CategoryMap>(() =>
+    buildCategoryMap(DEFAULT_CATALOGS.savings_category)
+  );
+  const [expensesList, setExpensesList] = useState<ExpenseOption[]>([]);
 
   // Modal state
   const [showModal, setShowModal] = useState(false);
@@ -68,6 +101,8 @@ export default function SavingsGoalsManager() {
   const [targetDate, setTargetDate] = useState('');
   const [category, setCategory] = useState('other');
   const [icon, setIcon] = useState('🎯');
+  const [linkedExpenseId, setLinkedExpenseId] = useState('');
+  const [linkedSince, setLinkedSince] = useState(new Date().toISOString().slice(0, 10));
 
   // Projection detail
   const [expandedGoalId, setExpandedGoalId] = useState<string | null>(null);
@@ -92,6 +127,28 @@ export default function SavingsGoalsManager() {
 
   useEffect(() => { fetchGoals(); }, [fetchGoals]);
 
+  // Catálogo de categorías (administrable) + gastos para vincular
+  useEffect(() => {
+    fetchCatalog('savings_category').then((opts) => setCategories(buildCategoryMap(opts)));
+    fetch('/api/expenses')
+      .then((r) => r.json())
+      .then((json) => {
+        const list = (json.data || []).map((e: any) => ({
+          id: e.id,
+          name: e.name,
+          amount: Number(e.amount) || 0,
+          frequency: e.frequency || 'monthly',
+        }));
+        setExpensesList(list);
+      })
+      .catch(() => {});
+  }, []);
+
+  const linkedExpense = expensesList.find((e) => e.id === linkedExpenseId) || null;
+  const linkedMonthly = linkedExpense
+    ? Math.round(normalizeToMonthly(linkedExpense.amount, linkedExpense.frequency as any) * 100) / 100
+    : 0;
+
   const resetForm = () => {
     setName('');
     setTargetAmount('');
@@ -101,6 +158,8 @@ export default function SavingsGoalsManager() {
     setTargetDate('');
     setCategory('other');
     setIcon('🎯');
+    setLinkedExpenseId('');
+    setLinkedSince(new Date().toISOString().slice(0, 10));
     setEditingId(null);
     setFormError(null);
   };
@@ -111,12 +170,15 @@ export default function SavingsGoalsManager() {
     setEditingId(g.id);
     setName(g.name);
     setTargetAmount(String(g.targetAmount));
-    setCurrentAmount(String(g.currentAmount));
+    // Se edita la base manual; el acumulado automático del vínculo se recalcula solo
+    setCurrentAmount(String(g.baseAmount ?? g.currentAmount));
     setMonthlyContribution(String(g.monthlyContribution));
     setStartDate(g.startDate);
     setTargetDate(g.targetDate || '');
     setCategory(g.category);
     setIcon(g.icon);
+    setLinkedExpenseId(g.linked?.expenseId || '');
+    setLinkedSince(g.linked?.since || new Date().toISOString().slice(0, 10));
     setFormError(null);
     setShowModal(true);
   };
@@ -131,11 +193,14 @@ export default function SavingsGoalsManager() {
         name,
         targetAmount: Number(targetAmount),
         currentAmount: Number(currentAmount) || 0,
-        monthlyContribution: Number(monthlyContribution) || 0,
+        // Con gasto vinculado, el aporte mensual es el monto del gasto
+        monthlyContribution: linkedExpenseId ? linkedMonthly : Number(monthlyContribution) || 0,
         startDate,
         targetDate: targetDate || null,
         category,
         icon: CATEGORIES[category]?.icon || icon,
+        linkedExpenseId: linkedExpenseId || null,
+        linkedSince: linkedExpenseId ? linkedSince : null,
       };
 
       const isEditing = !!editingId;
@@ -180,7 +245,9 @@ export default function SavingsGoalsManager() {
     if (!amount || amount <= 0) return;
 
     try {
-      const newCurrent = Math.round((goal.currentAmount + amount) * 100) / 100;
+      // El depósito manual suma a la BASE (el acumulado automático del
+      // vínculo se calcula aparte y no debe duplicarse aquí)
+      const newCurrent = Math.round(((goal.baseAmount ?? goal.currentAmount) + amount) * 100) / 100;
       const res = await fetch('/api/savings', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -194,6 +261,8 @@ export default function SavingsGoalsManager() {
           targetDate: goal.targetDate,
           category: goal.category,
           icon: goal.icon,
+          linkedExpenseId: goal.linked?.expenseId || null,
+          linkedSince: goal.linked?.since || null,
         }),
       });
 
@@ -325,6 +394,14 @@ export default function SavingsGoalsManager() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
+                    {goal.linked && (
+                      <span
+                        className="rounded-full bg-brand-500/15 px-2.5 py-0.5 text-[10px] font-bold text-brand-400"
+                        title={`Acumula ${formatCurrency(goal.linked.monthlyAmount)} cada mes desde ${goal.linked.since}`}
+                      >
+                        🔗 {goal.linked.expenseName}
+                      </span>
+                    )}
                     {proj.isOnTrack ? (
                       <span className="rounded-full bg-accent-500/15 px-2.5 py-0.5 text-[10px] font-bold text-accent-400">✓ En camino</span>
                     ) : (
@@ -359,6 +436,13 @@ export default function SavingsGoalsManager() {
                       style={{ width: `${Math.min(100, proj.percentComplete)}%` }}
                     />
                   </div>
+                  {goal.linked && (
+                    <p className="mt-1.5 text-[10px] text-text-muted">
+                      🔗 Base {formatCurrency(goal.baseAmount)} +{' '}
+                      <strong className="text-accent-400">{formatCurrency(goal.linked.accrued)} acumulados automáticamente</strong>
+                      {' '}({goal.linked.monthsElapsed} {goal.linked.monthsElapsed === 1 ? 'mes' : 'meses'} × {formatCurrency(goal.linked.monthlyAmount)} desde el {goal.linked.since})
+                    </p>
+                  )}
                 </div>
 
                 {/* Stats row */}
@@ -579,10 +663,51 @@ export default function SavingsGoalsManager() {
                 </div>
               </div>
 
+              {/* ─── Vincular con un gasto (ahorro programado) ─── */}
+              <div className="rounded-xl border border-brand-500/20 bg-brand-500/5 p-3 space-y-2">
+                <label className="block text-xs font-bold text-text-primary">
+                  🔗 Vincular con un gasto (opcional)
+                </label>
+                <p className="text-[10px] text-text-muted leading-relaxed">
+                  Si registras el ahorro como un gasto (ej. "Ahorro mensual"), vincúlalo aquí:
+                  la meta <strong className="text-brand-400">acumulará ese monto automáticamente cada mes</strong>,
+                  sin que tengas que registrar depósitos.
+                </p>
+                <select
+                  value={linkedExpenseId}
+                  onChange={(e) => setLinkedExpenseId(e.target.value)}
+                  className="w-full rounded-xl border border-border-default bg-surface-100 px-3 py-2 text-xs text-text-primary focus:border-brand-500 focus:outline-none"
+                >
+                  <option value="">Sin vínculo — depósitos manuales</option>
+                  {expensesList.map((exp) => (
+                    <option key={exp.id} value={exp.id}>
+                      {exp.name} · {formatCurrency(exp.amount)}/{exp.frequency === 'monthly' ? 'mes' : exp.frequency}
+                    </option>
+                  ))}
+                </select>
+                {linkedExpenseId && (
+                  <div className="grid grid-cols-2 gap-3 items-end">
+                    <div>
+                      <label className="mb-1 block text-[11px] font-medium text-text-secondary">Acumular desde</label>
+                      <input
+                        type="date"
+                        value={linkedSince}
+                        onChange={(e) => setLinkedSince(e.target.value)}
+                        className="w-full rounded-xl border border-border-default bg-surface-100 px-3 py-2 text-xs text-text-primary focus:border-brand-500 focus:outline-none"
+                      />
+                    </div>
+                    <div className="text-[11px] text-text-secondary pb-2">
+                      Aporte: <strong className="text-brand-400">{formatCurrency(linkedMonthly)}/mes</strong>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <div>
                 <label className="mb-1 block text-xs font-medium text-text-secondary">
                   Contribución Mensual ($)
-                  {targetDate && (
+                  {linkedExpenseId && <span className="ml-2 text-brand-400">(definida por el gasto vinculado)</span>}
+                  {!linkedExpenseId && targetDate && (
                     <button type="button" onClick={autoCalcMonthly} className="ml-2 text-brand-400 font-semibold cursor-pointer hover:underline">
                       ⚡ Auto-calcular
                     </button>
@@ -595,21 +720,26 @@ export default function SavingsGoalsManager() {
                     inputMode="decimal"
                     step="0.01"
                     min="0"
-                    value={monthlyContribution}
+                    value={linkedExpenseId ? String(linkedMonthly) : monthlyContribution}
                     onChange={(e) => setMonthlyContribution(e.target.value)}
-                    className="w-full rounded-xl border border-border-default bg-surface-100 pl-8 pr-3 py-2 text-xs font-bold text-brand-400 focus:border-brand-500 focus:outline-none"
+                    disabled={!!linkedExpenseId}
+                    className="w-full rounded-xl border border-border-default bg-surface-100 pl-8 pr-3 py-2 text-xs font-bold text-brand-400 focus:border-brand-500 focus:outline-none disabled:opacity-60"
                     placeholder="200.00"
                   />
                 </div>
-                {Number(targetAmount) > 0 && Number(monthlyContribution) > 0 && (
-                  <p className="text-[10px] text-text-muted mt-1">
-                    📅 Estimación: alcanzarás la meta en{' '}
-                    <strong className="text-brand-400">
-                      {Math.ceil((Number(targetAmount) - (Number(currentAmount) || 0)) / Number(monthlyContribution))} meses
-                    </strong>
-                    {' '}({calculateCompletionDate(Number(targetAmount), Number(currentAmount) || 0, Number(monthlyContribution)) || '—'})
-                  </p>
-                )}
+                {(() => {
+                  const contrib = linkedExpenseId ? linkedMonthly : Number(monthlyContribution);
+                  if (!(Number(targetAmount) > 0 && contrib > 0)) return null;
+                  return (
+                    <p className="text-[10px] text-text-muted mt-1">
+                      📅 Estimación: alcanzarás la meta en{' '}
+                      <strong className="text-brand-400">
+                        {Math.ceil((Number(targetAmount) - (Number(currentAmount) || 0)) / contrib)} meses
+                      </strong>
+                      {' '}({calculateCompletionDate(Number(targetAmount), Number(currentAmount) || 0, contrib) || '—'})
+                    </p>
+                  );
+                })()}
               </div>
 
               <div className="flex gap-3 pt-2">

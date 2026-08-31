@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { formatCurrency } from '@/lib/utils';
+import { DEFAULT_CATALOGS, fetchCatalog, type CatalogOption } from '@/lib/catalogs';
 
 interface ExpenseItem {
   id: string;
@@ -21,6 +22,12 @@ export default function ExpensesManager() {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  // Categorías administrables desde el panel de admin
+  const [categories, setCategories] = useState<CatalogOption[]>(DEFAULT_CATALOGS.expense_category);
+
+  useEffect(() => {
+    fetchCatalog('expense_category').then(setCategories);
+  }, []);
 
   // Form state
   const [name, setName] = useState('');
@@ -135,18 +142,10 @@ export default function ExpensesManager() {
   const essentialExpenses = expenses.filter((e) => e.isEssential).reduce((sum, e) => sum + e.amount, 0);
   const nonEssentialExpenses = expenses.filter((e) => !e.isEssential).reduce((sum, e) => sum + e.amount, 0);
 
-  const categoryLabels: Record<string, string> = {
-    housing: '🏠 Vivienda / Arriendo',
-    food: '🛒 Alimentación / Supermercado',
-    transport: '🚗 Transporte / Gasolina',
-    utilities: '💡 Servicios Básicos / Luz / Agua / Internet',
-    health: '🏥 Salud y Medicina',
-    education: '📚 Educación',
-    entertainment: '🎬 Entretenimiento / Salidas',
-    insurance: '🛡️ Seguros',
-    savings: '💰 Ahorro',
-    other: '📦 Otros Gastos',
-  };
+  // Etiquetas desde el catálogo administrable
+  const categoryLabels: Record<string, string> = Object.fromEntries(
+    categories.map((c) => [c.value, `${c.icon ? c.icon + ' ' : ''}${c.label}`])
+  );
 
   return (
     <div className="space-y-6">
@@ -336,15 +335,11 @@ export default function ExpensesManager() {
                     onChange={(e) => setCategory(e.target.value)}
                     className="w-full rounded-xl border border-border-default bg-surface-100 px-3 py-2 text-xs text-text-primary focus:border-brand-500 focus:outline-none"
                   >
-                    <option value="housing">Vivienda / Arriendo</option>
-                    <option value="food">Alimentación</option>
-                    <option value="transport">Transporte / Combustible</option>
-                    <option value="utilities">Servicios Básicos / Internet</option>
-                    <option value="health">Salud</option>
-                    <option value="education">Educación</option>
-                    <option value="entertainment">Entretenimiento</option>
-                    <option value="insurance">Seguros</option>
-                    <option value="other">Otro</option>
+                    {categories.map((c) => (
+                      <option key={c.value} value={c.value}>
+                        {c.icon ? `${c.icon} ` : ''}{c.label}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>

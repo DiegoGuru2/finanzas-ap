@@ -209,6 +209,26 @@ export const savingsGoals = mysqlTable('savings_goals', {
   icon: varchar('icon', { length: 10 }).default('🎯'),
   priority: int('priority').default(1), // 1 = highest
   status: varchar('status', { length: 50 }).notNull().default('active'), // 'active', 'completed', 'paused'
+  // ═══ Vínculo con un gasto (ahorro programado) ═══
+  linkedExpenseId: varchar('linkedExpenseId', { length: 36 }), // Gasto que alimenta esta meta (null = sin vínculo)
+  linkedSince: date('linkedSince'), // El acumulado automático corre desde esta fecha
+  createdAt: timestamp('createdAt').notNull().defaultNow(),
+  updatedAt: timestamp('updatedAt').notNull().defaultNow().onUpdateNow(),
+});
+
+// ═══════════════════════════════════════════
+// Catálogos administrables (selects de la app)
+// Globales — los gestiona el admin; los usuarios los consumen en los selects.
+// ═══════════════════════════════════════════
+
+export const catalogOptions = mysqlTable('catalog_options', {
+  id: varchar('id', { length: 36 }).primaryKey(),
+  catalog: varchar('catalog', { length: 50 }).notNull(), // 'expense_category' | 'debt_type' | 'savings_category'
+  value: varchar('value', { length: 100 }).notNull(), // clave estable guardada en los registros
+  label: varchar('label', { length: 150 }).notNull(), // texto visible en la app
+  icon: varchar('icon', { length: 10 }), // emoji opcional
+  sortOrder: int('sortOrder').default(0),
+  isActive: boolean('isActive').default(true),
   createdAt: timestamp('createdAt').notNull().defaultNow(),
   updatedAt: timestamp('updatedAt').notNull().defaultNow().onUpdateNow(),
 });

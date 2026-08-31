@@ -18,6 +18,42 @@ export interface SavingsGoal {
   category: string;
   icon: string;
   status: string;
+  linkedExpenseId?: string | null; // Gasto que alimenta la meta automáticamente
+  linkedSince?: string | null; // YYYY-MM-DD desde cuándo acumula
+}
+
+export interface LinkedAccrual {
+  monthsElapsed: number; // Meses completos transcurridos desde linkedSince
+  monthlyAmount: number; // Aporte mensual del gasto vinculado
+  accrued: number; // Total acumulado automáticamente hasta hoy
+}
+
+/**
+ * Acumulación automática de una meta vinculada a un gasto: cada vez que se
+ * cumple un mes desde `linkedSince`, se suma el monto mensual del gasto.
+ * (El primer aporte cuenta al cumplirse el primer mes, no el día del vínculo.)
+ */
+export function calculateLinkedAccrual(
+  linkedSince: string,
+  monthlyAmount: number,
+  today: Date = new Date()
+): LinkedAccrual {
+  const since = new Date(`${linkedSince.slice(0, 10)}T00:00:00`);
+  if (Number.isNaN(since.getTime()) || monthlyAmount <= 0) {
+    return { monthsElapsed: 0, monthlyAmount: Math.max(0, monthlyAmount), accrued: 0 };
+  }
+
+  let months =
+    (today.getFullYear() - since.getFullYear()) * 12 +
+    (today.getMonth() - since.getMonth());
+  if (today.getDate() < since.getDate()) months -= 1;
+  const monthsElapsed = Math.max(0, months);
+
+  return {
+    monthsElapsed,
+    monthlyAmount: Math.round(monthlyAmount * 100) / 100,
+    accrued: Math.round(monthsElapsed * monthlyAmount * 100) / 100,
+  };
 }
 
 export interface SavingsSnapshot {

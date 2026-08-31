@@ -14,29 +14,18 @@ export const frequencySchema = z.enum(['weekly', 'biweekly', 'monthly', 'annual'
 
 export const salaryPaymentSchemeSchema = z.enum(['monthly', 'quincena_fin_mes']);
 
-export const debtTypeSchema = z.enum([
-  'credit_card',
-  'personal_loan',
-  'mortgage',
-  'auto_loan',
-  'student_loan',
-  'biess_quirografario',
-  'biess_hipotecario',
-  'other',
-]);
+// Tipos y categorías son catálogos administrables desde el panel de admin
+// (tabla catalog_options), por eso aceptan cualquier clave razonable en vez
+// de un enum cerrado.
+export const debtTypeSchema = z
+  .string()
+  .min(1, 'El tipo de deuda es requerido')
+  .max(50, 'El tipo de deuda no puede exceder 50 caracteres');
 
-export const expenseCategorySchema = z.enum([
-  'housing',
-  'food',
-  'transport',
-  'utilities',
-  'insurance',
-  'health',
-  'education',
-  'entertainment',
-  'savings',
-  'other',
-]);
+export const expenseCategorySchema = z
+  .string()
+  .min(1, 'La categoría es requerida')
+  .max(100, 'La categoría no puede exceder 100 caracteres');
 
 export const strategySchema = z.enum(['avalanche', 'snowball', 'liquidity', 'custom']);
 export const currencySchema = z.enum(['USD', 'EUR']);
@@ -166,15 +155,11 @@ export const paymentSchema = z.object({
 
 // ─── Savings Goal ───
 
-export const savingsGoalCategorySchema = z.enum([
-  'emergency',
-  'vacation',
-  'education',
-  'housing',
-  'vehicle',
-  'retirement',
-  'other',
-]);
+// Catálogo administrable desde el panel de admin (igual que gastos y deudas)
+export const savingsGoalCategorySchema = z
+  .string()
+  .min(1, 'La categoría es requerida')
+  .max(50, 'La categoría no puede exceder 50 caracteres');
 
 export const savingsGoalSchema = z.object({
   name: z
@@ -197,6 +182,10 @@ export const savingsGoalSchema = z.object({
   icon: z.string().max(10).default('🎯'),
   priority: z.number().int().min(1).max(10).default(1),
   status: z.enum(['active', 'completed', 'paused']).default('active'),
+  // Vínculo con un gasto: la meta acumula automáticamente el monto del gasto
+  // cada mes desde linkedSince (null = sin vínculo)
+  linkedExpenseId: z.string().max(36).nullable().optional(),
+  linkedSince: z.string().nullable().optional(),
 });
 
 // ─── Auth ───
