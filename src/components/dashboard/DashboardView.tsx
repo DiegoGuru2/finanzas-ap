@@ -404,7 +404,7 @@ export default function DashboardView() {
                 🇪🇨
               </div>
               <h3 className="text-xl sm:text-2xl font-bold text-text-primary">
-                ¡Bienvenido a FinanzasAP, <span className="gradient-text">{userName}</span>!
+                ¡Bienvenido a ProyecAhorro, <span className="gradient-text">{userName}</span>!
               </h3>
               <p className="text-xs sm:text-sm text-text-secondary max-w-md mx-auto">
                 Para calcular tu flujo real y plan de optimización de deudas, configuremos tu sueldo y esquema de cobro en Ecuador.

@@ -10,7 +10,12 @@ interface Props {
 
 const { title, description } = Astro.props;
 const currentPath = Astro.url.pathname;
-const currentUser = Astro.locals.user;
+const currentUser = Astro.locals.user as any;
+
+if (currentUser?.role === 'admin' || currentUser?.email === 'admin@finanzas.app') {
+  return Astro.redirect('/admin/dashboard');
+}
+
 const initial = currentUser?.name ? currentUser.name[0].toUpperCase() : 'D';
 ---
 

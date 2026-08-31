@@ -32,7 +32,11 @@ export default function LoginForm() {
         return;
       }
 
-      window.location.href = '/app/dashboard';
+      if (email.toLowerCase().includes('admin') || (res?.data?.user as any)?.role === 'admin') {
+        window.location.href = '/admin/dashboard';
+      } else {
+        window.location.href = '/app/dashboard';
+      }
     } catch (err: any) {
       setErrorMessage(err.message || 'Error al iniciar sesión');
       setLoading(false);
