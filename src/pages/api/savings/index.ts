@@ -13,6 +13,10 @@ import { generateId } from '@/lib/utils';
 
 const toIso = (v: unknown): string | null => {
   if (!v) return null;
+  if (typeof v === 'string') {
+    if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return v;
+    if (v.length >= 10 && /^\d{4}-\d{2}-\d{2}/.test(v)) return v.slice(0, 10);
+  }
   const d = new Date(v as any);
   if (Number.isNaN(d.getTime())) return null;
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -24,8 +28,8 @@ const toGoal = (row: typeof savingsGoals.$inferSelect): SavingsGoal => ({
   targetAmount: parseFloat(row.targetAmount as string),
   currentAmount: parseFloat(row.currentAmount as string),
   monthlyContribution: parseFloat(row.monthlyContribution as string),
-  startDate: row.startDate as string,
-  targetDate: row.targetDate as string | null,
+  startDate: toIso(row.startDate) || new Date().toISOString().slice(0, 10),
+  targetDate: toIso(row.targetDate),
   category: row.category,
   icon: row.icon || '🎯',
   status: row.status,
@@ -169,15 +173,15 @@ export const POST: APIRoute = async (ctx) => {
       targetAmount: data.targetAmount.toString(),
       currentAmount: data.currentAmount.toString(),
       monthlyContribution: data.monthlyContribution.toString(),
-      startDate: new Date(data.startDate) as any,
-      targetDate: data.targetDate ? (new Date(data.targetDate) as any) : null,
+      startDate: (toIso(data.startDate) || new Date().toISOString().slice(0, 10)) as any,
+      targetDate: toIso(data.targetDate) as any,
       category: data.category,
       icon: data.icon,
       priority: data.priority,
       status: data.status,
       linkedExpenseId,
       linkedSince: linkedExpenseId
-        ? (new Date(data.linkedSince || new Date().toISOString().slice(0, 10)) as any)
+        ? ((toIso(data.linkedSince) || new Date().toISOString().slice(0, 10)) as any)
         : null,
     });
 
@@ -248,15 +252,15 @@ export const PUT: APIRoute = async (ctx) => {
         targetAmount: data.targetAmount.toString(),
         currentAmount: data.currentAmount.toString(),
         monthlyContribution: data.monthlyContribution.toString(),
-        startDate: new Date(data.startDate) as any,
-        targetDate: data.targetDate ? (new Date(data.targetDate) as any) : null,
+        startDate: (toIso(data.startDate) || new Date().toISOString().slice(0, 10)) as any,
+        targetDate: toIso(data.targetDate) as any,
         category: data.category,
         icon: data.icon,
         priority: data.priority,
         status: autoStatus,
         linkedExpenseId,
         linkedSince: linkedExpenseId
-          ? (new Date(data.linkedSince || new Date().toISOString().slice(0, 10)) as any)
+          ? ((toIso(data.linkedSince) || new Date().toISOString().slice(0, 10)) as any)
           : null,
       })
       .where(and(eq(savingsGoals.id, id), eq(savingsGoals.userId, user.id)));

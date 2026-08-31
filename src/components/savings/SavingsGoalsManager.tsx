@@ -77,6 +77,16 @@ interface Summary {
   overallPercent: number;
 }
 
+const isoDay = (v?: string | null): string => {
+  if (!v) return '';
+  const s = String(v);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  if (s.length >= 10 && /^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+  const d = new Date(v as any);
+  if (Number.isNaN(d.getTime())) return '';
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+
 export default function SavingsGoalsManager() {
   const [goals, setGoals] = useState<GoalData[]>([]);
   const [summary, setSummary] = useState<Summary | null>(null);
@@ -174,12 +184,12 @@ export default function SavingsGoalsManager() {
     // Se edita la base manual; el acumulado automático del vínculo se recalcula solo
     setCurrentAmount(String(g.baseAmount ?? g.currentAmount));
     setMonthlyContribution(String(g.monthlyContribution));
-    setStartDate(g.startDate);
-    setTargetDate(g.targetDate || '');
+    setStartDate(isoDay(g.startDate) || new Date().toISOString().slice(0, 10));
+    setTargetDate(isoDay(g.targetDate) || '');
     setCategory(g.category);
     setIcon(g.icon);
     setLinkedExpenseId(g.linked?.expenseId || '');
-    setLinkedSince(g.linked?.since || new Date().toISOString().slice(0, 10));
+    setLinkedSince(isoDay(g.linked?.since) || new Date().toISOString().slice(0, 10));
     setFormError(null);
     setShowModal(true);
   };
