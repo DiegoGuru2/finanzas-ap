@@ -150,178 +150,213 @@ export default function ScheduleConfig({ onClose, onSaved }: Props) {
     'w-full rounded-lg border border-border-default bg-surface-100 px-2.5 py-1.5 text-xs text-text-primary focus:border-brand-500 focus:outline-none';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-2xl border border-border-default bg-surface-50 p-6 shadow-2xl space-y-5">
-        <div className="flex items-center justify-between">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4">
+      <div className="w-full max-w-3xl max-h-[90vh] sm:max-h-[85vh] flex flex-col rounded-t-2xl sm:rounded-2xl border border-border-default bg-surface-50 shadow-2xl overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-border-default px-5 py-4 bg-surface-50 shrink-0">
           <div>
-            <h3 className="text-lg font-bold">⚙️ Configurar Cronograma</h3>
+            <h3 className="text-base sm:text-lg font-bold text-text-primary">⚙️ Configurar Cronograma</h3>
             <p className="text-xs text-text-muted">
-              Ajusta en qué corte cae cada concepto, las cuotas de tus deudas y la vigencia de cada gasto.
+              Ajusta el corte de cada concepto, cuotas de deudas y vigencia de gastos.
             </p>
           </div>
-          <button onClick={handleClose} className="text-text-muted hover:text-text-primary cursor-pointer">✕</button>
+          <button
+            onClick={handleClose}
+            className="p-1 rounded-lg text-text-muted hover:text-text-primary hover:bg-surface-100 transition-colors cursor-pointer"
+          >
+            ✕
+          </button>
         </div>
 
-        {error && (
-          <div className="rounded-lg bg-danger-500/10 border border-danger-500/20 px-3 py-2 text-xs text-danger-400">
-            {error}
-          </div>
-        )}
+        {/* Body scroll */}
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
+          {error && (
+            <div className="rounded-lg bg-danger-500/10 border border-danger-500/20 px-3 py-2 text-xs text-danger-400">
+              {error}
+            </div>
+          )}
 
-        {loading ? (
-          <div className="py-10 text-center text-sm text-text-muted">Cargando...</div>
-        ) : (
-          <>
-            {/* Deudas */}
-            <div>
-              <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-danger-400">
-                Deudas y créditos
-              </h4>
-              <div className="space-y-2">
-                {debts.length === 0 && (
-                  <p className="text-xs text-text-muted">No tienes deudas activas.</p>
-                )}
-                {debts.map((d) => (
-                  <div
-                    key={d.id}
-                    className="grid grid-cols-1 gap-2 rounded-xl border border-border-default bg-surface-100/50 p-3 sm:grid-cols-[1fr_auto_auto_auto_auto] sm:items-end"
-                  >
-                    <div>
-                      <div className="text-sm font-medium text-text-primary">{d.name}</div>
-                      <div className="text-[11px] text-text-muted">
-                        saldo {formatCurrency(d.currentBalance)}
-                        {d.hasInstallmentPlan && d.termMonths
-                          ? ` · ${d.termMonths} cuotas de ${formatCurrency(Math.round((d.currentBalance / d.termMonths) * 100) / 100)}`
-                          : ` · pago ${formatCurrency(d.minimumPayment)}`}
+          {loading ? (
+            <div className="py-10 text-center text-sm text-text-muted">Cargando datos...</div>
+          ) : (
+            <>
+              {/* Deudas */}
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="text-xs font-semibold uppercase tracking-wide text-danger-400">
+                    Deudas y Créditos
+                  </h4>
+                  <span className="text-[11px] text-text-muted">{debts.length} activas</span>
+                </div>
+                <div className="space-y-3">
+                  {debts.length === 0 && (
+                    <p className="text-xs text-text-muted py-2">No tienes deudas activas registradas.</p>
+                  )}
+                  {debts.map((d) => (
+                    <div
+                      key={d.id}
+                      className="rounded-xl border border-border-default bg-surface-100/50 p-3.5 space-y-3"
+                    >
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+                        <div className="font-medium text-sm text-text-primary">{d.name}</div>
+                        <div className="text-xs text-text-muted">
+                          Saldo actual: <strong className="text-text-primary">{formatCurrency(d.currentBalance)}</strong>
+                          {d.hasInstallmentPlan && d.termMonths
+                            ? ` · ${d.termMonths} cuotas de ${formatCurrency(Math.round((d.currentBalance / d.termMonths) * 100) / 100)}`
+                            : ` · pago ${formatCurrency(d.minimumPayment)}`}
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 items-end pt-1">
+                        <div>
+                          <span className="block text-[10px] text-text-muted mb-1 font-medium">Corte de pago</span>
+                          <select
+                            value={d.paymentTiming || 'fin_de_mes'}
+                            onChange={(e) => updateDebt(d.id, { paymentTiming: e.target.value })}
+                            className={inputCls}
+                          >
+                            <option value="quincena">Día 15</option>
+                            <option value="fin_de_mes">Fin de mes</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <span className="block text-[10px] text-text-muted mb-1 font-medium">Modalidad</span>
+                          <label className="flex items-center gap-1.5 h-[34px] px-2.5 rounded-lg border border-border-default bg-surface-100 text-xs text-text-secondary cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={!!d.hasInstallmentPlan}
+                              onChange={(e) => updateDebt(d.id, { hasInstallmentPlan: e.target.checked })}
+                              className="rounded border-border-default text-brand-500"
+                            />
+                            <span>Por Cuotas</span>
+                          </label>
+                        </div>
+
+                        <div>
+                          <span className="block text-[10px] text-text-muted mb-1 font-medium"># Cuotas restantes</span>
+                          <input
+                            type="number"
+                            min="1"
+                            max="360"
+                            placeholder="Ej. 12"
+                            disabled={!d.hasInstallmentPlan}
+                            value={d.termMonths || ''}
+                            onChange={(e) => updateDebt(d.id, { termMonths: parseInt(e.target.value) || null })}
+                            className={`${inputCls} disabled:opacity-40`}
+                          />
+                        </div>
+
+                        <button
+                          onClick={() => saveDebt(d)}
+                          disabled={savingId === d.id}
+                          className="w-full rounded-lg bg-brand-500 px-3 py-2 text-xs font-semibold text-white hover:bg-brand-400 disabled:opacity-50 transition-colors cursor-pointer"
+                        >
+                          {savingId === d.id ? 'Guardando...' : 'Guardar'}
+                        </button>
                       </div>
                     </div>
-                    <div>
-                      <span className="block text-[10px] text-text-muted mb-0.5">Corte</span>
-                      <select
-                        value={d.paymentTiming || 'fin_de_mes'}
-                        onChange={(e) => updateDebt(d.id, { paymentTiming: e.target.value })}
-                        className={inputCls}
-                      >
-                        <option value="quincena">Día 15</option>
-                        <option value="fin_de_mes">Fin de mes</option>
-                      </select>
-                    </div>
-                    <div className="flex items-center gap-1.5 pb-1.5">
-                      <input
-                        type="checkbox"
-                        id={`plan-${d.id}`}
-                        checked={!!d.hasInstallmentPlan}
-                        onChange={(e) => updateDebt(d.id, { hasInstallmentPlan: e.target.checked })}
-                        className="rounded border-border-default text-brand-500"
-                      />
-                      <label htmlFor={`plan-${d.id}`} className="text-[11px] text-text-secondary cursor-pointer">
-                        Cuotas
-                      </label>
-                    </div>
-                    <div>
-                      <span className="block text-[10px] text-text-muted mb-0.5"># Cuotas</span>
-                      <input
-                        type="number"
-                        min="1"
-                        max="360"
-                        disabled={!d.hasInstallmentPlan}
-                        value={d.termMonths || ''}
-                        onChange={(e) => updateDebt(d.id, { termMonths: parseInt(e.target.value) || null })}
-                        className={`${inputCls} w-20 disabled:opacity-40`}
-                      />
-                    </div>
-                    <button
-                      onClick={() => saveDebt(d)}
-                      disabled={savingId === d.id}
-                      className="rounded-lg bg-brand-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-400 disabled:opacity-50 cursor-pointer"
-                    >
-                      {savingId === d.id ? '...' : 'Guardar'}
-                    </button>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
 
-            {/* Gastos */}
-            <div>
-              <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-warning-400">
-                Gastos recurrentes
-              </h4>
-              <div className="space-y-2">
-                {expenses.length === 0 && (
-                  <p className="text-xs text-text-muted">No tienes gastos registrados.</p>
-                )}
-                {expenses.map((e) => (
-                  <div
-                    key={e.id}
-                    className="grid grid-cols-2 gap-2 rounded-xl border border-border-default bg-surface-100/50 p-3 sm:grid-cols-[1fr_5rem_auto_auto_auto_auto] sm:items-end"
-                  >
-                    <div className="col-span-2 sm:col-span-1">
-                      <div className="text-sm font-medium text-text-primary">{e.name}</div>
-                    </div>
-                    <div>
-                      <span className="block text-[10px] text-text-muted mb-0.5">Monto/mes</span>
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={e.amount}
-                        onChange={(ev) => updateExpense(e.id, { amount: parseFloat(ev.target.value) || 0 })}
-                        className={inputCls}
-                      />
-                    </div>
-                    <div>
-                      <span className="block text-[10px] text-text-muted mb-0.5">Corte</span>
-                      <select
-                        value={e.paymentTiming || 'ambas'}
-                        onChange={(ev) => updateExpense(e.id, { paymentTiming: ev.target.value })}
-                        className={inputCls}
-                      >
-                        <option value="quincena">Día 15</option>
-                        <option value="fin_de_mes">Fin de mes</option>
-                        <option value="ambas">Repartido</option>
-                      </select>
-                    </div>
-                    <div>
-                      <span className="block text-[10px] text-text-muted mb-0.5">Desde</span>
-                      <input
-                        type="date"
-                        value={isoDay(e.activeFrom)}
-                        onChange={(ev) => updateExpense(e.id, { activeFrom: ev.target.value || null })}
-                        className={inputCls}
-                      />
-                    </div>
-                    <div>
-                      <span className="block text-[10px] text-text-muted mb-0.5">Hasta</span>
-                      <input
-                        type="date"
-                        value={isoDay(e.activeUntil)}
-                        onChange={(ev) => updateExpense(e.id, { activeUntil: ev.target.value || null })}
-                        className={inputCls}
-                      />
-                    </div>
-                    <button
-                      onClick={() => saveExpense(e)}
-                      disabled={savingId === e.id}
-                      className="rounded-lg bg-brand-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-400 disabled:opacity-50 cursor-pointer"
+              {/* Gastos */}
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="text-xs font-semibold uppercase tracking-wide text-warning-400">
+                    Gastos Recurrentes
+                  </h4>
+                  <span className="text-[11px] text-text-muted">{expenses.length} registrados</span>
+                </div>
+                <div className="space-y-3">
+                  {expenses.length === 0 && (
+                    <p className="text-xs text-text-muted py-2">No tienes gastos recurrentes registrados.</p>
+                  )}
+                  {expenses.map((e) => (
+                    <div
+                      key={e.id}
+                      className="rounded-xl border border-border-default bg-surface-100/50 p-3.5 space-y-3"
                     >
-                      {savingId === e.id ? '...' : 'Guardar'}
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+                        <div className="font-medium text-sm text-text-primary">{e.name}</div>
+                        <div className="text-xs text-text-muted">
+                          Categoría: <span className="text-text-secondary">{e.category}</span>
+                        </div>
+                      </div>
 
-            <div className="flex justify-end pt-2">
-              <button
-                onClick={handleClose}
-                className="rounded-xl bg-surface-100 border border-border-default px-5 py-2 text-xs font-semibold text-text-primary hover:bg-surface-200 cursor-pointer"
-              >
-                Cerrar y actualizar cronograma
-              </button>
-            </div>
-          </>
-        )}
+                      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 items-end pt-1">
+                        <div>
+                          <span className="block text-[10px] text-text-muted mb-1 font-medium">Monto / mes</span>
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={e.amount}
+                            onChange={(ev) => updateExpense(e.id, { amount: parseFloat(ev.target.value) || 0 })}
+                            className={inputCls}
+                          />
+                        </div>
+
+                        <div>
+                          <span className="block text-[10px] text-text-muted mb-1 font-medium">Corte</span>
+                          <select
+                            value={e.paymentTiming || 'ambas'}
+                            onChange={(ev) => updateExpense(e.id, { paymentTiming: ev.target.value })}
+                            className={inputCls}
+                          >
+                            <option value="quincena">Día 15</option>
+                            <option value="fin_de_mes">Fin de mes</option>
+                            <option value="ambas">Repartido</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <span className="block text-[10px] text-text-muted mb-1 font-medium">Vigente desde</span>
+                          <input
+                            type="date"
+                            value={isoDay(e.activeFrom)}
+                            onChange={(ev) => updateExpense(e.id, { activeFrom: ev.target.value || null })}
+                            className={inputCls}
+                          />
+                        </div>
+
+                        <div>
+                          <span className="block text-[10px] text-text-muted mb-1 font-medium">Vigente hasta</span>
+                          <input
+                            type="date"
+                            value={isoDay(e.activeUntil)}
+                            onChange={(ev) => updateExpense(e.id, { activeUntil: ev.target.value || null })}
+                            className={inputCls}
+                          />
+                        </div>
+
+                        <div className="col-span-2 sm:col-span-1">
+                          <button
+                            onClick={() => saveExpense(e)}
+                            disabled={savingId === e.id}
+                            className="w-full rounded-lg bg-brand-500 px-3 py-2 text-xs font-semibold text-white hover:bg-brand-400 disabled:opacity-50 transition-colors cursor-pointer"
+                          >
+                            {savingId === e.id ? 'Guardando...' : 'Guardar'}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Sticky Footer */}
+        <div className="border-t border-border-default px-5 py-3 bg-surface-50 flex items-center justify-end gap-3 shrink-0">
+          <button
+            onClick={handleClose}
+            className="rounded-xl bg-brand-500 px-5 py-2 text-xs font-semibold text-white hover:bg-brand-400 transition-colors cursor-pointer"
+          >
+            Listo y actualizar cronograma
+          </button>
+        </div>
       </div>
     </div>
   );
