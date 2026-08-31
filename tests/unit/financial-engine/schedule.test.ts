@@ -81,6 +81,16 @@ describe('generatePeriods', () => {
     expect(periods[0].incomeAvailable).toBe(360);
     expect(periods[1].incomeAvailable).toBe(406.95);
   });
+
+  it('includes the 31st when startDate is the 31st of the month', () => {
+    // 2026-08-31
+    const periods = generatePeriods(new Date(2026, 7, 31), 1, { quincena: 360, finDeMes: 400 });
+
+    expect(periods[0].key).toBe('2026-08-31');
+    expect(periods[0].day).toBe(31);
+    expect(periods[0].timing).toBe('fin_de_mes');
+    expect(periods[1].key).toBe('2026-09-15');
+  });
 });
 
 describe('buildPaymentSchedule', () => {
@@ -97,7 +107,7 @@ describe('buildPaymentSchedule', () => {
     expect(row.kind).toBe('debt');
     expect(row.cells['2026-09-15']).toBeUndefined();
     expect(row.cells['2026-09-30']).toBe(219.54);
-    expect(row.cells['2026-10-30']).toBe(219.54);
+    expect(row.cells['2026-10-31']).toBe(219.54);
     expect(row.cells['2026-11-30']).toBe(219.54);
   });
 
@@ -112,9 +122,9 @@ describe('buildPaymentSchedule', () => {
 
     const row = result.rows[0];
     expect(row.cells['2026-09-30']).toBe(200);
-    expect(row.cells['2026-10-30']).toBe(100);
+    expect(row.cells['2026-10-31']).toBe(100);
     expect(row.cells['2026-11-30']).toBeUndefined();
-    expect(row.payoffPeriodKey).toBe('2026-10-30');
+    expect(row.payoffPeriodKey).toBe('2026-10-31');
     expect(row.remainingInstallments).toBe(2);
   });
 
@@ -191,12 +201,12 @@ describe('buildPaymentSchedule', () => {
     expect(row.monthlyAmount).toBe(333.33);
     expect(row.totalInstallments).toBe(3);
     expect(row.cells['2026-09-30']).toBe(333.33);
-    expect(row.cells['2026-10-30']).toBe(333.33);
+    expect(row.cells['2026-10-31']).toBe(333.33);
     // La última cuota absorbe el residuo de redondeo
     expect(row.cells['2026-11-30']).toBe(333.34);
-    expect(row.cells['2026-12-30']).toBeUndefined();
+    expect(row.cells['2026-12-31']).toBeUndefined();
     expect(row.payoffPeriodKey).toBe('2026-11-30');
-    expect(row.installmentNumbers?.['2026-10-30']).toBe(2);
+    expect(row.installmentNumbers?.['2026-10-31']).toBe(2);
     expect(row.totalScheduled).toBe(1000);
   });
 
@@ -280,12 +290,12 @@ describe('buildPaymentSchedule', () => {
       startDate: '2026-09-01',
     });
 
-    const dic30 = result.periods.find((p) => p.key === '2026-12-30')!;
+    const dic31 = result.periods.find((p) => p.key === '2026-12-31')!;
     const nov30 = result.periods.find((p) => p.key === '2026-11-30')!;
     // Fin de mes normal: 454.95; diciembre suma el décimo de 500
     expect(nov30.incomeAvailable).toBe(454.95);
-    expect(dic30.incomeAvailable).toBe(954.95);
-    expect(result.remaining['2026-12-30']).toBe(954.95);
+    expect(dic31.incomeAvailable).toBe(954.95);
+    expect(result.remaining['2026-12-31']).toBe(954.95);
   });
 
   it('excludes paid-off and zero-payment debts', () => {

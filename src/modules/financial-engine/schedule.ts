@@ -77,19 +77,25 @@ export function resolveTiming(
  * Generate the biweekly pay periods (15 y fin de mes) for the horizon.
  */
 export function generatePeriods(
-  startDate: Date,
+  startDateInput: Date,
   months: number,
   monthlyIncome: { quincena: number; finDeMes: number }
 ): SchedulePeriod[] {
   const periods: SchedulePeriod[] = [];
   const target = months * 2;
 
+  const startDate = new Date(
+    startDateInput.getFullYear(),
+    startDateInput.getMonth(),
+    startDateInput.getDate()
+  );
+
   let year = startDate.getFullYear();
   let month = startDate.getMonth();
 
   while (periods.length < target) {
     const daysInMonth = new Date(year, month + 1, 0).getDate();
-    const finDeMesDay = Math.min(30, daysInMonth);
+    const finDeMesDay = daysInMonth;
 
     for (const [day, timing] of [
       [15, 'quincena'],
