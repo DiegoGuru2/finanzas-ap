@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { formatCurrency } from '@/lib/utils';
-import { generateIcsCalendar, downloadIcsFile } from '@/lib/calendar';
 
 interface SchedulePeriod {
   key: string;
@@ -154,42 +153,6 @@ export default function NotificationCenter() {
     } catch (err) {
       console.error(err);
     }
-  };
-
-  const handleExportCalendar = () => {
-    if (!schedule) return;
-    const events = schedule.periods.map((p) => {
-      const pDebts = debtRows.filter((r) => (r.cells[p.key] || 0) > 0);
-      const pExp = expenseRows.filter((r) => (r.cells[p.key] || 0) > 0);
-      const toPay = schedule.totals[p.key] || 0;
-      const left = schedule.remaining[p.key] || 0;
-
-      const debtList = pDebts.map((d) => `• ${d.name}: ${formatCurrency(d.cells[p.key])}`).join('\n');
-      const expList = pExp.map((e) => `• ${e.name}: ${formatCurrency(e.cells[p.key])}`).join('\n');
-
-      const desc = [
-        `📅 Corte de Pagos ProyecAhorro (${p.timing === 'quincena' ? 'Día 15' : 'Fin de mes'})`,
-        `💰 Ingreso disponible: ${formatCurrency(p.incomeAvailable)}`,
-        `💳 Total a pagar: ${formatCurrency(toPay)}`,
-        `💵 Lo que te queda: ${formatCurrency(left)}`,
-        '',
-        '--- DEUDAS ---',
-        debtList || 'Ninguna',
-        '',
-        '--- GASTOS ---',
-        expList || 'Ninguno',
-      ].join('\n');
-
-      return {
-        title: `💳 ProyecAhorro: Corte de Pagos (${formatCurrency(toPay)})`,
-        description: desc,
-        date: p.date,
-        amount: toPay,
-      };
-    });
-
-    const ics = generateIcsCalendar(events);
-    downloadIcsFile(ics);
   };
 
   const openQuickPay = (row: ScheduleRow) => {
@@ -419,17 +382,6 @@ export default function NotificationCenter() {
                       Activar Alertas en el Navegador
                     </button>
                   )}
-
-                  {/* Exportar a Calendario con alarmas */}
-                  <button
-                    onClick={handleExportCalendar}
-                    className="w-full flex items-center justify-center gap-2 rounded-xl border border-border-default bg-surface-100 px-3 py-2 text-xs font-semibold text-text-secondary hover:text-text-primary hover:bg-surface-200 transition-colors cursor-pointer"
-                  >
-                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                    Exportar Alarmas a Google / Apple Calendar
-                  </button>
 
                   {/* Enlace al Cronograma completo */}
                   <a

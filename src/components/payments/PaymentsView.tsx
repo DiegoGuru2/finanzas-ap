@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { formatCurrency } from '@/lib/utils';
 import ScheduleConfig from './ScheduleConfig';
-import { generateIcsCalendar, downloadIcsFile } from '@/lib/calendar';
+import { exportScheduleToExcel } from '@/lib/excel-export';
 
 interface SchedulePeriod {
   key: string;
@@ -317,88 +317,14 @@ export default function PaymentsView() {
     : 0;
   const totalCommitment = monthlyCommitment.debts + monthlyCommitment.expenses;
 
-  const handleExportCalendar = () => {
+  const handleExportExcel = async () => {
     if (!schedule) return;
-    const events = schedule.periods.map((p) => {
-      const pDebts = debtRows.filter((r) => (r.cells[p.key] || 0) > 0);
-      const pExp = expenseRows.filter((r) => (r.cells[p.key] || 0) > 0);
-      const toPay = schedule.totals[p.key] || 0;
-      const left = schedule.remaining[p.key] || 0;
-
-      const debtList = pDebts.map((d) => `• ${d.name}: ${formatCurrency(d.cells[p.key])}`).join('\n');
-      const expList = pExp.map((e) => `• ${e.name}: ${formatCurrency(e.cells[p.key])}`).join('\n');
-
-      const desc = [
-        `📅 Corte de Pagos ProyecAhorro (${p.timing === 'quincena' ? 'Día 15' : 'Fin de mes'})`,
-        `💰 Ingreso disponible: ${formatCurrency(p.incomeAvailable)}`,
-        `💳 Total a pagar: ${formatCurrency(toPay)}`,
-        `💵 Lo que te queda: ${formatCurrency(left)}`,
-        '',
-        '--- DEUDAS ---',
-        debtList || 'Ninguna',
-        '',
-        '--- GASTOS ---',
-        expList || 'Ninguno',
-      ].join('\n');
-
-      return {
-        title: `💳 ProyecAhorro: Corte de Pagos (${formatCurrency(toPay)})`,
-        description: desc,
-        date: p.date,
-        amount: toPay,
-      };
-    });
-
-    const ics = generateIcsCalendar(events);
-    downloadIcsFile(ics);
-  };
-
-  const handleExportCsv = () => {
-    if (!schedule) return;
-
-    const headerRow = [
-      'Concepto',
-      'Tipo',
-      'Monto Mensual',
-      ...periods.map((p) => `${p.timing === 'quincena' ? '15' : 'Fin'} ${MONTH_SHORT[p.month]} ${p.year}`),
-    ];
-
-    const csvRows: string[][] = [headerRow];
-
-    rows.forEach((r) => {
-      const rowData = [
-        `"${r.name.replace(/"/g, '""')}"`,
-        r.kind === 'debt' ? 'Deuda' : 'Gasto',
-        r.monthlyAmount.toFixed(2),
-        ...periods.map((p) => (r.cells[p.key] || 0).toFixed(2)),
-      ];
-      csvRows.push(rowData);
-    });
-
-    const totalsRow = [
-      '"TOTAL A PAGAR"',
-      '-',
-      '-',
-      ...periods.map((p) => (totals[p.key] || 0).toFixed(2)),
-    ];
-    csvRows.push(totalsRow);
-
-    const remainingRow = [
-      '"SALDO DISPONIBLE"',
-      '-',
-      '-',
-      ...periods.map((p) => (remaining[p.key] || 0).toFixed(2)),
-    ];
-    csvRows.push(remainingRow);
-
-    const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + csvRows.map((e) => e.join(',')).join('\n');
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `cronograma_proyecahorro_${new Date().toISOString().slice(0, 10)}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    try {
+      await exportScheduleToExcel(schedule);
+    } catch (err) {
+      console.error('Error al exportar a Excel:', err);
+      alert('Error al generar el archivo Excel');
+    }
   };
 
   // Diferencia de días al próximo corte
@@ -473,28 +399,16 @@ export default function PaymentsView() {
             ))}
           </div>
 
-          {/* Botón Exportar CSV / Excel */}
+          {/* Botón Exportar Excel */}
           <button
-            onClick={handleExportCsv}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-border-default bg-surface-50 px-3 py-2 text-xs font-semibold text-text-secondary transition-all hover:text-text-primary hover:border-border-hover cursor-pointer"
-            title="Descargar matriz del cronograma en formato CSV para Excel"
+            onClick={handleExportExcel}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3.5 py-2 text-xs font-semibold text-emerald-400 transition-all hover:bg-emerald-500/20 hover:border-emerald-500/50 cursor-pointer shadow-sm"
+            title="Descargar plantilla profesional en Excel (.xlsx) con matriz y resumen financiero"
           >
-            <svg className="h-4 w-4 text-accent-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="h-4 w-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
-            <span className="hidden sm:inline">Exportar Excel</span>
-          </button>
-
-          {/* Botón Exportar Calendario */}
-          <button
-            onClick={handleExportCalendar}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-border-default bg-surface-50 px-3 py-2 text-xs font-semibold text-text-secondary transition-all hover:text-text-primary hover:border-border-hover cursor-pointer"
-            title="Descargar eventos con alarmas para Google Calendar / Apple Calendar / Outlook"
-          >
-            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-            <span className="hidden sm:inline">Calendario .ics</span>
+            <span>Exportar Excel (.xlsx)</span>
           </button>
 
           {/* Botón Configurar */}
@@ -570,13 +484,6 @@ export default function PaymentsView() {
               </p>
             </div>
           </div>
-
-          <button
-            onClick={handleExportCalendar}
-            className="self-start sm:self-auto shrink-0 inline-flex items-center gap-1.5 rounded-xl border border-border-default bg-surface-50 px-3 py-1.5 text-xs font-semibold text-text-primary hover:bg-surface-100 transition-colors cursor-pointer"
-          >
-            <span>📅 Guardar con Alarma</span>
-          </button>
         </div>
       )}
 
