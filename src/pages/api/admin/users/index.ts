@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { db } from '@/lib/db';
-import { user, account, debts, savingsGoals } from '@/lib/db/schema';
+import { user, account, session, debts, savingsGoals } from '@/lib/db/schema';
 import { eq, and, desc } from 'drizzle-orm';
 import { hashPassword } from 'better-auth/crypto';
 
@@ -70,21 +70,33 @@ export const PUT: APIRoute = async (ctx) => {
       await db.update(user).set(updates).where(eq(user.id, userId));
     }
 
-    // If email changed, update account table accountId as well
-    if (email) {
-      await db
-        .update(account)
-        .set({ accountId: email })
-        .where(and(eq(account.userId, userId), eq(account.providerId, 'credential')));
-    }
-
     // If password update requested
     if (newPassword && typeof newPassword === 'string' && newPassword.length >= 8) {
       const hashedPassword = await hashPassword(newPassword);
-      await db
-        .update(account)
-        .set({ password: hashedPassword })
+      const existingAcc = await db
+        .select()
+        .from(account)
         .where(and(eq(account.userId, userId), eq(account.providerId, 'credential')));
+
+      if (existingAcc.length > 0) {
+        await db
+          .update(account)
+          .set({ password: hashedPassword, updatedAt: new Date() })
+          .where(and(eq(account.userId, userId), eq(account.providerId, 'credential')));
+      } else {
+        await db.insert(account).values({
+          id: crypto.randomUUID(),
+          userId,
+          accountId: userId,
+          providerId: 'credential',
+          password: hashedPassword,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        });
+      }
+
+      // Limpiar cualquier sesión antigua en caché/base de datos para obligar al nuevo login limpio
+      await db.delete(session).where(eq(session.userId, userId));
     }
 
     return new Response(JSON.stringify({ success: true, message: 'Usuario actualizado exitosamente' }), {
