@@ -22,46 +22,46 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     </div>
 
     <!-- Navigation -->
-    <nav class="relative z-10 flex items-center justify-between px-6 py-5 lg:px-16">
-      <a href="/" class="flex items-center gap-3">
+    <nav class="relative z-10 flex items-center justify-between gap-3 px-4 py-3.5 sm:px-8 sm:py-5 lg:px-16">
+      <a href="/" class="flex items-center gap-2 sm:gap-3 shrink-0">
         <img
           src="/images/logo-icon.png"
           alt="ProyecAhorro Logo"
-          class="h-10 w-10 object-contain rounded-xl shadow-md"
+          class="h-8 w-8 sm:h-10 sm:w-10 object-contain rounded-xl shadow-md shrink-0"
         />
         <div class="flex flex-col">
-          <span class="text-xl font-black tracking-tight text-text-primary">
+          <span class="text-base sm:text-xl font-black tracking-tight text-text-primary whitespace-nowrap">
             Proyec<span class="text-accent-400">Ahorro</span>
           </span>
-          <span class="text-[10px] text-text-muted font-medium -mt-1 hidden sm:block">
+          <span class="text-[9px] sm:text-[10px] text-text-muted font-medium -mt-1 hidden md:block whitespace-nowrap">
             Gestiona hoy, proyecta tu mañana
           </span>
         </div>
       </a>
 
-      <div class="flex items-center gap-2 sm:gap-4">
+      <div class="flex items-center gap-1.5 sm:gap-3 shrink-0">
         <button
           id="theme-toggle-landing"
-          class="rounded-lg p-2 text-text-secondary transition-colors hover:bg-surface-100 hover:text-text-primary cursor-pointer"
+          class="rounded-lg p-1.5 sm:p-2 text-text-secondary transition-colors hover:bg-surface-100 hover:text-text-primary cursor-pointer shrink-0"
           title="Cambiar tema claro / oscuro"
           aria-label="Cambiar tema"
         >
-          <svg id="landing-icon-moon" class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg id="landing-icon-moon" class="h-4 w-4 sm:h-5 sm:w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
           </svg>
-          <svg id="landing-icon-sun" class="hidden h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg id="landing-icon-sun" class="hidden h-4 w-4 sm:h-5 sm:w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
           </svg>
         </button>
         <a
           href="/login"
-          class="text-sm font-medium text-text-secondary transition-colors hover:text-text-primary"
+          class="rounded-lg px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm font-semibold text-text-secondary transition-colors hover:text-text-primary hover:bg-surface-100/60 whitespace-nowrap shrink-0"
         >
           Iniciar sesión
         </a>
         <a
           href="/register"
-          class="rounded-xl bg-brand-500 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand-500/25 transition-all hover:bg-brand-400 hover:shadow-brand-400/30 pulse-glow"
+          class="rounded-xl bg-brand-500 px-3 py-1.5 sm:px-5 sm:py-2.5 text-xs sm:text-sm font-semibold text-white shadow-md shadow-brand-500/25 transition-all hover:bg-brand-400 hover:shadow-brand-400/30 whitespace-nowrap shrink-0"
         >
           Empezar gratis
         </a>
