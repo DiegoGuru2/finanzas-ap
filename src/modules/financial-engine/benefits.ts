@@ -150,3 +150,42 @@ export function calculateBenefits(income: Income): BenefitsBreakdown {
     annualPayouts,
   };
 }
+
+/**
+ * Evalúa si el trabajador cumple con el requisito legal de 1 año (12 meses)
+ * de antigüedad continua para percibir Fondos de Reserva en Ecuador.
+ */
+export function checkFondosReservaEligibility(workStartDate?: string | null): {
+  isEligible: boolean;
+  monthsWorked: number;
+  eligibilityDate: Date | null;
+  message: string;
+} {
+  if (!workStartDate) {
+    return {
+      isEligible: false,
+      monthsWorked: 0,
+      eligibilityDate: null,
+      message: 'Ingresa tu fecha de inicio de labores para calcular la fecha de Fondos de Reserva.',
+    };
+  }
+
+  const start = new Date(`${workStartDate}T00:00:00`);
+  const now = new Date();
+  const diffTime = now.getTime() - start.getTime();
+  const monthsWorked = Math.max(0, Math.floor(diffTime / (1000 * 60 * 60 * 24 * 30.4375)));
+
+  const eligibilityDate = new Date(start);
+  eligibilityDate.setFullYear(eligibilityDate.getFullYear() + 1);
+
+  const isEligible = now >= eligibilityDate;
+
+  return {
+    isEligible,
+    monthsWorked,
+    eligibilityDate,
+    message: isEligible
+      ? `✓ Cumples con la antigüedad (+${monthsWorked} meses). Tienes derecho a Fondos de Reserva (8.33%).`
+      : `Calificarás el ${eligibilityDate.toLocaleDateString('es-ES', { dateStyle: 'long' })} (al cumplir 1 año de labores).`,
+  };
+}

@@ -161,8 +161,10 @@ export default function ScheduleConfig({ onClose, onSaved }: Props) {
             </p>
           </div>
           <button
+            type="button"
             onClick={handleClose}
-            className="p-1 rounded-lg text-text-muted hover:text-text-primary hover:bg-surface-100 transition-colors cursor-pointer"
+            className="flex h-8 w-8 items-center justify-center rounded-xl bg-surface-100 border border-border-default text-text-muted hover:text-text-primary hover:bg-surface-200 transition-colors cursor-pointer"
+            title="Cerrar modal"
           >
             ✕
           </button>

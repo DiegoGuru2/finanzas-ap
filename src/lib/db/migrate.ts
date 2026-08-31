@@ -45,6 +45,7 @@ async function migrateAll() {
       \`sbuAmount\` DECIMAL(10,2) DEFAULT 460.00,
       \`hasUtilidades\` BOOLEAN DEFAULT TRUE,
       \`utilidadesAmount\` DECIMAL(15,2) DEFAULT 0.00,
+      \`workStartDate\` DATE,
       \`date\` DATE,
       \`category\` VARCHAR(50) DEFAULT 'salary',
       \`createdAt\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -52,6 +53,17 @@ async function migrateAll() {
       FOREIGN KEY (\`userId\`) REFERENCES \`user\`(\`id\`) ON DELETE CASCADE
     );
   `);
+
+  try {
+    const [incCols]: any = await db.execute(sql`DESC \`incomes\``);
+    const incColNames = Array.isArray(incCols) ? incCols.map((r: any) => r.Field) : [];
+    if (!incColNames.includes('workStartDate')) {
+      await db.execute(sql`ALTER TABLE \`incomes\` ADD COLUMN \`workStartDate\` DATE;`);
+      console.log('✅ Added workStartDate column to incomes table');
+    }
+  } catch (e: any) {
+    console.error('Incomes workStartDate check:', e.message);
+  }
   console.log('✅ Tabla incomes lista');
 
   // 3. Expenses table

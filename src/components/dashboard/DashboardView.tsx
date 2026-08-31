@@ -43,6 +43,7 @@ export default function DashboardView() {
   const [onboardingFinDeMes, setOnboardingFinDeMes] = useState<number>(452.75);
   const [deductIess, setDeductIess] = useState(true);
   const [iessPercentage, setIessPercentage] = useState(9.45);
+  const [onboardingWorkStartDate, setOnboardingWorkStartDate] = useState('');
   const [savingOnboarding, setSavingOnboarding] = useState(false);
   const [onboardingError, setOnboardingError] = useState<string | null>(null);
 
@@ -108,6 +109,7 @@ export default function DashboardView() {
           finDeMesAmount: Number(onboardingFinDeMes),
           deductIess,
           iessPercentage: Number(iessPercentage),
+          workStartDate: onboardingWorkStartDate || null,
           category: 'Sueldo',
         }),
       });
@@ -398,7 +400,17 @@ export default function DashboardView() {
       {/* 🚀 ONBOARDING WIZARD MODAL FOR NEW REGISTERED USERS */}
       {showOnboarding && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-300">
-          <div className="w-full max-w-xl max-h-[92vh] overflow-y-auto rounded-3xl border border-brand-500/30 bg-surface-50 p-6 sm:p-8 shadow-2xl space-y-6">
+          <div className="relative w-full max-w-xl max-h-[92vh] overflow-y-auto rounded-3xl border border-brand-500/30 bg-surface-50 p-6 sm:p-8 shadow-2xl space-y-6">
+            {/* Close button X */}
+            <button
+              type="button"
+              onClick={() => setShowOnboarding(false)}
+              className="absolute top-5 right-5 flex h-8 w-8 items-center justify-center rounded-xl bg-surface-100 border border-border-default text-text-muted hover:text-text-primary hover:bg-surface-200 transition-colors cursor-pointer"
+              title="Cerrar modal"
+            >
+              ✕
+            </button>
+
             <div className="text-center space-y-2">
               <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-500/20 text-brand-400 border border-brand-500/30 shadow-lg shadow-brand-500/20 text-2xl">
                 🇪🇨
@@ -430,6 +442,19 @@ export default function DashboardView() {
                     placeholder="1000.00"
                   />
                 </div>
+              </div>
+
+              {/* Fecha de inicio de labores */}
+              <div>
+                <label className="block text-xs font-semibold text-text-secondary mb-1.5">
+                  Fecha de inicio de labores <span className="text-[10px] text-text-muted font-normal">(Para Fondos de Reserva)</span>
+                </label>
+                <input
+                  type="date"
+                  value={onboardingWorkStartDate}
+                  onChange={(e) => setOnboardingWorkStartDate(e.target.value)}
+                  className="w-full rounded-xl border border-border-default bg-surface-100 px-3.5 py-2.5 text-xs text-text-primary focus:border-brand-500 focus:outline-none"
+                />
               </div>
 
               {/* Paso 2: Aporte IESS */}

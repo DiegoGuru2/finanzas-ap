@@ -141,7 +141,14 @@ export default function AdminInstitutionsManager() {
           <div className="w-full max-w-md rounded-2xl border border-border-default bg-surface-50 p-6 shadow-2xl space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-base font-bold text-text-primary">Nueva Entidad Financiera</h3>
-              <button onClick={() => setShowModal(false)} className="text-text-muted hover:text-text-primary cursor-pointer">✕</button>
+              <button
+                type="button"
+                onClick={() => setShowModal(false)}
+                className="flex h-8 w-8 items-center justify-center rounded-xl bg-surface-100 border border-border-default text-text-muted hover:text-text-primary hover:bg-surface-200 transition-colors cursor-pointer"
+                title="Cerrar modal"
+              >
+                ✕
+              </button>
             </div>
 
             <form onSubmit={handleCreate} className="space-y-3">

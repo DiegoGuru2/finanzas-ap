@@ -289,10 +289,17 @@ export default function ExpensesManager() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl border border-border-default bg-surface-50 p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in duration-200">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-bold">
+              <h3 className="text-lg font-bold text-text-primary">
                 {editingId ? '✏️ Editar Gasto' : 'Registrar Gasto Recurrente'}
               </h3>
-              <button onClick={() => setShowModal(false)} className="text-text-muted hover:text-text-primary">✕</button>
+              <button
+                type="button"
+                onClick={() => setShowModal(false)}
+                className="flex h-8 w-8 items-center justify-center rounded-xl bg-surface-100 border border-border-default text-text-muted hover:text-text-primary hover:bg-surface-200 transition-colors cursor-pointer"
+                title="Cerrar modal"
+              >
+                ✕
+              </button>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">

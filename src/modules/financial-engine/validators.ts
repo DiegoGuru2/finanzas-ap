@@ -78,6 +78,7 @@ export const incomeSchema = z.object({
     .min(0, 'Las utilidades no pueden ser negativas')
     .max(999999999.99, 'El monto excede el límite')
     .default(0),
+  workStartDate: z.string().nullable().optional(),
   date: z.string().optional(),
   category: z.string().optional(),
 });

@@ -96,6 +96,7 @@ export const incomes = mysqlTable('incomes', {
   sbuAmount: decimal('sbuAmount', { precision: 15, scale: 2 }).default('460.00'), // Salario Básico Unificado vigente
   hasUtilidades: boolean('hasUtilidades').default(true), // La empresa reparte utilidades (15%)
   utilidadesAmount: decimal('utilidadesAmount', { precision: 15, scale: 2 }).default('0.00'), // Monto estimado anual de utilidades
+  workStartDate: date('workStartDate'), // Fecha de inicio de labores (para cálculo automático de Fondos de Reserva)
   date: date('date'),
   category: varchar('category', { length: 100 }),
   isActive: boolean('isActive').default(true),

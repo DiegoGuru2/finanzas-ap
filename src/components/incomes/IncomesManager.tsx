@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { formatCurrency } from '@/lib/utils';
 import { calculateSalaryDetails } from '@/modules/financial-engine/cashflow';
+import { checkFondosReservaEligibility } from '@/modules/financial-engine/benefits';
 
 interface IncomeItem {
   id: string;
@@ -35,6 +36,7 @@ export default function IncomesManager() {
   const [finDeMesAmount, setFinDeMesAmount] = useState<number>(455.50);
   const [deductIess, setDeductIess] = useState(true);
   const [iessPercentage, setIessPercentage] = useState(9.45);
+  const [workStartDate, setWorkStartDate] = useState<string>('');
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -112,6 +114,7 @@ export default function IncomesManager() {
                 finDeMesAmount: Number(finDeMesAmount),
                 deductIess,
                 iessPercentage: Number(iessPercentage),
+                workStartDate: workStartDate || null,
                 category: isSalary ? 'Sueldo' : 'Ingreso Extra',
               }
         ),
@@ -294,8 +297,15 @@ export default function IncomesManager() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl border border-border-default bg-surface-50 p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in duration-200">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-bold">Configurar Sueldo / Ingreso</h3>
-              <button onClick={() => setShowModal(false)} className="text-text-muted hover:text-text-primary">✕</button>
+              <h3 className="text-lg font-bold text-text-primary">Configurar Sueldo / Ingreso</h3>
+              <button
+                type="button"
+                onClick={() => setShowModal(false)}
+                className="flex h-8 w-8 items-center justify-center rounded-xl bg-surface-100 border border-border-default text-text-muted hover:text-text-primary hover:bg-surface-200 transition-colors cursor-pointer"
+                title="Cerrar modal"
+              >
+                ✕
+              </button>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -338,6 +348,25 @@ export default function IncomesManager() {
                   placeholder={incomeType === 'unico' ? 'Ej. Décimo Tercero / Fondos de Reserva' : 'Ej. Sueldo Empresa / Trabajo'}
                 />
               </div>
+
+              {incomeType === 'recurrente' && (
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-text-secondary">
+                    Fecha de inicio de labores en la empresa <span className="text-[10px] text-text-muted font-normal">(Para Fondos de Reserva)</span>
+                  </label>
+                  <input
+                    type="date"
+                    value={workStartDate}
+                    onChange={(e) => setWorkStartDate(e.target.value)}
+                    className="w-full rounded-xl border border-border-default bg-surface-100 px-3 py-2 text-sm text-text-primary focus:border-brand-500 focus:outline-none"
+                  />
+                  {workStartDate && (
+                    <div className="mt-1.5 p-2 rounded-lg bg-surface-100/80 border border-border-default text-[11px] text-accent-400 font-semibold">
+                      {checkFondosReservaEligibility(workStartDate).message}
+                    </div>
+                  )}
+                </div>
+              )}
 
               {incomeType === 'unico' && (
                 <div>

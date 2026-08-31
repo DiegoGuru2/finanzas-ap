@@ -1298,7 +1298,14 @@ export default function PaymentsView() {
           <div className="w-full max-w-sm rounded-2xl border border-border-default bg-surface-50 p-5 sm:p-6 shadow-2xl space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-base sm:text-lg font-bold text-text-primary">Registrar Abono</h3>
-              <button onClick={() => setPayCell(null)} className="text-text-muted hover:text-text-primary cursor-pointer p-1">✕</button>
+              <button
+                type="button"
+                onClick={() => setPayCell(null)}
+                className="flex h-8 w-8 items-center justify-center rounded-xl bg-surface-100 border border-border-default text-text-muted hover:text-text-primary hover:bg-surface-200 transition-colors cursor-pointer"
+                title="Cerrar modal"
+              >
+                ✕
+              </button>
             </div>
             <p className="text-xs text-text-secondary">
               Pago programado de <strong className="text-text-primary">{payCell.debtName}</strong> del corte{' '}
@@ -1369,7 +1376,14 @@ export default function PaymentsView() {
           <div className="w-full max-w-sm rounded-2xl border border-border-default bg-surface-50 p-5 sm:p-6 shadow-2xl space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-base sm:text-lg font-bold text-text-primary">✏️ Editar Pago</h3>
-              <button onClick={() => setEditPayment(null)} className="text-text-muted hover:text-text-primary cursor-pointer p-1">✕</button>
+              <button
+                type="button"
+                onClick={() => setEditPayment(null)}
+                className="flex h-8 w-8 items-center justify-center rounded-xl bg-surface-100 border border-border-default text-text-muted hover:text-text-primary hover:bg-surface-200 transition-colors cursor-pointer"
+                title="Cerrar modal"
+              >
+                ✕
+              </button>
             </div>
             <p className="text-xs text-text-secondary">
               Pago a <strong className="text-text-primary">{editPayment.debtName || 'deuda'}</strong>. El saldo se recalculará automáticamente.

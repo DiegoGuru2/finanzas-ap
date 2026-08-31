@@ -469,8 +469,15 @@ export default function SavingsGoalsManager() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl border border-border-default bg-surface-50 p-6 shadow-2xl space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-bold">{editingId ? '✏️ Editar Meta' : '🎯 Nueva Meta de Ahorro'}</h3>
-              <button onClick={() => { setShowModal(false); resetForm(); }} className="text-text-muted hover:text-text-primary cursor-pointer">✕</button>
+              <h3 className="text-lg font-bold text-text-primary">{editingId ? '✏️ Editar Meta' : '🎯 Nueva Meta de Ahorro'}</h3>
+              <button
+                type="button"
+                onClick={() => { setShowModal(false); resetForm(); }}
+                className="flex h-8 w-8 items-center justify-center rounded-xl bg-surface-100 border border-border-default text-text-muted hover:text-text-primary hover:bg-surface-200 transition-colors cursor-pointer"
+                title="Cerrar modal"
+              >
+                ✕
+              </button>
             </div>
 
             {formError && (
@@ -631,8 +638,15 @@ export default function SavingsGoalsManager() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="w-full max-w-sm rounded-2xl border border-border-default bg-surface-50 p-6 shadow-2xl space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-base font-bold">💰 Registrar Depósito</h3>
-              <button onClick={() => { setDepositGoalId(null); setDepositAmount(''); }} className="text-text-muted hover:text-text-primary cursor-pointer">✕</button>
+              <h3 className="text-base font-bold text-text-primary">💰 Registrar Depósito</h3>
+              <button
+                type="button"
+                onClick={() => { setDepositGoalId(null); setDepositAmount(''); }}
+                className="flex h-8 w-8 items-center justify-center rounded-xl bg-surface-100 border border-border-default text-text-muted hover:text-text-primary hover:bg-surface-200 transition-colors cursor-pointer"
+                title="Cerrar modal"
+              >
+                ✕
+              </button>
             </div>
 
             <p className="text-xs text-text-secondary">
