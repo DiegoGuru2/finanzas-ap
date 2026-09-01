@@ -312,4 +312,32 @@ describe('buildPaymentSchedule', () => {
 
     expect(result.rows).toHaveLength(0);
   });
+
+  it('includes the immediate preceding cut when includePastCuts is 1', () => {
+    // When date is September 1, 2026, includePastCuts=1 should include 2026-08-31 as the first period
+    const periods = generatePeriods(
+      new Date(2026, 8, 1),
+      3,
+      { quincena: 360, finDeMes: 400 },
+      1
+    );
+
+    expect(periods).toHaveLength(7); // 6 future + 1 past
+    expect(periods[0].key).toBe('2026-08-31');
+    expect(periods[0].timing).toBe('fin_de_mes');
+    expect(periods[1].key).toBe('2026-09-15');
+    expect(periods[1].timing).toBe('quincena');
+
+    const result = buildPaymentSchedule({
+      debts: [],
+      incomes: [salary],
+      expenses: [],
+      months: 2,
+      startDate: '2026-09-01',
+      includePastCuts: 1,
+    });
+
+    expect(result.periods[0].key).toBe('2026-08-31');
+    expect(result.periods[1].key).toBe('2026-09-15');
+  });
 });

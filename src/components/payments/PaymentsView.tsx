@@ -604,6 +604,7 @@ export default function PaymentsView() {
               {periods.map((p) => {
                 const isSelected = p.key === selectedPeriodKey;
                 const isNext = p.key === nextKey;
+                const isPast = p.date < todayIso;
                 const isNegative = (remaining[p.key] ?? 0) < 0;
                 return (
                   <button
@@ -615,7 +616,9 @@ export default function PaymentsView() {
                     className={`relative flex flex-col items-center rounded-xl px-3 py-2 text-xs transition-all cursor-pointer ${
                       isSelected && !showAllCards
                         ? 'bg-brand-500 text-white shadow-md scale-102 ring-2 ring-brand-400/40'
-                        : 'border border-border-default bg-surface-50 text-text-secondary hover:border-border-hover hover:text-text-primary'
+                        : isPast
+                          ? 'border border-border-default/60 bg-surface-100/40 text-text-muted hover:border-border-hover hover:text-text-primary'
+                          : 'border border-border-default bg-surface-50 text-text-secondary hover:border-border-hover hover:text-text-primary'
                     }`}
                   >
                     {isNext && (
@@ -628,7 +631,7 @@ export default function PaymentsView() {
                       {p.day} {MONTH_SHORT[p.month]}
                     </span>
                     <span className="text-[10px] opacity-80">
-                      {p.timing === 'quincena' ? '15' : 'Fin mes'}
+                      {isPast ? 'Anterior' : p.timing === 'quincena' ? '15' : 'Fin mes'}
                     </span>
                     {isNegative && (
                       <span className="mt-0.5 h-1 w-1 rounded-full bg-danger-400"></span>
@@ -656,6 +659,7 @@ export default function PaymentsView() {
           <div className="space-y-4">
             {periodsToRenderCards.map((p) => {
               const isNext = p.key === nextKey;
+              const isPast = p.date < todayIso;
               const periodTotals = totals[p.key] ?? 0;
               const periodRemaining = remaining[p.key] ?? 0;
               const payouts = schedule?.benefitPayouts?.[p.key] || [];
@@ -671,7 +675,9 @@ export default function PaymentsView() {
                   className={`rounded-2xl border transition-all ${
                     isNext
                       ? 'border-brand-500/40 bg-surface-50 shadow-lg shadow-brand-500/5 ring-1 ring-brand-500/20'
-                      : 'border-border-default bg-surface-50'
+                      : isPast
+                        ? 'border-border-default/70 bg-surface-50/70 opacity-95'
+                        : 'border-border-default bg-surface-50'
                   }`}
                 >
                   {/* Encabezado del corte */}
@@ -679,9 +685,11 @@ export default function PaymentsView() {
                     <div className="flex items-center gap-3">
                       <div
                         className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl font-bold text-sm ${
-                          p.timing === 'quincena'
-                            ? 'bg-brand-500/15 text-brand-400 border border-brand-500/20'
-                            : 'bg-accent-500/15 text-accent-400 border border-accent-500/20'
+                          isPast
+                            ? 'bg-surface-200 text-text-muted border border-border-default'
+                            : p.timing === 'quincena'
+                              ? 'bg-brand-500/15 text-brand-400 border border-brand-500/20'
+                              : 'bg-accent-500/15 text-accent-400 border border-accent-500/20'
                         }`}
                       >
                         {p.day}
@@ -703,6 +711,11 @@ export default function PaymentsView() {
                           {isNext && (
                             <span className="rounded-md bg-brand-500 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white shadow-sm">
                               ⚡ Próximo corte
+                            </span>
+                          )}
+                          {isPast && !isNext && (
+                            <span className="rounded-md bg-surface-200 border border-border-default px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-text-muted">
+                              🕰️ Corte anterior
                             </span>
                           )}
                         </div>
@@ -998,22 +1011,31 @@ export default function PaymentsView() {
                   <th className="sticky left-0 top-[37px] z-20 bg-surface-50 px-3 sm:px-4 py-2 min-w-[125px] sm:min-w-[170px] max-w-[145px] sm:max-w-[210px] border-r border-border-default shadow-[3px_0_10px_-2px_rgba(0,0,0,0.4)]" />
                   {filteredMatrixPeriods.map((p) => {
                     const isNext = p.key === nextKey;
+                    const isPast = p.date < todayIso;
                     return (
                       <th
                         id={`matrix-col-${p.key}`}
                         key={p.key}
                         className={`px-2 sm:px-3 py-2 text-center text-xs font-semibold min-w-[88px] sm:min-w-[105px] ${
-                          p.timing === 'quincena' ? 'text-brand-400' : 'text-accent-400'
+                          isPast
+                            ? 'text-text-muted bg-surface-100/30'
+                            : p.timing === 'quincena'
+                              ? 'text-brand-400'
+                              : 'text-accent-400'
                         } border-l border-border-default${isNext ? ' bg-brand-500/15 ring-1 ring-inset ring-brand-500/30' : ''}`}
                       >
                         <div className="flex flex-col items-center">
                           <span>{p.timing === 'quincena' ? 'Día 15' : 'Fin mes'}</span>
                           <span className="text-[10px] text-text-muted font-normal">{p.day} {MONTH_SHORT[p.month]}</span>
-                          {isNext && (
+                          {isNext ? (
                             <span className="mt-0.5 rounded bg-brand-500 px-1 py-0.2 text-[8px] font-bold uppercase tracking-wider text-white">
                               Próximo
                             </span>
-                          )}
+                          ) : isPast ? (
+                            <span className="mt-0.5 rounded bg-surface-200 border border-border-default px-1 py-0.2 text-[8px] font-bold uppercase tracking-wider text-text-muted">
+                              Anterior
+                            </span>
+                          ) : null}
                         </div>
                       </th>
                     );

@@ -22,6 +22,7 @@ export interface ScheduleInput {
   expenses: Expense[];
   months?: number; // Horizonte en meses (default 6)
   startDate?: string; // ISO date; default hoy
+  includePastCuts?: number; // Cantidad de cortes pasados inmediatos a incluir (default 1)
 }
 
 export interface SchedulePeriod {
@@ -80,10 +81,11 @@ export function resolveTiming(
 export function generatePeriods(
   startDateInput: Date,
   months: number,
-  monthlyIncome: { quincena: number; finDeMes: number }
+  monthlyIncome: { quincena: number; finDeMes: number },
+  includePastCuts: number = 0
 ): SchedulePeriod[] {
   const periods: SchedulePeriod[] = [];
-  const target = months * 2;
+  const target = months * 2 + includePastCuts;
 
   const startDate = new Date(
     startDateInput.getFullYear(),
@@ -91,8 +93,25 @@ export function generatePeriods(
     startDateInput.getDate()
   );
 
-  let year = startDate.getFullYear();
-  let month = startDate.getMonth();
+  // Calcular el punto de partida efectivo retrocediendo la cantidad de cortes pasados solicitados
+  let effectiveStartDate = new Date(startDate);
+  for (let i = 0; i < includePastCuts; i++) {
+    const curDay = effectiveStartDate.getDate();
+    const curMonth = effectiveStartDate.getMonth();
+    const curYear = effectiveStartDate.getFullYear();
+
+    if (curDay > 15) {
+      effectiveStartDate = new Date(curYear, curMonth, 15);
+    } else {
+      const prevMonth = curMonth === 0 ? 11 : curMonth - 1;
+      const prevYear = curMonth === 0 ? curYear - 1 : curYear;
+      const prevMonthLastDay = new Date(prevYear, prevMonth + 1, 0).getDate();
+      effectiveStartDate = new Date(prevYear, prevMonth, prevMonthLastDay);
+    }
+  }
+
+  let year = effectiveStartDate.getFullYear();
+  let month = effectiveStartDate.getMonth();
 
   while (periods.length < target) {
     const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -103,7 +122,7 @@ export function generatePeriods(
       [finDeMesDay, 'fin_de_mes'],
     ] as [number, PeriodTiming][]) {
       const date = new Date(year, month, day);
-      if (date < startDate || periods.length >= target) continue;
+      if (date < effectiveStartDate || periods.length >= target) continue;
       periods.push({
         key: toKey(date),
         date: toKey(date),
@@ -133,6 +152,12 @@ export function buildPaymentSchedule(input: ScheduleInput): PaymentScheduleResul
   const months = Math.min(Math.max(input.months ?? 6, 1), 24);
   const startDate = input.startDate ? new Date(`${input.startDate}T00:00:00`) : new Date();
   startDate.setHours(0, 0, 0, 0);
+  const includePastCuts =
+    input.includePastCuts !== undefined
+      ? input.includePastCuts
+      : input.startDate
+        ? 0
+        : 1;
 
   // ─── Ingreso por corte ───
   let quincenaIncome = 0;
@@ -150,10 +175,15 @@ export function buildPaymentSchedule(input: ScheduleInput): PaymentScheduleResul
     }
   }
 
-  const periods = generatePeriods(startDate, months, {
-    quincena: round(quincenaIncome),
-    finDeMes: round(finDeMesIncome),
-  });
+  const periods = generatePeriods(
+    startDate,
+    months,
+    {
+      quincena: round(quincenaIncome),
+      finDeMes: round(finDeMesIncome),
+    },
+    includePastCuts
+  );
 
   // ─── Beneficios anuales (décimos no mensualizados, utilidades) en su mes legal ───
   const benefitPayouts: Record<string, { label: string; amount: number }[]> = {};
