@@ -1,6 +1,7 @@
 import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { formatCurrency } from '@/lib/utils';
 import { calculateSalaryDetails } from '@/modules/financial-engine/cashflow';
+import HealthScoreWidget from './HealthScoreWidget';
 
 // Lazy-load recharts para reducir el bundle inicial (~500KB)
 const LazyChart = lazy(() =>
@@ -404,6 +405,9 @@ export default function DashboardView() {
           </div>
         )}
       </div>
+
+      {/* 🏆 Score de Salud Financiera y Gamificación */}
+      <HealthScoreWidget />
 
       {/* 🚀 ONBOARDING WIZARD MODAL FOR NEW REGISTERED USERS */}
       {showOnboarding && (

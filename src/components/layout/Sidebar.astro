@@ -16,6 +16,7 @@ const navItems: NavItem[] = [
   { href: '/app/debts', label: 'Deudas', icon: 'credit-card' },
   { href: '/app/incomes', label: 'Ingresos', icon: 'trending-up' },
   { href: '/app/expenses', label: 'Gastos', icon: 'receipt' },
+  { href: '/app/budgets', label: 'Presupuestos', icon: 'pie-chart' },
   { href: '/app/payments', label: 'Pagos', icon: 'banknote' },
   { href: '/app/savings', label: 'Metas de Ahorro', icon: 'target' },
   { href: '/app/vault', label: 'Contraseñas', icon: 'lock' },
@@ -119,6 +120,14 @@ function isActive(href: string): boolean {
                   stroke-linejoin="round"
                   stroke-width="1.5"
                   d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z"
+                />
+              )}
+              {item.icon === 'pie-chart' && (
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="1.5"
+                  d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"
                 />
               )}
               {item.icon === 'banknote' && (

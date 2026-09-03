@@ -1,0 +1,10 @@
+---
+import AppLayout from '../../layouts/AppLayout.astro';
+import BudgetsManager from '@/components/budgets/BudgetsManager';
+
+const user = Astro.locals.user;
+---
+
+<AppLayout title="Presupuestos">
+  <BudgetsManager client:load />
+</AppLayout>

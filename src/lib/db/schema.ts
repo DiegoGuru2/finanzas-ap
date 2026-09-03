@@ -331,13 +331,32 @@ export const adminSettings = mysqlTable('admin_settings', {
 export const institutions = mysqlTable('institutions', {
   id: varchar('id', { length: 36 }).primaryKey(),
   name: varchar('name', { length: 255 }).notNull(),
-  type: varchar('type', { length: 50 }).notNull().default('Banco'), // 'Banco' | 'Cooperativa' | 'Pública' | 'Tarjeta'
+  type: varchar('type', { length: 50 }).notNull().default('Banco'),
   code: varchar('code', { length: 50 }).notNull(),
   defaultApr: decimal('defaultApr', { precision: 5, scale: 2 }).notNull().default('15.00'),
   maxTermMonths: int('maxTermMonths').notNull().default(60),
-  status: varchar('status', { length: 50 }).notNull().default('active'), // 'active' | 'inactive'
+  status: varchar('status', { length: 50 }).notNull().default('active'),
   createdAt: timestamp('createdAt').notNull().defaultNow(),
   updatedAt: timestamp('updatedAt').notNull().defaultNow().onUpdateNow(),
 });
 
+// ═══════════════════════════════════════════
+// Presupuestos Mensuales
+// ═══════════════════════════════════════════
 
+export const budgets = mysqlTable(
+  'budgets',
+  {
+    id: varchar('id', { length: 36 }).primaryKey(),
+    userId: varchar('userId', { length: 36 })
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    category: varchar('category', { length: 100 }).notNull(), // 'housing', 'food', etc. — coincide con expense.category
+    monthlyLimit: decimal('monthlyLimit', { precision: 15, scale: 2 }).notNull(),
+    createdAt: timestamp('createdAt').notNull().defaultNow(),
+    updatedAt: timestamp('updatedAt').notNull().defaultNow().onUpdateNow(),
+  },
+  (table) => [
+    index('budgets_user_cat_idx').on(table.userId, table.category),
+  ]
+);

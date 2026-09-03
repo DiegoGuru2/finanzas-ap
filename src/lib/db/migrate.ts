@@ -303,7 +303,26 @@ async function migrateAll() {
   }
   console.log('✅ Tabla institutions lista');
 
-  // 13. Índices Compuestos para Alto Rendimiento
+  // 13. Budgets (Presupuestos Mensuales)
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS \`budgets\` (
+      \`id\` VARCHAR(36) PRIMARY KEY,
+      \`userId\` VARCHAR(36) NOT NULL,
+      \`category\` VARCHAR(100) NOT NULL,
+      \`monthlyLimit\` DECIMAL(15,2) NOT NULL,
+      \`createdAt\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      \`updatedAt\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      FOREIGN KEY (\`userId\`) REFERENCES \`user\`(\`id\`) ON DELETE CASCADE
+    );
+  `);
+  console.log('✅ Tabla budgets lista');
+
+  try {
+    await db.execute(sql`CREATE INDEX \`budgets_user_cat_idx\` ON \`budgets\` (\`userId\`, \`category\`);`);
+    console.log('✅ Índice budgets_user_cat_idx creado');
+  } catch {}
+
+  // 14. Índices Compuestos para Alto Rendimiento
   try {
     await db.execute(sql`CREATE INDEX \`payments_user_paid_idx\` ON \`payments\` (\`userId\`, \`paidAt\`);`);
     console.log('✅ Índice payments_user_paid_idx creado');
