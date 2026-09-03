@@ -455,8 +455,8 @@ export default function SavingsGoalsManager() {
                   {goal.linked && (
                     <p className="mt-1.5 text-[10px] text-text-muted">
                       🔗 Base {formatCurrency(goal.baseAmount)} +{' '}
-                      <strong className="text-accent-400">{formatCurrency(goal.linked.accrued)} acumulados automáticamente</strong>
-                      {' '}({goal.linked.monthsElapsed} {goal.linked.monthsElapsed === 1 ? 'mes' : 'meses'} × {formatCurrency(goal.linked.monthlyAmount)} desde el {goal.linked.since})
+                      <strong className="text-accent-400">{formatCurrency(goal.linked.accrued)} abonados</strong>
+                      {' '}({goal.linked.monthsElapsed} {goal.linked.monthsElapsed === 1 ? 'pago realizado' : 'pagos realizados'} marcados en cronograma desde el {goal.linked.since})
                     </p>
                   )}
                 </div>

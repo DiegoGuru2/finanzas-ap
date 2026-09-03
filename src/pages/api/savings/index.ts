@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { db } from '@/lib/db';
-import { savingsGoals, expenses } from '@/lib/db/schema';
+import { savingsGoals, expenses, expensePayments } from '@/lib/db/schema';
 import { eq, and, desc } from 'drizzle-orm';
 import { savingsGoalSchema } from '@/modules/financial-engine/validators';
 import {
@@ -44,21 +44,22 @@ export const GET: APIRoute = async (ctx) => {
   }
 
   try {
-    const [rows, userExpenses] = await Promise.all([
+    const [rows, userExpenses, userExpensePayments] = await Promise.all([
       db
         .select()
         .from(savingsGoals)
         .where(eq(savingsGoals.userId, user.id))
         .orderBy(desc(savingsGoals.createdAt)),
       db.select().from(expenses).where(eq(expenses.userId, user.id)),
+      db.select().from(expensePayments).where(eq(expensePayments.userId, user.id)),
     ]);
 
     const enriched = rows.map((row) => {
       const goal = toGoal(row);
 
-      // ─── Meta vinculada a un gasto: acumula sola con el tiempo ───
-      // El "Ya ahorrado" manual queda como base; cada mes cumplido desde
-      // linkedSince suma el monto mensual del gasto vinculado.
+      // ─── Meta vinculada a un gasto: acumula según pagos efectivamente realizados ───
+      // El "Ya ahorrado" manual queda como base; cada pago marcado como realizado
+      // en el cronograma suma al ahorro real acumulado.
       const linkedExpense = goal.linkedExpenseId
         ? userExpenses.find((e) => e.id === goal.linkedExpenseId)
         : null;
@@ -68,19 +69,33 @@ export const GET: APIRoute = async (ctx) => {
           parseFloat(linkedExpense.amount as string),
           (linkedExpense.frequency as any) || 'monthly'
         );
-        const since = goal.linkedSince || goal.startDate;
-        const accrual = calculateLinkedAccrual(since, monthlyAmount);
+        const sinceStr = (goal.linkedSince || goal.startDate).slice(0, 10);
+
+        // Filtrar pagos marcados en la tabla expense_payments para este gasto a partir de linkedSince
+        const paymentsForExpense = userExpensePayments.filter((p) => {
+          if (p.expenseId !== linkedExpense.id) return false;
+          const paidAtStr = p.paidAt instanceof Date 
+            ? p.paidAt.toISOString().slice(0, 10) 
+            : String(p.paidAt).slice(0, 10);
+          return paidAtStr >= sinceStr;
+        });
+
+        const totalPaidAmount = paymentsForExpense.reduce(
+          (sum, p) => sum + parseFloat(p.amount as string),
+          0
+        );
+        const paidCount = paymentsForExpense.length;
 
         const baseAmount = goal.currentAmount;
         const effectiveAmount = Math.min(
           goal.targetAmount,
-          Math.round((baseAmount + accrual.accrued) * 100) / 100
+          Math.round((baseAmount + totalPaidAmount) * 100) / 100
         );
 
         const effectiveGoal: SavingsGoal = {
           ...goal,
           currentAmount: effectiveAmount,
-          monthlyContribution: accrual.monthlyAmount,
+          monthlyContribution: monthlyAmount,
         };
         const projection = projectSavingsGoal(effectiveGoal);
 
@@ -92,10 +107,10 @@ export const GET: APIRoute = async (ctx) => {
           linked: {
             expenseId: linkedExpense.id,
             expenseName: linkedExpense.name,
-            monthlyAmount: accrual.monthlyAmount,
-            monthsElapsed: accrual.monthsElapsed,
-            accrued: accrual.accrued,
-            since,
+            monthlyAmount,
+            monthsElapsed: paidCount, // cantidad de pagos marcados realizados
+            accrued: Math.round(totalPaidAmount * 100) / 100,
+            since: sinceStr,
           },
           projection,
         };
