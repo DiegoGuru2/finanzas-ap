@@ -181,12 +181,12 @@ export default function PasswordVaultManager() {
   const [revealedItems, setRevealedItems] = useState<Record<string, boolean>>({});
   const [loadingItems, setLoadingItems] = useState(false);
 
-  // Modal de Autenticación de Contraseña del Sistema para revelar
+  // Modal de Autenticación de Clave Maestra para revelar
   const [authModalItem, setAuthModalItem] = useState<EncryptedVaultItem | null>(null);
-  const [systemPassword, setSystemPassword] = useState('');
-  const [showSystemPassword, setShowSystemPassword] = useState(false);
-  const [systemAuthError, setSystemAuthError] = useState<string | null>(null);
-  const [verifyingSystem, setVerifyingSystem] = useState(false);
+  const [masterAuthPin, setMasterAuthPin] = useState('');
+  const [showMasterAuthPin, setShowMasterAuthPin] = useState(false);
+  const [masterAuthError, setMasterAuthError] = useState<string | null>(null);
+  const [verifyingMaster, setVerifyingMaster] = useState(false);
 
   // Filtros y Búsqueda
   const [searchQuery, setSearchQuery] = useState('');
@@ -417,54 +417,51 @@ export default function PasswordVaultManager() {
     }
   };
 
-  // 4. Solicitar Contraseña del Sistema antes de Revelar
+  // 4. Solicitar Clave Maestra antes de Revelar
   const handleRequestReveal = (item: EncryptedVaultItem) => {
     if (revealedItems[item.id]) {
-      // Ya está revelado: permite ocultarlo inmediatamente sin contraseña
+      // Ya está revelado: permite ocultarlo inmediatamente
       setRevealedItems((prev) => ({ ...prev, [item.id]: false }));
       return;
     }
-    // Requiere la contraseña del sistema para revelar
+    // Requiere la clave maestra para revelar
     setAuthModalItem(item);
-    setSystemPassword('');
-    setShowSystemPassword(false);
-    setSystemAuthError(null);
+    setMasterAuthPin('');
+    setShowMasterAuthPin(false);
+    setMasterAuthError(null);
   };
 
-  const handleConfirmSystemPassword = async (e: React.FormEvent) => {
+  const handleConfirmMasterPin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!authModalItem) return;
-    if (!systemPassword) {
-      setSystemAuthError('Ingresa la contraseña del sistema');
+    if (!authModalItem || !salt || !verifier || !verifierIv) return;
+    if (!masterAuthPin) {
+      setMasterAuthError('Ingresa tu clave maestra');
       return;
     }
 
     try {
-      setVerifyingSystem(true);
-      setSystemAuthError(null);
+      setVerifyingMaster(true);
+      setMasterAuthError(null);
 
-      const res = await fetch('/api/vault/verify-system-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password: systemPassword }),
-      });
+      // Derivar y verificar directamente con el canario de la bóveda
+      const candidateKey = await deriveMasterKey(masterAuthPin, salt);
+      const isValid = await verifyMasterKey(candidateKey, verifier, verifierIv);
 
-      const json = await res.json();
-      if (!res.ok || !json.valid) {
-        setSystemAuthError(json.error || 'Contraseña del sistema incorrecta');
+      if (!isValid) {
+        setMasterAuthError('Clave maestra incorrecta');
         return;
       }
 
       // Autenticación correcta: revelar este elemento
       setRevealedItems((prev) => ({ ...prev, [authModalItem.id]: true }));
       setAuthModalItem(null);
-      setSystemPassword('');
+      setMasterAuthPin('');
       resetInactivityTimer();
     } catch (err: any) {
-      console.error('Error verifying system password:', err);
-      setSystemAuthError('Error de verificación');
+      console.error('Error verifying master pin:', err);
+      setMasterAuthError('Error al verificar la clave maestra');
     } finally {
-      setVerifyingSystem(false);
+      setVerifyingMaster(false);
     }
   };
 
@@ -1020,12 +1017,12 @@ export default function PasswordVaultManager() {
 
                   {/* Campos Usuario y Contraseña protegidos por Contraseña del Sistema */}
                   <div className="space-y-2 pt-1">
-                    {/* Botón de Revelación con Contraseña del Sistema */}
+                    {/* Botón de Revelación con Clave Maestra */}
                     <div className="flex items-center justify-between rounded-xl bg-surface-100/60 p-2 border border-border-default/60">
                       <div className="flex items-center gap-1.5 text-xs text-text-secondary">
-                        <span className="h-3.5 w-3.5 text-brand-400">{SvgIcons.other}</span>
+                        <span className="h-3.5 w-3.5 text-brand-400">{SvgIcons.lock}</span>
                         <span className="text-[11px] font-medium">
-                          {isRevealed ? 'Credenciales reveladas' : 'Protegido por contraseña'}
+                          {isRevealed ? 'Credenciales reveladas' : 'Protegido por clave maestra'}
                         </span>
                       </div>
 
@@ -1037,7 +1034,7 @@ export default function PasswordVaultManager() {
                             ? 'bg-surface-200 text-text-secondary hover:text-text-primary'
                             : 'bg-brand-500/15 border border-brand-500/30 text-brand-400 hover:bg-brand-500/25'
                         }`}
-                        title={isRevealed ? 'Ocultar credenciales' : 'Requiere contraseña del sistema para ver'}
+                        title={isRevealed ? 'Ocultar credenciales' : 'Requiere clave maestra de la bóveda para ver'}
                       >
                         {isRevealed ? (
                           <>
@@ -1139,7 +1136,7 @@ export default function PasswordVaultManager() {
       )}
 
       {/* ═══════════════════════════════════════════════════════════════
-          MODAL: CONFIRMAR CONTRASEÑA DEL SISTEMA
+          MODAL: CONFIRMAR CLAVE MAESTRA DE LA BÓVEDA
       ═══════════════════════════════════════════════════════════════ */}
       {authModalItem && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-fade-in">
@@ -1150,7 +1147,7 @@ export default function PasswordVaultManager() {
                   {SvgIcons.lock}
                 </div>
                 <h3 className="font-bold text-base text-text-primary">
-                  Autenticación Requerida
+                  Clave Maestra Requerida
                 </h3>
               </div>
               <button
@@ -1164,32 +1161,32 @@ export default function PasswordVaultManager() {
 
             <p className="text-xs text-text-secondary leading-relaxed">
               Para visualizar y copiar el usuario y la contraseña de <strong>{authModalItem.title}</strong>,
-              ingresa tu contraseña de inicio de sesión de <strong>ProyecAhorro</strong>.
+              ingresa tu <strong>Clave Maestra o PIN de la Bóveda</strong>.
             </p>
 
-            {systemAuthError && (
+            {masterAuthError && (
               <div className="rounded-xl border border-danger-500/30 bg-danger-500/10 p-3 text-xs font-semibold text-danger-400">
-                {systemAuthError}
+                {masterAuthError}
               </div>
             )}
 
-            <form onSubmit={handleConfirmSystemPassword} className="space-y-4">
+            <form onSubmit={handleConfirmMasterPin} className="space-y-4">
               <div className="relative">
                 <input
-                  type={showSystemPassword ? 'text' : 'password'}
-                  value={systemPassword}
-                  onChange={(e) => setSystemPassword(e.target.value)}
-                  placeholder="Contraseña del sistema..."
+                  type={showMasterAuthPin ? 'text' : 'password'}
+                  value={masterAuthPin}
+                  onChange={(e) => setMasterAuthPin(e.target.value)}
+                  placeholder="Ingresa tu Clave Maestra de la Bóveda..."
                   autoFocus
                   className="w-full rounded-xl border border-border-default bg-surface-100 px-3.5 py-2.5 text-sm text-text-primary placeholder:text-text-muted focus:border-brand-500 focus:outline-none pr-10"
                   required
                 />
                 <button
                   type="button"
-                  onClick={() => setShowSystemPassword(!showSystemPassword)}
+                  onClick={() => setShowMasterAuthPin(!showMasterAuthPin)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary text-xs"
                 >
-                  {showSystemPassword ? SvgIcons.eyeOff : SvgIcons.eye}
+                  {showMasterAuthPin ? SvgIcons.eyeOff : SvgIcons.eye}
                 </button>
               </div>
 
@@ -1203,10 +1200,10 @@ export default function PasswordVaultManager() {
                 </button>
                 <button
                   type="submit"
-                  disabled={verifyingSystem}
+                  disabled={verifyingMaster}
                   className="rounded-xl bg-brand-500 px-5 py-2 text-xs font-bold text-white shadow-md hover:bg-brand-400 transition-all cursor-pointer disabled:opacity-50"
                 >
-                  {verifyingSystem ? 'Verificando...' : 'Confirmar y Revelar'}
+                  {verifyingMaster ? 'Verificando...' : 'Confirmar y Revelar'}
                 </button>
               </div>
             </form>
