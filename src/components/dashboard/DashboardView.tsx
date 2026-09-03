@@ -1,6 +1,7 @@
 import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { formatCurrency } from '@/lib/utils';
 import { calculateSalaryDetails } from '@/modules/financial-engine/cashflow';
+import { DEFAULT_CATALOGS } from '@/lib/catalogs';
 import HealthScoreWidget from './HealthScoreWidget';
 
 // Lazy-load recharts para reducir el bundle inicial (~500KB)
@@ -41,6 +42,54 @@ const LazyChart = lazy(() =>
           <mod.Area type="monotone" dataKey="saldo" stroke="#ef4444" fill="url(#colorSaldo)" strokeWidth={2} name="Saldo" />
           <mod.Area type="monotone" dataKey="capitalPagado" stroke="#10b981" fill="url(#colorCapital)" strokeWidth={2} name="Capital Pagado" />
         </mod.AreaChart>
+      </mod.ResponsiveContainer>
+    ),
+  }))
+);
+
+const DONUT_COLORS = [
+  '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6',
+  '#ec4899', '#06b6d4', '#14b8a6', '#f97316', '#6366f1'
+];
+
+const LazyDonutChart = lazy(() =>
+  import('recharts').then((mod) => ({
+    default: ({
+      data,
+      isLight,
+    }: {
+      data: { name: string; amount: number; label: string }[];
+      isLight: boolean;
+    }) => (
+      <mod.ResponsiveContainer width="100%" height={260}>
+        <mod.PieChart>
+          <mod.Pie
+            data={data}
+            cx="50%"
+            cy="50%"
+            innerRadius={60}
+            outerRadius={95}
+            paddingAngle={3}
+            dataKey="amount"
+          >
+            {data.map((_, index) => (
+              <mod.Cell key={`cell-${index}`} fill={DONUT_COLORS[index % DONUT_COLORS.length]} />
+            ))}
+          </mod.Pie>
+          <mod.Tooltip
+            contentStyle={{
+              backgroundColor: isLight ? '#fff' : '#0f172a',
+              border: `1px solid ${isLight ? '#e2e8f0' : '#1e293b'}`,
+              borderRadius: '12px',
+              padding: '8px 12px',
+              fontSize: '12px',
+            }}
+            formatter={(val: number, _name: any, item: any) => [
+              formatCurrency(val),
+              item.payload.label || item.payload.name,
+            ]}
+          />
+        </mod.PieChart>
       </mod.ResponsiveContainer>
     ),
   }))
@@ -188,6 +237,18 @@ export default function DashboardView() {
     capitalPagado: s.totalPrincipalPaid,
   })) || [];
 
+  // Donut chart: Distribución de Gastos por Categoría
+  const rawExpensesByCategory = data?.expensesByCategory || [];
+  const categoryCatalog = DEFAULT_CATALOGS.expense_category;
+  const donutChartData = rawExpensesByCategory.map((item: any) => {
+    const found = categoryCatalog.find((c) => c.value === item.name);
+    return {
+      name: item.name,
+      amount: item.amount,
+      label: found ? `${found.icon} ${found.label}` : item.name,
+    };
+  });
+
   return (
     <div className="space-y-6">
       {/* Welcome & Status Bar */}
@@ -218,7 +279,7 @@ export default function DashboardView() {
       </div>
 
       {/* Ecuadorian Payroll & Cashflow Cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {/* Total Debt */}
         <div className="rounded-2xl border border-danger-500/20 bg-danger-500/5 p-5">
           <div className="flex items-center justify-between">
@@ -292,6 +353,52 @@ export default function DashboardView() {
           </div>
           <div className="mt-1 text-xs text-text-muted">
             Libre tras gastos y mínimos
+          </div>
+        </div>
+
+        {/* Metas de Ahorro Acumulado */}
+        <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-5">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-emerald-400">Ahorro en Metas</span>
+            <span className="text-[10px] text-emerald-300 bg-emerald-500/20 px-2 py-0.5 rounded font-bold">
+              {summary.totalSavingsTarget > 0
+                ? `${Math.round((summary.totalSaved / summary.totalSavingsTarget) * 100)}% de meta`
+                : 'Activo'}
+            </span>
+          </div>
+          <div className="mt-3 text-2xl font-extrabold text-emerald-400">
+            {formatCurrency(summary.totalSaved || 0)}
+          </div>
+          <div className="mt-1 text-xs text-text-muted">
+            Objetivo: {formatCurrency(summary.totalSavingsTarget || 0)}
+          </div>
+        </div>
+
+        {/* Ratio Deuda/Ingreso (DTI) */}
+        <div className="rounded-2xl border border-border-default bg-surface-50 p-5">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-text-secondary">Carga Financiera (DTI)</span>
+            <span
+              className={`rounded px-2 py-0.5 text-[10px] font-bold ${
+                (summary.debtToIncomeRatio || 0) <= 20
+                  ? 'bg-accent-500/20 text-accent-400'
+                  : (summary.debtToIncomeRatio || 0) <= 40
+                  ? 'bg-warning-500/20 text-warning-400'
+                  : 'bg-danger-500/20 text-danger-400'
+              }`}
+            >
+              {(summary.debtToIncomeRatio || 0) <= 20
+                ? 'Excelente'
+                : (summary.debtToIncomeRatio || 0) <= 40
+                ? 'Moderado'
+                : 'Riesgo Alto'}
+            </span>
+          </div>
+          <div className="mt-3 text-2xl font-extrabold text-text-primary">
+            {summary.debtToIncomeRatio || 0}%
+          </div>
+          <div className="mt-1 text-xs text-text-muted">
+            Máx recomendado Ecuador: 40%
           </div>
         </div>
       </div>
@@ -374,36 +481,79 @@ export default function DashboardView() {
         )}
       </div>
 
-      {/* Projection Chart (Recharts) */}
-      <div className="rounded-2xl border border-border-default bg-surface-50 p-6 space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-          <div>
-            <h3 className="font-bold text-base text-text-primary">📉 Proyección de Amortización (24 Meses)</h3>
-            <p className="text-xs text-text-muted">Visualización mes a mes de la reducción de capital e intereses</p>
-          </div>
-          <div className="flex items-center gap-4 text-xs">
-            <div className="flex items-center gap-1.5">
-              <div className="h-3 w-3 rounded-full bg-danger-500"></div>
-              <span className="text-text-secondary">Saldo Deuda</span>
+      {/* Analytics Charts Grid: Amortización + Distribución de Gastos */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Projection Chart (Recharts) */}
+        <div className="lg:col-span-2 rounded-2xl border border-border-default bg-surface-50 p-6 space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <div>
+              <h3 className="font-bold text-base text-text-primary">📉 Proyección de Amortización (24 Meses)</h3>
+              <p className="text-xs text-text-muted">Visualización mes a mes de la reducción de capital e intereses</p>
             </div>
-            <div className="flex items-center gap-1.5">
-              <div className="h-3 w-3 rounded-full bg-accent-400"></div>
-              <span className="text-text-secondary">Capital Amortizado</span>
+            <div className="flex items-center gap-4 text-xs">
+              <div className="flex items-center gap-1.5">
+                <div className="h-3 w-3 rounded-full bg-danger-500"></div>
+                <span className="text-text-secondary">Saldo Deuda</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="h-3 w-3 rounded-full bg-accent-400"></div>
+                <span className="text-text-secondary">Capital Amortizado</span>
+              </div>
             </div>
           </div>
+
+          {chartData.length > 0 && debts.length > 0 ? (
+            <div className="h-72 w-full pt-4">
+              <Suspense fallback={<div className="flex h-full items-center justify-center text-xs text-text-muted">Cargando gráfico...</div>}>
+                <LazyChart chartData={chartData} isLight={isLight} />
+              </Suspense>
+            </div>
+          ) : (
+            <div className="flex h-48 items-center justify-center rounded-xl border border-dashed border-border-default text-xs text-text-muted">
+              Registra tus deudas para generar la curva de amortización
+            </div>
+          )}
         </div>
 
-        {chartData.length > 0 && debts.length > 0 ? (
-          <div className="h-72 w-full pt-4">
-            <Suspense fallback={<div className="flex h-full items-center justify-center text-xs text-text-muted">Cargando gráfico...</div>}>
-              <LazyChart chartData={chartData} isLight={isLight} />
-            </Suspense>
+        {/* Expenses by Category Donut Chart */}
+        <div className="rounded-2xl border border-border-default bg-surface-50 p-6 space-y-4 flex flex-col justify-between">
+          <div>
+            <h3 className="font-bold text-base text-text-primary">🥧 Distribución de Gastos</h3>
+            <p className="text-xs text-text-muted">Desglose mensual de tus egresos por categoría</p>
           </div>
-        ) : (
-          <div className="flex h-48 items-center justify-center rounded-xl border border-dashed border-border-default text-xs text-text-muted">
-            Registra tus deudas para generar la curva de amortización
-          </div>
-        )}
+
+          {donutChartData.length > 0 ? (
+            <div className="space-y-4">
+              <div className="h-56 w-full">
+                <Suspense fallback={<div className="flex h-full items-center justify-center text-xs text-text-muted">Cargando gráfica...</div>}>
+                  <LazyDonutChart data={donutChartData} isLight={isLight} />
+                </Suspense>
+              </div>
+
+              {/* Leyenda compacta de categorías top */}
+              <div className="max-h-36 overflow-y-auto space-y-1.5 pr-1">
+                {donutChartData.map((item: any, idx: number) => (
+                  <div key={idx} className="flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-2 truncate">
+                      <span
+                        className="h-2.5 w-2.5 rounded-full shrink-0"
+                        style={{ backgroundColor: DONUT_COLORS[idx % DONUT_COLORS.length] }}
+                      />
+                      <span className="text-text-secondary truncate">{item.label}</span>
+                    </div>
+                    <span className="font-bold text-text-primary shrink-0 ml-2">
+                      {formatCurrency(item.amount)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="flex h-48 items-center justify-center rounded-xl border border-dashed border-border-default text-xs text-text-muted">
+              Añade tus gastos para ver la distribución porcentual
+            </div>
+          )}
+        </div>
       </div>
 
       {/* 🏆 Score de Salud Financiera y Gamificación */}

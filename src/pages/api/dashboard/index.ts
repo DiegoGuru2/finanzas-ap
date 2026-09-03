@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { db } from '@/lib/db';
-import { incomes, expenses, debts } from '@/lib/db/schema';
+import { incomes, expenses, debts, savingsGoals, budgets } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { calculateCashflow } from '@/modules/financial-engine/cashflow';
 import { optimizeDebt, compareStrategies } from '@/modules/financial-engine/optimizer';
@@ -20,10 +20,12 @@ export const GET: APIRoute = async (ctx) => {
       ? strategyParam
       : 'avalanche') as 'avalanche' | 'snowball' | 'liquidity';
 
-    const [userIncomes, userExpenses, userDebts] = await Promise.all([
+    const [userIncomes, userExpenses, userDebts, userSavings, userBudgets] = await Promise.all([
       db.select().from(incomes).where(eq(incomes.userId, user.id)),
       db.select().from(expenses).where(eq(expenses.userId, user.id)),
       db.select().from(debts).where(eq(debts.userId, user.id)),
+      db.select().from(savingsGoals).where(eq(savingsGoals.userId, user.id)),
+      db.select().from(budgets).where(eq(budgets.userId, user.id)),
     ]);
 
     // Format incomes
@@ -108,6 +110,27 @@ export const GET: APIRoute = async (ctx) => {
 
     const totalDebt = formattedDebts.reduce((sum, d) => sum + d.currentBalance, 0);
 
+    // Métricas avanzadas adicionales: Ahorro y Presupuestos
+    const totalSaved = userSavings.reduce((sum, s) => sum + parseFloat(s.currentAmount as string || '0'), 0);
+    const totalSavingsTarget = userSavings.reduce((sum, s) => sum + parseFloat(s.targetAmount as string || '0'), 0);
+    const totalMonthlySavingsContribution = userSavings
+      .filter((s) => s.status === 'active')
+      .reduce((sum, s) => sum + parseFloat(s.monthlyContribution as string || '0'), 0);
+
+    const debtToIncomeRatio = cashflow.totalGrossIncome > 0
+      ? Math.round(((totalMinimumPayments / cashflow.totalGrossIncome) * 100) * 10) / 10
+      : 0;
+
+    // Desglose de gastos por categoría para gráfica Donut
+    const expensesByCategoryMap: Record<string, number> = {};
+    for (const exp of formattedExpenses) {
+      expensesByCategoryMap[exp.category] = (expensesByCategoryMap[exp.category] || 0) + exp.amount;
+    }
+    const expensesByCategory = Object.entries(expensesByCategoryMap).map(([cat, amount]) => ({
+      name: cat,
+      amount: Math.round(amount * 100) / 100,
+    }));
+
     return new Response(
       JSON.stringify({
         data: {
@@ -131,7 +154,14 @@ export const GET: APIRoute = async (ctx) => {
             savingsRate: cashflow.savingsRate,
             status: cashflow.status,
             activeDebtsCount: formattedDebts.length,
+            // Nuevas métricas avanzadas
+            totalSaved,
+            totalSavingsTarget,
+            totalMonthlySavingsContribution,
+            debtToIncomeRatio,
+            budgetsCount: userBudgets.length,
           },
+          expensesByCategory,
           strategy,
           optimization,
           strategyComparison,
