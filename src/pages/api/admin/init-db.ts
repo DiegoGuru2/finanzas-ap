@@ -2,7 +2,15 @@ import type { APIRoute } from 'astro';
 import { db } from '@/lib/db';
 import { sql } from 'drizzle-orm';
 
-export const GET: APIRoute = async () => {
+export const GET: APIRoute = async (ctx) => {
+  const currentUser = ctx.locals.user as any;
+  if (!currentUser || currentUser.role !== 'admin') {
+    return new Response(JSON.stringify({ error: 'Acceso denegado: Se requiere rol de Administrador' }), {
+      status: 403,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
   const logs: string[] = [];
 
   try {

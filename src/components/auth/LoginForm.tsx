@@ -32,7 +32,7 @@ export default function LoginForm() {
         return;
       }
 
-      if (email.toLowerCase().includes('admin') || (res?.data?.user as any)?.role === 'admin') {
+      if (email.toLowerCase() === 'admin@finanzas.app' || (res?.data?.user as any)?.role === 'admin') {
         window.location.href = '/admin/dashboard';
       } else {
         window.location.href = '/app/dashboard';

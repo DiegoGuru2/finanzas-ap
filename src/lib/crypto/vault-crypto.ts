@@ -86,7 +86,7 @@ export async function deriveMasterKey(pin: string, saltBase64: string): Promise<
   const derivedKey = await crypto.subtle.deriveKey(
     {
       name: 'PBKDF2',
-      salt,
+      salt: salt as any,
       iterations: 100_000,
       hash: 'SHA-256',
     },
@@ -145,7 +145,7 @@ export async function encryptVaultData(
   const crypto = getCrypto();
   const iv = customIv || new Uint8Array(12);
   if (!customIv) {
-    crypto.getRandomValues(iv);
+    crypto.getRandomValues(iv as any);
   }
 
   const enc = new TextEncoder();
@@ -154,10 +154,10 @@ export async function encryptVaultData(
   const encryptedBuffer = await crypto.subtle.encrypt(
     {
       name: 'AES-GCM',
-      iv,
+      iv: iv as any,
     },
     key,
-    data
+    data as any
   );
 
   return {
@@ -181,10 +181,10 @@ export async function decryptVaultData(
   const decryptedBuffer = await crypto.subtle.decrypt(
     {
       name: 'AES-GCM',
-      iv,
+      iv: iv as any,
     },
     key,
-    ciphertext
+    ciphertext as any
   );
 
   const dec = new TextDecoder();

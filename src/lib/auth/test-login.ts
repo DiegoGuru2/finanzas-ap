@@ -12,7 +12,7 @@ async function testLogin() {
     });
 
     console.log('✅ Login SUCCESS! User verified:', res.user?.name, res.user?.email);
-    console.log('🎟️ Session token created:', res.session?.token ? 'OK' : 'NONE');
+    console.log('🎟️ Session token created:', (res as any).session?.token || res.token ? 'OK' : 'NONE');
   } catch (err: any) {
     console.error('❌ Login failed:', err.message || err);
   }

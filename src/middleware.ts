@@ -50,6 +50,12 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
   // ─── If user is NOT logged in and visits a protected route ───
   if (!isPublicRoute && !session) {
+    if (pathname.startsWith('/api/')) {
+      return new Response(JSON.stringify({ error: 'No autorizado' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
     return context.redirect('/login');
   }
 
