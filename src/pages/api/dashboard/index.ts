@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { db } from '@/lib/db';
-import { incomes, expenses, debts, savingsGoals, budgets } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
+import { incomes, expenses, debts, savingsGoals, budgets, payments } from '@/lib/db/schema';
+import { eq, desc } from 'drizzle-orm';
 import { calculateCashflow } from '@/modules/financial-engine/cashflow';
 import { optimizeDebt, compareStrategies } from '@/modules/financial-engine/optimizer';
 import { projectAmortization } from '@/modules/financial-engine/projection';
@@ -20,12 +20,13 @@ export const GET: APIRoute = async (ctx) => {
       ? strategyParam
       : 'avalanche') as 'avalanche' | 'snowball' | 'liquidity';
 
-    const [userIncomes, userExpenses, userDebts, userSavings, userBudgets] = await Promise.all([
+    const [userIncomes, userExpenses, userDebts, userSavings, userBudgets, userPayments] = await Promise.all([
       db.select().from(incomes).where(eq(incomes.userId, user.id)),
       db.select().from(expenses).where(eq(expenses.userId, user.id)),
       db.select().from(debts).where(eq(debts.userId, user.id)),
       db.select().from(savingsGoals).where(eq(savingsGoals.userId, user.id)),
       db.select().from(budgets).where(eq(budgets.userId, user.id)),
+      db.select().from(payments).where(eq(payments.userId, user.id)).orderBy(desc(payments.paidAt)),
     ]);
 
     // Format incomes
@@ -109,13 +110,21 @@ export const GET: APIRoute = async (ctx) => {
     });
 
     const totalDebt = formattedDebts.reduce((sum, d) => sum + d.currentBalance, 0);
+    const totalOriginalDebt = userDebts.reduce((sum, d) => sum + parseFloat(d.originalBalance as string || '0'), 0);
+    const totalDebtPaidOff = Math.max(0, Math.round((totalOriginalDebt - totalDebt) * 100) / 100);
+    const totalDebtProgress = totalOriginalDebt > 0 ? Math.round(((totalOriginalDebt - totalDebt) / totalOriginalDebt) * 1000) / 10 : 0;
+    const paidOffDebtsCount = userDebts.filter((d) => parseFloat(d.currentBalance as string) <= 0).length;
 
-    // Métricas avanzadas adicionales: Ahorro y Presupuestos
+    // Métricas avanzadas adicionales: Ahorro y Metas
     const totalSaved = userSavings.reduce((sum, s) => sum + parseFloat(s.currentAmount as string || '0'), 0);
     const totalSavingsTarget = userSavings.reduce((sum, s) => sum + parseFloat(s.targetAmount as string || '0'), 0);
     const totalMonthlySavingsContribution = userSavings
       .filter((s) => s.status === 'active')
       .reduce((sum, s) => sum + parseFloat(s.monthlyContribution as string || '0'), 0);
+    const savingsProgress = totalSavingsTarget > 0 ? Math.round((totalSaved / totalSavingsTarget) * 1000) / 10 : 0;
+
+    // Total histórico abonado a deudas
+    const totalHistoricalPaymentsAmount = userPayments.reduce((sum, p) => sum + parseFloat(p.amount as string || '0'), 0);
 
     const debtToIncomeRatio = cashflow.totalGrossIncome > 0
       ? Math.round(((totalMinimumPayments / cashflow.totalGrossIncome) * 100) * 10) / 10
@@ -131,6 +140,35 @@ export const GET: APIRoute = async (ctx) => {
       amount: Math.round(amount * 100) / 100,
     }));
 
+    // Metas de ahorro estructuradas
+    const formattedSavingsGoals = userSavings.map((s) => ({
+      id: s.id,
+      name: s.name,
+      currentAmount: parseFloat(s.currentAmount as string || '0'),
+      targetAmount: parseFloat(s.targetAmount as string || '0'),
+      monthlyContribution: parseFloat(s.monthlyContribution as string || '0'),
+      category: s.category,
+      icon: s.icon || '🎯',
+      status: s.status,
+      percent: parseFloat(s.targetAmount as string) > 0
+        ? Math.min(100, Math.round((parseFloat(s.currentAmount as string || '0') / parseFloat(s.targetAmount as string)) * 1000) / 10)
+        : 0,
+    }));
+
+    // Pagos recientes
+    const recentPayments = userPayments.slice(0, 5).map((p) => {
+      const targetDebt = userDebts.find((d) => d.id === p.debtId);
+      return {
+        id: p.id,
+        debtId: p.debtId,
+        debtName: targetDebt?.name || 'Deuda',
+        amount: parseFloat(p.amount as string),
+        type: p.type,
+        paidAt: p.paidAt,
+        notes: p.notes,
+      };
+    });
+
     return new Response(
       JSON.stringify({
         data: {
@@ -141,6 +179,10 @@ export const GET: APIRoute = async (ctx) => {
           },
           summary: {
             totalDebt,
+            totalOriginalDebt,
+            totalDebtPaidOff,
+            totalDebtProgress,
+            paidOffDebtsCount,
             totalGrossIncome: cashflow.totalGrossIncome,
             totalIessDeductions: cashflow.totalIessDeductions,
             totalProgrammedSavings: cashflow.totalProgrammedSavings,
@@ -154,21 +196,40 @@ export const GET: APIRoute = async (ctx) => {
             savingsRate: cashflow.savingsRate,
             status: cashflow.status,
             activeDebtsCount: formattedDebts.length,
-            // Nuevas métricas avanzadas
+            // Métricas de Ahorro
             totalSaved,
             totalSavingsTarget,
             totalMonthlySavingsContribution,
+            savingsProgress,
+            totalHistoricalPaymentsAmount,
             debtToIncomeRatio,
             budgetsCount: userBudgets.length,
           },
           expensesByCategory,
+          savingsGoals: formattedSavingsGoals,
+          recentPayments,
           strategy,
           optimization,
           strategyComparison,
           projection,
           incomes: formattedIncomes,
           expenses: formattedExpenses,
-          debts: formattedDebts,
+          debts: userDebts.map((d) => ({
+            id: d.id,
+            name: d.name,
+            creditor: d.creditor || '',
+            currentBalance: parseFloat(d.currentBalance as string),
+            originalBalance: parseFloat(d.originalBalance as string),
+            apr: parseFloat(d.apr as string),
+            minimumPayment: parseFloat(d.minimumPayment as string),
+            dueDay: d.dueDay ?? 15,
+            type: d.type,
+            status: d.status,
+            paidAmount: Math.max(0, Math.round((parseFloat(d.originalBalance as string) - parseFloat(d.currentBalance as string)) * 100) / 100),
+            progress: parseFloat(d.originalBalance as string) > 0
+              ? Math.min(100, Math.round(((parseFloat(d.originalBalance as string) - parseFloat(d.currentBalance as string)) / parseFloat(d.originalBalance as string)) * 100))
+              : 0,
+          })),
         },
       }),
       {

@@ -227,6 +227,8 @@ export default function DashboardView() {
   const optimization = data?.optimization || {};
   const projection = data?.projection || {};
   const debts = data?.debts || [];
+  const savingsGoals = data?.savingsGoals || [];
+  const recentPayments = data?.recentPayments || [];
   const userName = data?.user?.name || 'Usuario';
 
   // Chart data format
@@ -285,14 +287,20 @@ export default function DashboardView() {
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-danger-400">Deuda Total Activa</span>
             <span className="rounded bg-danger-500/20 px-2 py-0.5 text-[10px] font-bold text-danger-300">
-              {summary.activeDebtsCount || 0} deudas
+              {summary.activeDebtsCount || 0} activa{summary.activeDebtsCount === 1 ? '' : 's'}
+              {summary.paidOffDebtsCount > 0 ? ` · ${summary.paidOffDebtsCount} liquidada(s)` : ''}
             </span>
           </div>
           <div className="mt-3 text-2xl font-extrabold text-danger-400">
             {formatCurrency(summary.totalDebt || 0)}
           </div>
-          <div className="mt-1 text-xs text-text-muted">
-            Mínimo total: {formatCurrency(summary.totalMinimumPayments || 0)}/mes
+          <div className="mt-1 flex items-center justify-between text-xs text-text-muted">
+            <span>Mínimo: {formatCurrency(summary.totalMinimumPayments || 0)}/mes</span>
+            {summary.totalDebtPaidOff > 0 && (
+              <span className="font-semibold text-accent-400">
+                Pagado: {formatCurrency(summary.totalDebtPaidOff)} ({summary.totalDebtProgress}%)
+              </span>
+            )}
           </div>
         </div>
 
@@ -362,15 +370,20 @@ export default function DashboardView() {
             <span className="text-xs font-medium text-emerald-400">Ahorro en Metas</span>
             <span className="text-[10px] text-emerald-300 bg-emerald-500/20 px-2 py-0.5 rounded font-bold">
               {summary.totalSavingsTarget > 0
-                ? `${Math.round((summary.totalSaved / summary.totalSavingsTarget) * 100)}% de meta`
+                ? `${summary.savingsProgress}% de meta`
                 : 'Activo'}
             </span>
           </div>
           <div className="mt-3 text-2xl font-extrabold text-emerald-400">
             {formatCurrency(summary.totalSaved || 0)}
           </div>
-          <div className="mt-1 text-xs text-text-muted">
-            Objetivo: {formatCurrency(summary.totalSavingsTarget || 0)}
+          <div className="mt-1 flex items-center justify-between text-xs text-text-muted">
+            <span>Objetivo: {formatCurrency(summary.totalSavingsTarget || 0)}</span>
+            {(summary.totalMonthlySavingsContribution || 0) > 0 && (
+              <span className="text-emerald-400 font-medium">
+                +{formatCurrency(summary.totalMonthlySavingsContribution)}/mes
+              </span>
+            )}
           </div>
         </div>
 
@@ -559,6 +572,245 @@ export default function DashboardView() {
           ) : (
             <div className="flex h-48 items-center justify-center rounded-xl border border-dashed border-border-default text-xs text-text-muted">
               Añade tus gastos para ver la distribución porcentual
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* 📊 SECCIÓN DEDICADA: PROGRESO DE PAGOS DE DEUDAS Y METAS DE AHORRO */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Panel 1: Estado y Progreso de Pagos de Deudas */}
+        <div className="rounded-2xl border border-border-default bg-surface-50 p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="font-bold text-base text-text-primary flex items-center gap-2">
+                <span>💳</span> Progreso de Amortización de Deudas
+              </h3>
+              <p className="text-xs text-text-muted mt-0.5">
+                Seguimiento de cuánto has amortizado del monto original
+              </p>
+            </div>
+            <a
+              href="/app/debts"
+              className="text-xs font-semibold text-brand-400 hover:text-brand-300 transition-colors"
+            >
+              Ver todas →
+            </a>
+          </div>
+
+          {/* Resumen Global de Amortización */}
+          <div className="grid grid-cols-3 gap-2 rounded-xl bg-surface-100 p-3 text-center border border-border-default">
+            <div>
+              <div className="text-[10px] text-text-muted">Total Original</div>
+              <div className="text-xs sm:text-sm font-bold text-text-primary">
+                {formatCurrency(summary.totalOriginalDebt || 0)}
+              </div>
+            </div>
+            <div>
+              <div className="text-[10px] text-text-muted">Amortizado</div>
+              <div className="text-xs sm:text-sm font-bold text-accent-400">
+                {formatCurrency(summary.totalDebtPaidOff || 0)}
+              </div>
+            </div>
+            <div>
+              <div className="text-[10px] text-text-muted">Saldo Restante</div>
+              <div className="text-xs sm:text-sm font-bold text-danger-400">
+                {formatCurrency(summary.totalDebt || 0)}
+              </div>
+            </div>
+          </div>
+
+          {/* Lista de deudas con progreso individual */}
+          {debts.length > 0 ? (
+            <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
+              {debts.map((d: any) => {
+                const isPaid = d.currentBalance <= 0;
+                return (
+                  <div
+                    key={d.id}
+                    className={`rounded-xl border p-3 space-y-2 transition-all ${
+                      isPaid
+                        ? 'border-accent-500/20 bg-accent-500/5'
+                        : 'border-border-default bg-surface-100/50'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="min-w-0 flex items-center gap-2">
+                        <span className="text-sm">{isPaid ? '✅' : '💳'}</span>
+                        <div className="truncate">
+                          <span className="font-bold text-xs text-text-primary truncate block">
+                            {d.name}
+                          </span>
+                          <span className="text-[10px] text-text-muted">
+                            {d.creditor || 'Crédito'} · Mínimo: {formatCurrency(d.minimumPayment)}/mes
+                          </span>
+                        </div>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <span className={`text-xs font-bold ${isPaid ? 'text-accent-400' : 'text-text-primary'}`}>
+                          {isPaid ? '¡Completamente pagada!' : formatCurrency(d.currentBalance)}
+                        </span>
+                        <div className="text-[10px] text-text-muted">
+                          de {formatCurrency(d.originalBalance)}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Barra de progreso de pago */}
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between text-[10px]">
+                        <span className="text-accent-400 font-medium">
+                          Amortizado: {formatCurrency(d.paidAmount || 0)}
+                        </span>
+                        <span className="font-bold text-text-primary">{d.progress || 0}%</span>
+                      </div>
+                      <div className="h-2 w-full rounded-full bg-surface-200 overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all duration-700 ease-out ${
+                            isPaid ? 'bg-accent-500' : (d.progress || 0) > 50 ? 'bg-brand-500' : 'bg-warning-500'
+                          }`}
+                          style={{ width: `${Math.min(100, d.progress || 0)}%` }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="flex h-36 items-center justify-center rounded-xl border border-dashed border-border-default text-xs text-text-muted text-center p-4">
+              <div>
+                <p>No tienes deudas registradas.</p>
+                <a href="/app/debts" className="mt-2 inline-block text-xs text-brand-400 font-semibold hover:underline">
+                  + Registrar mi primera deuda
+                </a>
+              </div>
+            </div>
+          )}
+
+          {/* Historial rápido de abonos recientes */}
+          {recentPayments.length > 0 && (
+            <div className="pt-2 border-t border-border-default">
+              <div className="text-[11px] font-bold text-text-secondary mb-1.5 flex items-center justify-between">
+                <span>Últimos abonos registrados:</span>
+                <a href="/app/payments" className="text-[10px] text-brand-400 hover:underline">Ver historial</a>
+              </div>
+              <div className="space-y-1">
+                {recentPayments.slice(0, 3).map((p: any) => (
+                  <div key={p.id} className="flex items-center justify-between text-[11px] text-text-muted">
+                    <span className="truncate">{p.debtName} ({p.paidAt ? String(p.paidAt).slice(0, 10) : 'Fecha'})</span>
+                    <span className="font-bold text-accent-400 shrink-0 ml-2">+{formatCurrency(p.amount)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Panel 2: Progreso de Metas de Ahorro */}
+        <div className="rounded-2xl border border-border-default bg-surface-50 p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="font-bold text-base text-text-primary flex items-center gap-2">
+                <span>🎯</span> Progreso de Metas de Ahorro
+              </h3>
+              <p className="text-xs text-text-muted mt-0.5">
+                Visualiza cuánto llevas ahorrado en cada meta activa
+              </p>
+            </div>
+            <a
+              href="/app/savings"
+              className="text-xs font-semibold text-emerald-400 hover:text-emerald-300 transition-colors"
+            >
+              Gestionar metas →
+            </a>
+          </div>
+
+          {/* Resumen Global de Ahorros */}
+          <div className="grid grid-cols-3 gap-2 rounded-xl bg-surface-100 p-3 text-center border border-border-default">
+            <div>
+              <div className="text-[10px] text-text-muted">Total Ahorrado</div>
+              <div className="text-xs sm:text-sm font-bold text-emerald-400">
+                {formatCurrency(summary.totalSaved || 0)}
+              </div>
+            </div>
+            <div>
+              <div className="text-[10px] text-text-muted">Objetivo Total</div>
+              <div className="text-xs sm:text-sm font-bold text-text-primary">
+                {formatCurrency(summary.totalSavingsTarget || 0)}
+              </div>
+            </div>
+            <div>
+              <div className="text-[10px] text-text-muted">Aporte Mensual</div>
+              <div className="text-xs sm:text-sm font-bold text-brand-400">
+                +{formatCurrency(summary.totalMonthlySavingsContribution || 0)}
+              </div>
+            </div>
+          </div>
+
+          {/* Lista de Metas con Progreso */}
+          {savingsGoals.length > 0 ? (
+            <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
+              {savingsGoals.map((g: any) => {
+                const isCompleted = g.status === 'completed' || g.percent >= 100;
+                return (
+                  <div
+                    key={g.id}
+                    className={`rounded-xl border p-3 space-y-2 transition-all ${
+                      isCompleted
+                        ? 'border-emerald-500/20 bg-emerald-500/5'
+                        : 'border-border-default bg-surface-100/50'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="min-w-0 flex items-center gap-2">
+                        <span className="text-base">{g.icon || '🎯'}</span>
+                        <div className="truncate">
+                          <span className="font-bold text-xs text-text-primary truncate block">
+                            {g.name}
+                          </span>
+                          <span className="text-[10px] text-text-muted">
+                            Aporte: {formatCurrency(g.monthlyContribution)}/mes
+                          </span>
+                        </div>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <span className="text-xs font-bold text-emerald-400">
+                          {formatCurrency(g.currentAmount)}
+                        </span>
+                        <div className="text-[10px] text-text-muted">
+                          de {formatCurrency(g.targetAmount)}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Barra de progreso de ahorro */}
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between text-[10px]">
+                        <span className="text-text-muted font-medium">
+                          {isCompleted ? '¡Meta alcanzada! 🎉' : `Faltan ${formatCurrency(Math.max(0, g.targetAmount - g.currentAmount))}`}
+                        </span>
+                        <span className="font-bold text-emerald-400">{g.percent}%</span>
+                      </div>
+                      <div className="h-2 w-full rounded-full bg-surface-200 overflow-hidden">
+                        <div
+                          className="h-full rounded-full bg-emerald-500 transition-all duration-700 ease-out"
+                          style={{ width: `${Math.min(100, g.percent)}%` }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="flex h-36 items-center justify-center rounded-xl border border-dashed border-border-default text-xs text-text-muted text-center p-4">
+              <div>
+                <p>No tienes metas de ahorro configuradas.</p>
+                <a href="/app/savings" className="mt-2 inline-block text-xs text-emerald-400 font-semibold hover:underline">
+                  + Crear mi primera meta de ahorro
+                </a>
+              </div>
             </div>
           )}
         </div>
