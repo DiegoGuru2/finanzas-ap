@@ -678,188 +678,246 @@ export default function PasswordVaultManager() {
   }
 
   // ═══════════════════════════════════════════════════════════════
-  // RENDER: CONFIGURACIÓN INICIAL (PRIMERA VEZ)
+  // RENDER: CONFIGURACIÓN INICIAL (MODAL PRIMERA VEZ)
   // ═══════════════════════════════════════════════════════════════
   if (!hasVault) {
     return (
-      <div className="max-w-xl mx-auto py-8 px-4">
-        <div className="rounded-3xl border border-brand-500/30 bg-surface-50 p-6 sm:p-8 shadow-2xl space-y-6 animate-fade-up">
-          <div className="flex items-center gap-4">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-500/15 border border-brand-500/30 text-brand-400 shadow-inner">
-              {SvgIcons.lock}
+      <div className="relative min-h-[70vh]">
+        {/* Fondo sutil de la bóveda mientras se configura */}
+        <div className="pointer-events-none select-none opacity-30 blur-xs space-y-6">
+          <div className="h-16 rounded-2xl border border-border-default bg-surface-50"></div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div key={i} className="h-44 rounded-2xl border border-border-default bg-surface-50"></div>
+            ))}
+          </div>
+        </div>
+
+        {/* MODAL: ACTIVAR BÓVEDA */}
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/75 backdrop-blur-md p-4 animate-fade-in">
+          <div className="relative w-full max-w-lg rounded-3xl border border-border-default bg-surface-50 p-6 sm:p-8 shadow-2xl space-y-6 max-h-[90vh] overflow-y-auto animate-scale-in">
+            {/* Botón Cerrar / Volver */}
+            <button
+              type="button"
+              onClick={() => {
+                if (window.history.length > 1) {
+                  window.history.back();
+                } else {
+                  window.location.href = '/app/dashboard';
+                }
+              }}
+              className="absolute right-4 top-4 rounded-xl p-2 text-text-muted hover:text-text-primary hover:bg-surface-100 transition-colors cursor-pointer"
+              title="Cerrar y volver"
+            >
+              ✕
+            </button>
+
+            <div className="flex items-center gap-4">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-500/15 border border-brand-500/30 text-brand-400 shadow-inner shrink-0">
+                {SvgIcons.lock}
+              </div>
+              <div className="min-w-0 pr-6">
+                <h2 className="text-xl sm:text-2xl font-bold text-text-primary">
+                  Configura tu Bóveda Segura
+                </h2>
+                <p className="text-xs sm:text-sm text-text-muted mt-0.5">
+                  Cifrado de Cero Conocimiento (*Zero-Knowledge AES-256*)
+                </p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-xl sm:text-2xl font-bold text-text-primary">
-                Configura tu Bóveda Segura
-              </h2>
-              <p className="text-xs sm:text-sm text-text-muted mt-0.5">
-                Cifrado de Cero Conocimiento (*Zero-Knowledge AES-256*)
+
+            <div className="rounded-2xl border border-warning-500/30 bg-warning-500/10 p-4 text-xs text-warning-400 space-y-1.5 leading-relaxed">
+              <div className="font-bold flex items-center gap-1.5 text-sm">
+                <span className="h-4 w-4">{SvgIcons.other}</span>
+                Importante sobre tu Clave Maestra
+              </div>
+              <p>
+                Tus contraseñas se cifran en tu dispositivo antes de viajar a la base de datos.
+                <strong> Nadie más puede ver tus contraseñas, ni siquiera el equipo de ProyecAhorro.</strong>
+              </p>
+              <p>
+                Si olvidas esta clave maestra, no podrá ser recuperada por ningún administrador. Guarda bien tu clave o escribe una pista.
               </p>
             </div>
-          </div>
 
-          <div className="rounded-2xl border border-warning-500/30 bg-warning-500/10 p-4 text-xs text-warning-400 space-y-1.5 leading-relaxed">
-            <div className="font-bold flex items-center gap-1.5 text-sm">
-              <span className="h-4 w-4">{SvgIcons.other}</span>
-              Importante sobre tu Clave Maestra
-            </div>
-            <p>
-              Tus contraseñas se cifran en tu dispositivo antes de viajar a la base de datos.
-              <strong> Nadie más puede ver tus contraseñas, ni siquiera el equipo de ProyecAhorro.</strong>
-            </p>
-            <p>
-              Si olvidas esta clave maestra, no podrá ser recuperada por ningún administrador. Guarda bien tu clave o escribe una pista.
-            </p>
-          </div>
+            <form onSubmit={handleSetup} className="space-y-4">
+              {setupError && (
+                <div className="rounded-xl border border-danger-500/30 bg-danger-500/10 p-3 text-xs font-semibold text-danger-400">
+                  {setupError}
+                </div>
+              )}
 
-          <form onSubmit={handleSetup} className="space-y-4">
-            {setupError && (
-              <div className="rounded-xl border border-danger-500/30 bg-danger-500/10 p-3 text-xs font-semibold text-danger-400">
-                {setupError}
+              <div>
+                <label className="block text-xs font-semibold text-text-primary mb-1.5">
+                  Crea tu PIN o Contraseña Maestra
+                </label>
+                <div className="relative">
+                  <input
+                    type={showNewPin ? 'text' : 'password'}
+                    value={newPin}
+                    onChange={(e) => setNewPin(e.target.value)}
+                    placeholder="Mínimo 6 caracteres (ej. PIN o frase secreta)"
+                    className="w-full rounded-xl border border-border-default bg-surface-100 px-3.5 py-2.5 text-sm text-text-primary placeholder:text-text-muted focus:border-brand-500 focus:outline-none pr-10"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPin(!showNewPin)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary text-xs"
+                  >
+                    {showNewPin ? SvgIcons.eyeOff : SvgIcons.eye}
+                  </button>
+                </div>
               </div>
-            )}
 
-            <div>
-              <label className="block text-xs font-semibold text-text-primary mb-1.5">
-                Crea tu PIN o Contraseña Maestra
-              </label>
-              <div className="relative">
+              <div>
+                <label className="block text-xs font-semibold text-text-primary mb-1.5">
+                  Confirma tu Contraseña Maestra
+                </label>
                 <input
                   type={showNewPin ? 'text' : 'password'}
-                  value={newPin}
-                  onChange={(e) => setNewPin(e.target.value)}
-                  placeholder="Mínimo 6 caracteres (ej. PIN o frase secreta)"
-                  className="w-full rounded-xl border border-border-default bg-surface-100 px-3.5 py-2.5 text-sm text-text-primary placeholder:text-text-muted focus:border-brand-500 focus:outline-none pr-10"
+                  value={confirmPin}
+                  onChange={(e) => setConfirmPin(e.target.value)}
+                  placeholder="Repite exactamente la misma clave"
+                  className="w-full rounded-xl border border-border-default bg-surface-100 px-3.5 py-2.5 text-sm text-text-primary placeholder:text-text-muted focus:border-brand-500 focus:outline-none"
                   required
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowNewPin(!showNewPin)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary text-xs"
-                >
-                  {showNewPin ? SvgIcons.eyeOff : SvgIcons.eye}
-                </button>
               </div>
-            </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-text-primary mb-1.5">
-                Confirma tu Contraseña Maestra
-              </label>
-              <input
-                type={showNewPin ? 'text' : 'password'}
-                value={confirmPin}
-                onChange={(e) => setConfirmPin(e.target.value)}
-                placeholder="Repite exactamente la misma clave"
-                className="w-full rounded-xl border border-border-default bg-surface-100 px-3.5 py-2.5 text-sm text-text-primary placeholder:text-text-muted focus:border-brand-500 focus:outline-none"
-                required
-              />
-            </div>
+              <div>
+                <label className="block text-xs font-semibold text-text-primary mb-1.5">
+                  Pista para recordar tu clave (Opcional)
+                </label>
+                <input
+                  type="text"
+                  value={newHint}
+                  onChange={(e) => setNewHint(e.target.value)}
+                  placeholder="Ej. Mi fecha favorita + inicial de mi mascota"
+                  className="w-full rounded-xl border border-border-default bg-surface-100 px-3.5 py-2.5 text-sm text-text-primary placeholder:text-text-muted focus:border-brand-500 focus:outline-none"
+                  maxLength={200}
+                />
+                <span className="text-[11px] text-text-muted mt-1 block">
+                  Esta pista será visible si olvidas tu clave, pero no revela la contraseña.
+                </span>
+              </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-text-primary mb-1.5">
-                Pista para recordar tu clave (Opcional)
-              </label>
-              <input
-                type="text"
-                value={newHint}
-                onChange={(e) => setNewHint(e.target.value)}
-                placeholder="Ej. Mi fecha favorita + inicial de mi mascota"
-                className="w-full rounded-xl border border-border-default bg-surface-100 px-3.5 py-2.5 text-sm text-text-primary placeholder:text-text-muted focus:border-brand-500 focus:outline-none"
-                maxLength={200}
-              />
-              <span className="text-[11px] text-text-muted mt-1 block">
-                Esta pista será visible si olvidas tu clave, pero no revela la contraseña.
-              </span>
-            </div>
-
-            <button
-              type="submit"
-              disabled={settingUp}
-              className="w-full flex items-center justify-center gap-2 rounded-xl bg-brand-500 py-3 text-sm font-bold text-white shadow-lg hover:bg-brand-400 transition-all cursor-pointer disabled:opacity-50"
-            >
-              <span className="h-4 w-4">{SvgIcons.lock}</span>
-              <span>{settingUp ? 'Generando llaves seguras...' : 'Activar Bóveda Segura'}</span>
-            </button>
-          </form>
+              <button
+                type="submit"
+                disabled={settingUp}
+                className="w-full flex items-center justify-center gap-2 rounded-xl bg-brand-500 py-3 text-sm font-bold text-white shadow-lg hover:bg-brand-400 transition-all cursor-pointer disabled:opacity-50"
+              >
+                <span className="h-4 w-4">{SvgIcons.lock}</span>
+                <span>{settingUp ? 'Generando llaves seguras...' : 'Activar Bóveda Segura'}</span>
+              </button>
+            </form>
+          </div>
         </div>
       </div>
     );
   }
 
   // ═══════════════════════════════════════════════════════════════
-  // RENDER: PANTALLA DE DESBLOQUEO (BÓVEDA BLOQUEADA)
+  // RENDER: PANTALLA DE DESBLOQUEO (MODAL BÓVEDA PROTEGIDA)
   // ═══════════════════════════════════════════════════════════════
   if (!isUnlocked) {
     return (
-      <div className="max-w-md mx-auto py-12 px-4">
-        <div className="rounded-3xl border border-border-default bg-surface-50 p-6 sm:p-8 shadow-2xl text-center space-y-6 animate-fade-up">
-          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-brand-500/15 border border-brand-500/30 text-brand-400 shadow-inner">
-            <span className="h-9 w-9 flex items-center justify-center">{SvgIcons.lock}</span>
+      <div className="relative min-h-[70vh]">
+        {/* Fondo sutil de la bóveda bajo el modal */}
+        <div className="pointer-events-none select-none opacity-30 blur-xs space-y-6">
+          <div className="h-16 rounded-2xl border border-border-default bg-surface-50"></div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div key={i} className="h-44 rounded-2xl border border-border-default bg-surface-50"></div>
+            ))}
           </div>
+        </div>
 
-          <div>
-            <h2 className="text-xl sm:text-2xl font-bold text-text-primary">
-              Bóveda Protegida
-            </h2>
-            <p className="text-xs sm:text-sm text-text-muted mt-1">
-              Ingresa tu PIN o Contraseña Maestra para descifrar tus accesos.
-            </p>
-          </div>
-
-          {unlockError && (
-            <div className="rounded-xl border border-danger-500/30 bg-danger-500/10 p-3 text-xs font-semibold text-danger-400">
-              {unlockError}
-            </div>
-          )}
-
-          <form onSubmit={handleUnlock} className="space-y-4 text-left">
-            <div className="relative">
-              <input
-                type={showUnlockPin ? 'text' : 'password'}
-                value={unlockPin}
-                onChange={(e) => setUnlockPin(e.target.value)}
-                placeholder="Ingresa tu Clave Maestra..."
-                autoFocus
-                className="w-full rounded-2xl border border-border-default bg-surface-100 px-4 py-3.5 text-base text-center text-text-primary placeholder:text-text-muted focus:border-brand-500 focus:outline-none tracking-widest"
-                required
-              />
-              <button
-                type="button"
-                onClick={() => setShowUnlockPin(!showUnlockPin)}
-                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary text-xs p-1 cursor-pointer"
-                title={showUnlockPin ? 'Ocultar' : 'Ver'}
-              >
-                {showUnlockPin ? SvgIcons.eyeOff : SvgIcons.eye}
-              </button>
-            </div>
-
+        {/* MODAL: BÓVEDA PROTEGIDA */}
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/75 backdrop-blur-md p-4 animate-fade-in">
+          <div className="relative w-full max-w-md rounded-3xl border border-border-default bg-surface-50 p-6 sm:p-8 shadow-2xl text-center space-y-6 animate-scale-in">
+            {/* Botón Cerrar / Volver */}
             <button
-              type="submit"
-              disabled={unlocking}
-              className="w-full flex items-center justify-center gap-2 rounded-xl bg-brand-500 py-3.5 text-sm font-bold text-white shadow-lg hover:bg-brand-400 transition-all cursor-pointer disabled:opacity-50"
+              type="button"
+              onClick={() => {
+                if (window.history.length > 1) {
+                  window.history.back();
+                } else {
+                  window.location.href = '/app/dashboard';
+                }
+              }}
+              className="absolute right-4 top-4 rounded-xl p-2 text-text-muted hover:text-text-primary hover:bg-surface-100 transition-colors cursor-pointer"
+              title="Cerrar y volver"
             >
-              <span className="h-4 w-4">{SvgIcons.unlock}</span>
-              <span>{unlocking ? 'Descifrando datos...' : 'Desbloquear Bóveda'}</span>
+              ✕
             </button>
-          </form>
 
-          {hint && (
-            <div className="pt-2 border-t border-border-default/60">
-              <button
-                type="button"
-                onClick={() => setShowHintModal(!showHintModal)}
-                className="text-xs font-semibold text-brand-400 hover:underline cursor-pointer"
-              >
-                {showHintModal ? 'Ocultar pista' : '¿Olvidaste tu clave? Ver pista'}
-              </button>
-              {showHintModal && (
-                <div className="mt-2 rounded-xl bg-surface-100 p-3 text-xs text-text-secondary border border-border-default">
-                  💡 <strong>Pista registrada:</strong> {hint}
-                </div>
-              )}
+            <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-brand-500/15 border border-brand-500/30 text-brand-400 shadow-inner">
+              <span className="h-9 w-9 flex items-center justify-center">{SvgIcons.lock}</span>
             </div>
-          )}
+
+            <div>
+              <h2 className="text-xl sm:text-2xl font-bold text-text-primary">
+                Bóveda Protegida
+              </h2>
+              <p className="text-xs sm:text-sm text-text-muted mt-1">
+                Ingresa tu Clave Maestra para acceder a tus contraseñas.
+              </p>
+            </div>
+
+            {unlockError && (
+              <div className="rounded-xl border border-danger-500/30 bg-danger-500/10 p-3 text-xs font-semibold text-danger-400">
+                {unlockError}
+              </div>
+            )}
+
+            <form onSubmit={handleUnlock} className="space-y-4 text-left">
+              <div className="relative">
+                <input
+                  type={showUnlockPin ? 'text' : 'password'}
+                  value={unlockPin}
+                  onChange={(e) => setUnlockPin(e.target.value)}
+                  placeholder="Ingresa tu Clave Maestra..."
+                  autoFocus
+                  className="w-full rounded-2xl border border-border-default bg-surface-100 px-4 py-3.5 text-base text-center text-text-primary placeholder:text-text-muted focus:border-brand-500 focus:outline-none tracking-widest"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowUnlockPin(!showUnlockPin)}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary text-xs p-1 cursor-pointer"
+                  title={showUnlockPin ? 'Ocultar' : 'Ver'}
+                >
+                  {showUnlockPin ? SvgIcons.eyeOff : SvgIcons.eye}
+                </button>
+              </div>
+
+              <button
+                type="submit"
+                disabled={unlocking}
+                className="w-full flex items-center justify-center gap-2 rounded-xl bg-brand-500 py-3.5 text-sm font-bold text-white shadow-lg hover:bg-brand-400 transition-all cursor-pointer disabled:opacity-50"
+              >
+                <span className="h-4 w-4">{SvgIcons.unlock}</span>
+                <span>{unlocking ? 'Descifrando datos...' : 'Desbloquear Bóveda'}</span>
+              </button>
+            </form>
+
+            {hint && (
+              <div className="pt-2 border-t border-border-default/60">
+                <button
+                  type="button"
+                  onClick={() => setShowHintModal(!showHintModal)}
+                  className="text-xs font-semibold text-brand-400 hover:underline cursor-pointer"
+                >
+                  {showHintModal ? 'Ocultar pista' : '¿Olvidaste tu clave? Ver pista'}
+                </button>
+                {showHintModal && (
+                  <div className="mt-2 rounded-xl bg-surface-100 p-3 text-xs text-text-secondary border border-border-default text-left">
+                    💡 <strong>Pista registrada:</strong> {hint}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     );
