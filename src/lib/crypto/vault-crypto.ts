@@ -135,15 +135,18 @@ export async function verifyMasterKey(
 
 /**
  * Cifra una cadena de texto arbitraria con AES-GCM-256.
- * Genera un IV único de 12 bytes por cada llamada.
+ * Genera un IV único de 12 bytes si no se proporciona uno.
  */
 export async function encryptVaultData(
   plainText: string,
-  key: CryptoKey
+  key: CryptoKey,
+  customIv?: Uint8Array
 ): Promise<{ ciphertext: string; iv: string }> {
   const crypto = getCrypto();
-  const iv = new Uint8Array(12);
-  crypto.getRandomValues(iv);
+  const iv = customIv || new Uint8Array(12);
+  if (!customIv) {
+    crypto.getRandomValues(iv);
+  }
 
   const enc = new TextEncoder();
   const data = enc.encode(plainText);

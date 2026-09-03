@@ -31,7 +31,7 @@ interface DecryptedItemData {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// ICONOS SVG PREMIUM
+// ICONOS SVG
 // ═══════════════════════════════════════════════════════════════
 
 const SvgIcons = {
@@ -145,7 +145,7 @@ const CATEGORIES = [
   { id: 'other', label: 'Otros', icon: SvgIcons.other },
 ];
 
-const AUTO_LOCK_SECONDS = 900; // 15 minutos de inactividad efectiva
+const AUTO_LOCK_SECONDS = 900; // 15 minutos de inactividad
 
 export default function PasswordVaultManager() {
   // Estado de inicialización y configuración
@@ -160,7 +160,7 @@ export default function PasswordVaultManager() {
   const [masterKey, setMasterKey] = useState<CryptoKey | null>(null);
   const [isUnlocked, setIsUnlocked] = useState(false);
 
-  // Formulario de Desbloqueo
+  // Formulario de Desbloqueo de Bóveda
   const [unlockPin, setUnlockPin] = useState('');
   const [showUnlockPin, setShowUnlockPin] = useState(false);
   const [unlockError, setUnlockError] = useState<string | null>(null);
@@ -178,15 +178,23 @@ export default function PasswordVaultManager() {
   // Lista de elementos de la bóveda
   const [items, setItems] = useState<EncryptedVaultItem[]>([]);
   const [decryptedCache, setDecryptedCache] = useState<Record<string, DecryptedItemData>>({});
-  const [revealedItems, setRevealedItems] = useState<Record<string, boolean>>({});
   const [loadingItems, setLoadingItems] = useState(false);
 
-  // Modal de Autenticación de Clave Maestra para revelar
-  const [authModalItem, setAuthModalItem] = useState<EncryptedVaultItem | null>(null);
-  const [masterAuthPin, setMasterAuthPin] = useState('');
-  const [showMasterAuthPin, setShowMasterAuthPin] = useState(false);
-  const [masterAuthError, setMasterAuthError] = useState<string | null>(null);
-  const [verifyingMaster, setVerifyingMaster] = useState(false);
+  // ═══════════════════════════════════════════════════════════════
+  // MODAL DEDICADO: VER CREDENCIALES SEGURAS
+  // ═══════════════════════════════════════════════════════════════
+  const [viewModalItem, setViewModalItem] = useState<EncryptedVaultItem | null>(null);
+  const [viewModalPin, setViewModalPin] = useState('');
+  const [showViewModalPin, setShowViewModalPin] = useState(false);
+  const [viewModalError, setViewModalError] = useState<string | null>(null);
+  const [isViewVerified, setIsViewVerified] = useState(false);
+  const [viewDecrypted, setViewDecrypted] = useState<{ username: string; password: string; notes: string }>({
+    username: '',
+    password: '',
+    notes: '',
+  });
+  const [showViewPassword, setShowViewPassword] = useState(false);
+  const [verifyingView, setVerifyingView] = useState(false);
 
   // Filtros y Búsqueda
   const [searchQuery, setSearchQuery] = useState('');
@@ -253,12 +261,12 @@ export default function PasswordVaultManager() {
     setMasterKey(null);
     setIsUnlocked(false);
     setDecryptedCache({});
-    setRevealedItems({});
     setUnlockPin('');
     setUnlockError(null);
     setModalOpen(false);
     setGenModalOpen(false);
-    setAuthModalItem(null);
+    setViewModalItem(null);
+    setIsViewVerified(false);
   }, []);
 
   // Control de Inactividad (Sin bloqueo agresivo al cambiar de pestaña)
@@ -306,18 +314,33 @@ export default function PasswordVaultManager() {
         setItems(json.items);
         const newCache: Record<string, DecryptedItemData> = {};
         for (const item of json.items) {
+          let password = '';
+          let username = '';
+          let notes = '';
+
           try {
-            const password = await decryptVaultData(item.passwordEncrypted, item.iv, keyToUse);
-            const username = item.usernameEncrypted
-              ? await decryptVaultData(item.usernameEncrypted, item.iv, keyToUse)
-              : '';
-            const notes = item.notesEncrypted
-              ? await decryptVaultData(item.notesEncrypted, item.iv, keyToUse)
-              : '';
-            newCache[item.id] = { password, username, notes };
+            password = await decryptVaultData(item.passwordEncrypted, item.iv, keyToUse);
           } catch (err) {
-            console.error('Error decrypting item:', item.id, err);
+            console.error('Error decrypting password:', item.id, err);
           }
+
+          if (item.usernameEncrypted) {
+            try {
+              username = await decryptVaultData(item.usernameEncrypted, item.iv, keyToUse);
+            } catch (err) {
+              console.error('Error decrypting username:', item.id, err);
+            }
+          }
+
+          if (item.notesEncrypted) {
+            try {
+              notes = await decryptVaultData(item.notesEncrypted, item.iv, keyToUse);
+            } catch (err) {
+              console.error('Error decrypting notes:', item.id, err);
+            }
+          }
+
+          newCache[item.id] = { password, username, notes };
         }
         setDecryptedCache(newCache);
       }
@@ -417,51 +440,80 @@ export default function PasswordVaultManager() {
     }
   };
 
-  // 4. Solicitar Clave Maestra antes de Revelar
-  const handleRequestReveal = (item: EncryptedVaultItem) => {
-    if (revealedItems[item.id]) {
-      // Ya está revelado: permite ocultarlo inmediatamente
-      setRevealedItems((prev) => ({ ...prev, [item.id]: false }));
-      return;
-    }
-    // Requiere la clave maestra para revelar
-    setAuthModalItem(item);
-    setMasterAuthPin('');
-    setShowMasterAuthPin(false);
-    setMasterAuthError(null);
+  // ═══════════════════════════════════════════════════════════════
+  // ABRIR MODAL PARA VER CREDENCIALES
+  // ═══════════════════════════════════════════════════════════════
+  const openViewCredentialsModal = (item: EncryptedVaultItem) => {
+    setViewModalItem(item);
+    setViewModalPin('');
+    setShowViewModalPin(false);
+    setViewModalError(null);
+    setIsViewVerified(false);
+    setShowViewPassword(false);
+    setViewDecrypted({ username: '', password: '', notes: '' });
   };
 
-  const handleConfirmMasterPin = async (e: React.FormEvent) => {
+  // Confirmar Clave Maestra y Desbloquear Visualización en Modal
+  const handleConfirmMasterPinInModal = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!authModalItem || !salt || !verifier || !verifierIv) return;
-    if (!masterAuthPin) {
-      setMasterAuthError('Ingresa tu clave maestra');
+    if (!viewModalItem || !salt || !verifier || !verifierIv) return;
+    if (!viewModalPin) {
+      setViewModalError('Ingresa tu clave maestra');
       return;
     }
 
     try {
-      setVerifyingMaster(true);
-      setMasterAuthError(null);
+      setVerifyingView(true);
+      setViewModalError(null);
 
-      // Derivar y verificar directamente con el canario de la bóveda
-      const candidateKey = await deriveMasterKey(masterAuthPin, salt);
+      // Derivar llave con la clave ingresada
+      const candidateKey = await deriveMasterKey(viewModalPin, salt);
       const isValid = await verifyMasterKey(candidateKey, verifier, verifierIv);
 
       if (!isValid) {
-        setMasterAuthError('Clave maestra incorrecta');
+        setViewModalError('Clave maestra incorrecta');
         return;
       }
 
-      // Autenticación correcta: revelar este elemento
-      setRevealedItems((prev) => ({ ...prev, [authModalItem.id]: true }));
-      setAuthModalItem(null);
-      setMasterAuthPin('');
+      // Descifrar inmediatamente en caliente con la llave verificada
+      let password = '';
+      let username = '';
+      let notes = '';
+
+      try {
+        password = await decryptVaultData(viewModalItem.passwordEncrypted, viewModalItem.iv, candidateKey);
+      } catch (err) {
+        console.error('Error descifrando contraseña:', err);
+      }
+
+      if (viewModalItem.usernameEncrypted) {
+        try {
+          username = await decryptVaultData(viewModalItem.usernameEncrypted, viewModalItem.iv, candidateKey);
+        } catch (err) {
+          console.error('Error descifrando usuario:', err);
+        }
+      }
+
+      if (viewModalItem.notesEncrypted) {
+        try {
+          notes = await decryptVaultData(viewModalItem.notesEncrypted, viewModalItem.iv, candidateKey);
+        } catch (err) {
+          console.error('Error descifrando notas:', err);
+        }
+      }
+
+      setViewDecrypted({ username, password, notes });
+      setIsViewVerified(true);
+      setViewModalPin('');
       resetInactivityTimer();
+
+      // Si por alguna razón masterKey no estaba fijada, asegurarla
+      if (!masterKey) setMasterKey(candidateKey);
     } catch (err: any) {
       console.error('Error verifying master pin:', err);
-      setMasterAuthError('Error al verificar la clave maestra');
+      setViewModalError('Error al procesar la clave maestra');
     } finally {
-      setVerifyingMaster(false);
+      setVerifyingView(false);
     }
   };
 
@@ -516,12 +568,16 @@ export default function PasswordVaultManager() {
       setSavingItem(true);
       setModalError(null);
 
-      const passEnc = await encryptVaultData(modalPassword, masterKey);
+      // Generar UN solo vector de inicialización (IV) compartido para todo el registro
+      const recordIv = new Uint8Array(12);
+      window.crypto.getRandomValues(recordIv);
+
+      const passEnc = await encryptVaultData(modalPassword, masterKey, recordIv);
       const userEnc = modalUsername
-        ? await encryptVaultData(modalUsername, masterKey)
+        ? await encryptVaultData(modalUsername, masterKey, recordIv)
         : null;
       const notesEnc = modalNotes
-        ? await encryptVaultData(modalNotes, masterKey)
+        ? await encryptVaultData(modalNotes, masterKey, recordIv)
         : null;
 
       const payload = {
@@ -958,8 +1014,6 @@ export default function PasswordVaultManager() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
           {filteredItems.map((item) => {
-            const dec = decryptedCache[item.id] || {};
-            const isRevealed = !!revealedItems[item.id];
             const catObj = CATEGORIES.find((c) => c.id === item.category) || CATEGORIES[CATEGORIES.length - 1];
 
             return (
@@ -968,7 +1022,7 @@ export default function PasswordVaultManager() {
                 className="group flex flex-col justify-between rounded-2xl border border-border-default/80 bg-surface-50 p-4 shadow-sm hover:border-brand-500/40 hover:shadow-md transition-all gap-3"
               >
                 {/* Cabecera de la Tarjeta */}
-                <div className="space-y-2">
+                <div className="space-y-3">
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-center gap-2.5 min-w-0">
                       <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-surface-100 border border-border-default text-text-primary shadow-2xs">
@@ -1015,119 +1069,26 @@ export default function PasswordVaultManager() {
                     </div>
                   </div>
 
-                  {/* Campos Usuario y Contraseña protegidos por Contraseña del Sistema */}
-                  <div className="space-y-2 pt-1">
-                    {/* Botón de Revelación con Clave Maestra */}
-                    <div className="flex items-center justify-between rounded-xl bg-surface-100/60 p-2 border border-border-default/60">
-                      <div className="flex items-center gap-1.5 text-xs text-text-secondary">
-                        <span className="h-3.5 w-3.5 text-brand-400">{SvgIcons.lock}</span>
-                        <span className="text-[11px] font-medium">
-                          {isRevealed ? 'Credenciales reveladas' : 'Protegido por clave maestra'}
-                        </span>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() => handleRequestReveal(item)}
-                        className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                          isRevealed
-                            ? 'bg-surface-200 text-text-secondary hover:text-text-primary'
-                            : 'bg-brand-500/15 border border-brand-500/30 text-brand-400 hover:bg-brand-500/25'
-                        }`}
-                        title={isRevealed ? 'Ocultar credenciales' : 'Requiere clave maestra de la bóveda para ver'}
-                      >
-                        {isRevealed ? (
-                          <>
-                            {SvgIcons.eyeOff}
-                            <span>Ocultar</span>
-                          </>
-                        ) : (
-                          <>
-                            {SvgIcons.eye}
-                            <span>Ver credenciales</span>
-                          </>
-                        )}
-                      </button>
+                  {/* Estado Protegido y Botón Ver en Modal */}
+                  <div className="rounded-xl bg-surface-100/60 p-3 border border-border-default/60 space-y-2.5">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-[10px] uppercase font-semibold text-text-muted tracking-wider">
+                        Credenciales
+                      </span>
+                      <span className="text-[11px] font-mono text-text-muted tracking-widest">
+                        ••••••••••••
+                      </span>
                     </div>
 
-                    {/* Usuario / Email */}
-                    {dec.username && (
-                      <div className="flex items-center justify-between rounded-xl bg-surface-100/70 px-3 py-1.5 border border-border-default/60 text-xs">
-                        <div className="min-w-0 pr-2">
-                          <span className="text-[9px] uppercase tracking-wider text-text-muted block">
-                            Usuario / Correo
-                          </span>
-                          <span className="font-medium text-text-primary truncate block font-mono text-[11px]">
-                            {isRevealed ? dec.username : '••••••••••••'}
-                          </span>
-                        </div>
-                        {isRevealed && (
-                          <button
-                            type="button"
-                            onClick={() => handleCopy(dec.username || '', `user-${item.id}`)}
-                            className="shrink-0 inline-flex items-center gap-1 rounded-lg px-2 py-1 text-text-muted hover:text-brand-400 hover:bg-surface-200 transition-colors cursor-pointer text-xs font-semibold"
-                            title="Copiar usuario"
-                          >
-                            {copiedKey === `user-${item.id}` ? (
-                              <>
-                                {SvgIcons.check}
-                                <span className="text-accent-400">Copiado</span>
-                              </>
-                            ) : (
-                              <>
-                                {SvgIcons.copy}
-                                <span>Copiar</span>
-                              </>
-                            )}
-                          </button>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Contraseña */}
-                    <div className="flex items-center justify-between rounded-xl bg-surface-100/70 px-3 py-1.5 border border-border-default/60 text-xs">
-                      <div className="min-w-0 pr-2">
-                        <span className="text-[9px] uppercase tracking-wider text-text-muted block">
-                          Contraseña
-                        </span>
-                        <span className="font-bold text-text-primary truncate block font-mono text-xs tracking-wider">
-                          {isRevealed ? dec.password : '••••••••••••••••'}
-                        </span>
-                      </div>
-                      {isRevealed && (
-                        <button
-                          type="button"
-                          onClick={() => handleCopy(dec.password || '', `pass-${item.id}`)}
-                          className="shrink-0 inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold text-brand-400 hover:bg-brand-500/15 transition-colors cursor-pointer"
-                          title="Copiar contraseña"
-                        >
-                          {copiedKey === `pass-${item.id}` ? (
-                            <>
-                              {SvgIcons.check}
-                              <span className="text-accent-400">Copiada</span>
-                            </>
-                          ) : (
-                            <>
-                              {SvgIcons.copy}
-                              <span>Copiar</span>
-                            </>
-                          )}
-                        </button>
-                      )}
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => openViewCredentialsModal(item)}
+                      className="w-full flex items-center justify-center gap-2 rounded-xl bg-brand-500/15 border border-brand-500/30 px-3 py-2 text-xs font-bold text-brand-400 hover:bg-brand-500/25 transition-all cursor-pointer shadow-2xs"
+                    >
+                      {SvgIcons.eye}
+                      <span>Ver usuario y contraseña</span>
+                    </button>
                   </div>
-
-                  {/* Notas Seguras */}
-                  {dec.notes && isRevealed && (
-                    <details className="text-[11px] text-text-secondary pt-1">
-                      <summary className="cursor-pointer text-text-muted hover:text-text-primary select-none font-medium">
-                        Ver notas seguras...
-                      </summary>
-                      <div className="mt-1.5 p-2 rounded-lg bg-surface-100/50 border border-border-default/40 font-mono text-[10px] whitespace-pre-wrap break-all">
-                        {dec.notes}
-                      </div>
-                    </details>
-                  )}
                 </div>
               </div>
             );
@@ -1136,77 +1097,218 @@ export default function PasswordVaultManager() {
       )}
 
       {/* ═══════════════════════════════════════════════════════════════
-          MODAL: CONFIRMAR CLAVE MAESTRA DE LA BÓVEDA
+          MODAL: VER CREDENCIALES (DESAFÍO Y VISUALIZACIÓN)
       ═══════════════════════════════════════════════════════════════ */}
-      {authModalItem && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-fade-in">
-          <div className="w-full max-w-md rounded-3xl border border-border-default bg-surface-50 p-6 shadow-2xl space-y-4">
+      {viewModalItem && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 animate-fade-in">
+          <div className="w-full max-w-md rounded-3xl border border-border-default bg-surface-50 p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+            {/* Cabecera */}
             <div className="flex items-center justify-between border-b border-border-default pb-3">
-              <div className="flex items-center gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-brand-500/15 text-brand-400">
-                  {SvgIcons.lock}
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-500/15 text-brand-400 border border-brand-500/30">
+                  {isViewVerified ? SvgIcons.unlock : SvgIcons.lock}
                 </div>
-                <h3 className="font-bold text-base text-text-primary">
-                  Clave Maestra Requerida
-                </h3>
+                <div>
+                  <h3 className="font-bold text-base text-text-primary truncate max-w-[240px]">
+                    {viewModalItem.title}
+                  </h3>
+                  <span className="text-[10px] text-text-muted block">
+                    {isViewVerified ? 'Credenciales Descifradas' : 'Confirmar Clave Maestra'}
+                  </span>
+                </div>
               </div>
               <button
                 type="button"
-                onClick={() => setAuthModalItem(null)}
+                onClick={() => setViewModalItem(null)}
                 className="text-text-muted hover:text-text-primary p-1 text-sm cursor-pointer"
               >
                 ✕
               </button>
             </div>
 
-            <p className="text-xs text-text-secondary leading-relaxed">
-              Para visualizar y copiar el usuario y la contraseña de <strong>{authModalItem.title}</strong>,
-              ingresa tu <strong>Clave Maestra o PIN de la Bóveda</strong>.
-            </p>
+            {/* FASE 1: DESAFÍO DE CLAVE MAESTRA */}
+            {!isViewVerified ? (
+              <div className="space-y-4">
+                <p className="text-xs text-text-secondary leading-relaxed">
+                  Para visualizar y copiar el usuario y la contraseña de <strong>{viewModalItem.title}</strong>,
+                  ingresa tu <strong>Clave Maestra o PIN de la Bóveda</strong>.
+                </p>
 
-            {masterAuthError && (
-              <div className="rounded-xl border border-danger-500/30 bg-danger-500/10 p-3 text-xs font-semibold text-danger-400">
-                {masterAuthError}
+                {viewModalError && (
+                  <div className="rounded-xl border border-danger-500/30 bg-danger-500/10 p-3 text-xs font-semibold text-danger-400">
+                    {viewModalError}
+                  </div>
+                )}
+
+                <form onSubmit={handleConfirmMasterPinInModal} className="space-y-4">
+                  <div className="relative">
+                    <input
+                      type={showViewModalPin ? 'text' : 'password'}
+                      value={viewModalPin}
+                      onChange={(e) => setViewModalPin(e.target.value)}
+                      placeholder="Ingresa tu Clave Maestra..."
+                      autoFocus
+                      className="w-full rounded-xl border border-border-default bg-surface-100 px-3.5 py-3 text-sm text-text-primary placeholder:text-text-muted focus:border-brand-500 focus:outline-none pr-10 tracking-widest text-center"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowViewModalPin(!showViewModalPin)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary text-xs"
+                    >
+                      {showViewModalPin ? SvgIcons.eyeOff : SvgIcons.eye}
+                    </button>
+                  </div>
+
+                  <div className="flex items-center justify-end gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setViewModalItem(null)}
+                      className="rounded-xl border border-border-default px-4 py-2.5 text-xs font-semibold text-text-secondary hover:text-text-primary cursor-pointer"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={verifyingView}
+                      className="rounded-xl bg-brand-500 px-5 py-2.5 text-xs font-bold text-white shadow-md hover:bg-brand-400 transition-all cursor-pointer disabled:opacity-50"
+                    >
+                      {verifyingView ? 'Descifrando...' : 'Desbloquear y Ver'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            ) : (
+              /* FASE 2: VISUALIZACIÓN REVELADA CON COPIADO EN 1 CLIC */
+              <div className="space-y-4 animate-fade-in">
+                {/* Enlace al sitio si existe */}
+                {viewModalItem.websiteUrl && (
+                  <div className="flex items-center justify-between text-xs p-2 rounded-xl bg-surface-100 border border-border-default">
+                    <span className="text-text-muted">Sitio web:</span>
+                    <a
+                      href={viewModalItem.websiteUrl.startsWith('http') ? viewModalItem.websiteUrl : `https://${viewModalItem.websiteUrl}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 font-semibold text-brand-400 hover:underline"
+                    >
+                      <span>{viewModalItem.websiteUrl}</span>
+                      {SvgIcons.globe}
+                    </a>
+                  </div>
+                )}
+
+                {/* Campo: Usuario / Correo */}
+                <div className="rounded-2xl border border-border-default bg-surface-100 p-3.5 space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-text-muted">
+                      Usuario o Correo Electrónico
+                    </span>
+                    {viewDecrypted.username && (
+                      <button
+                        type="button"
+                        onClick={() => handleCopy(viewDecrypted.username, 'modal-user')}
+                        className="inline-flex items-center gap-1 text-xs font-bold text-brand-400 hover:text-brand-300 cursor-pointer"
+                      >
+                        {copiedKey === 'modal-user' ? (
+                          <>
+                            {SvgIcons.check}
+                            <span className="text-accent-400">✓ Copiado</span>
+                          </>
+                        ) : (
+                          <>
+                            {SvgIcons.copy}
+                            <span>Copiar</span>
+                          </>
+                        )}
+                      </button>
+                    )}
+                  </div>
+                  <div className="font-mono text-sm font-semibold text-text-primary select-all break-all">
+                    {viewDecrypted.username || '(Sin usuario registrado)'}
+                  </div>
+                </div>
+
+                {/* Campo: Contraseña */}
+                <div className="rounded-2xl border border-border-default bg-surface-100 p-3.5 space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-text-muted">
+                      Contraseña
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setShowViewPassword(!showViewPassword)}
+                        className="text-text-muted hover:text-text-primary p-1 cursor-pointer"
+                        title={showViewPassword ? 'Ocultar' : 'Mostrar'}
+                      >
+                        {showViewPassword ? SvgIcons.eyeOff : SvgIcons.eye}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleCopy(viewDecrypted.password, 'modal-pass')}
+                        className="inline-flex items-center gap-1 text-xs font-bold text-brand-400 hover:text-brand-300 cursor-pointer"
+                      >
+                        {copiedKey === 'modal-pass' ? (
+                          <>
+                            {SvgIcons.check}
+                            <span className="text-accent-400">✓ Copiada</span>
+                          </>
+                        ) : (
+                          <>
+                            {SvgIcons.copy}
+                            <span>Copiar</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                  <div className="font-mono text-base font-bold text-text-primary select-all break-all tracking-wider">
+                    {showViewPassword ? viewDecrypted.password : '••••••••••••••••'}
+                  </div>
+                </div>
+
+                {/* Campo: Notas Privadas */}
+                {viewDecrypted.notes && (
+                  <div className="rounded-2xl border border-border-default bg-surface-100 p-3.5 space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-text-muted">
+                        Notas Seguras / PINs
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleCopy(viewDecrypted.notes, 'modal-notes')}
+                        className="inline-flex items-center gap-1 text-xs font-bold text-brand-400 hover:text-brand-300 cursor-pointer"
+                      >
+                        {copiedKey === 'modal-notes' ? (
+                          <>
+                            {SvgIcons.check}
+                            <span className="text-accent-400">✓ Copiado</span>
+                          </>
+                        ) : (
+                          <>
+                            {SvgIcons.copy}
+                            <span>Copiar</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                    <div className="font-mono text-xs text-text-secondary whitespace-pre-wrap select-all">
+                      {viewDecrypted.notes}
+                    </div>
+                  </div>
+                )}
+
+                <div className="pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setViewModalItem(null)}
+                    className="w-full rounded-xl bg-surface-200 hover:bg-surface-300 py-2.5 text-xs font-bold text-text-primary transition-all cursor-pointer"
+                  >
+                    Cerrar
+                  </button>
+                </div>
               </div>
             )}
-
-            <form onSubmit={handleConfirmMasterPin} className="space-y-4">
-              <div className="relative">
-                <input
-                  type={showMasterAuthPin ? 'text' : 'password'}
-                  value={masterAuthPin}
-                  onChange={(e) => setMasterAuthPin(e.target.value)}
-                  placeholder="Ingresa tu Clave Maestra de la Bóveda..."
-                  autoFocus
-                  className="w-full rounded-xl border border-border-default bg-surface-100 px-3.5 py-2.5 text-sm text-text-primary placeholder:text-text-muted focus:border-brand-500 focus:outline-none pr-10"
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowMasterAuthPin(!showMasterAuthPin)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary text-xs"
-                >
-                  {showMasterAuthPin ? SvgIcons.eyeOff : SvgIcons.eye}
-                </button>
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-1">
-                <button
-                  type="button"
-                  onClick={() => setAuthModalItem(null)}
-                  className="rounded-xl border border-border-default px-4 py-2 text-xs font-semibold text-text-secondary hover:text-text-primary cursor-pointer"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={verifyingMaster}
-                  className="rounded-xl bg-brand-500 px-5 py-2 text-xs font-bold text-white shadow-md hover:bg-brand-400 transition-all cursor-pointer disabled:opacity-50"
-                >
-                  {verifyingMaster ? 'Verificando...' : 'Confirmar y Revelar'}
-                </button>
-              </div>
-            </form>
           </div>
         </div>
       )}
