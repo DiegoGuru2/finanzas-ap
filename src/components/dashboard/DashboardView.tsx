@@ -419,10 +419,12 @@ export default function DashboardView() {
             </p>
           </div>
 
-          <div className="text-left md:text-right bg-surface-100/80 p-3 rounded-xl border border-border-default">
-            <div className="text-xs text-text-muted">Fecha estimada libre de deuda</div>
+          <div className="text-left md:text-right bg-surface-100/90 p-3.5 rounded-xl border border-border-default shadow-sm">
+            <div className="text-xs font-semibold text-text-muted">Fecha estimada libre de deuda</div>
             <div className="text-lg font-extrabold text-accent-400">
-              {optimization.projectedDebtFreeDate || 'Calculando...'}
+              {debts.length === 0
+                ? '¡Sin deudas activas! 🎉'
+                : (optimization.projectedDebtFreeDate || 'Calculando...')}
             </div>
           </div>
         </div>
@@ -436,22 +438,28 @@ export default function DashboardView() {
               <button
                 key={s}
                 onClick={() => setStrategy(s)}
-                className={`rounded-xl border p-3 text-left transition-all cursor-pointer ${
+                className={`rounded-xl border p-3.5 text-left transition-all cursor-pointer ${
                   active
-                    ? 'border-brand-500 bg-brand-500/15 ring-1 ring-brand-500'
-                    : 'border-border-default bg-surface-100 hover:border-border-hover'
+                    ? 'border-brand-500 bg-brand-500/15 ring-2 ring-brand-500/40 shadow-sm'
+                    : 'border-border-default bg-surface-100/80 hover:bg-surface-200/80 hover:border-border-hover'
                 }`}
               >
                 <div className={`text-xs font-bold ${active ? 'text-brand-400' : 'text-text-primary'}`}>
                   {STRATEGY_LABELS[s].name} {active && '✓'}
                 </div>
-                {comp && (
-                  <div className="mt-1 text-[11px] text-text-muted">
-                    Intereses proyectados:{' '}
-                    <strong className="text-warning-400">{formatCurrency(comp.totalInterest || 0)}</strong>
+                {comp ? (
+                  <div className="mt-1.5 text-[11px] text-text-secondary space-y-0.5">
+                    <div>
+                      Intereses proyectados:{' '}
+                      <strong className="text-warning-400 font-semibold">{formatCurrency(comp.totalInterest || 0)}</strong>
+                    </div>
                     {comp.debtFreeDate && (
-                      <span className="block">Libre de deuda: {comp.debtFreeDate}</span>
+                      <div className="text-text-muted">Libre de deuda: {comp.debtFreeDate}</div>
                     )}
+                  </div>
+                ) : (
+                  <div className="mt-1 text-[11px] text-text-muted">
+                    {s === 'avalanche' ? 'Menos intereses' : s === 'snowball' ? 'Mayor motivación' : 'Mayor liquidez'}
                   </div>
                 )}
               </button>
