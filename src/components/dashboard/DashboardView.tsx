@@ -1,15 +1,49 @@
-import React, { useState, useEffect } from 'react';
-import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from 'recharts';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { formatCurrency } from '@/lib/utils';
 import { calculateSalaryDetails } from '@/modules/financial-engine/cashflow';
+
+// Lazy-load recharts para reducir el bundle inicial (~500KB)
+const LazyChart = lazy(() =>
+  import('recharts').then((mod) => ({
+    default: ({
+      chartData,
+      isLight,
+    }: {
+      chartData: { name: string; saldo: number; interesAcumulado: number; capitalPagado: number }[];
+      isLight: boolean;
+    }) => (
+      <mod.ResponsiveContainer width="100%" height={260}>
+        <mod.AreaChart data={chartData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+          <defs>
+            <linearGradient id="colorSaldo" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3} />
+              <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
+            </linearGradient>
+            <linearGradient id="colorCapital" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
+              <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+            </linearGradient>
+          </defs>
+          <mod.CartesianGrid strokeDasharray="3 3" stroke={isLight ? '#e5e7eb' : '#1e293b'} />
+          <mod.XAxis dataKey="name" tick={{ fill: isLight ? '#64748b' : '#94a3b8', fontSize: 11 }} />
+          <mod.YAxis tick={{ fill: isLight ? '#64748b' : '#94a3b8', fontSize: 11 }} tickFormatter={(v: number) => `$${(v / 1000).toFixed(0)}k`} />
+          <mod.Tooltip
+            contentStyle={{
+              backgroundColor: isLight ? '#fff' : '#0f172a',
+              border: `1px solid ${isLight ? '#e2e8f0' : '#1e293b'}`,
+              borderRadius: '12px',
+              padding: '8px 12px',
+              fontSize: '12px',
+            }}
+            formatter={(value: number) => [`$${value.toFixed(2)}`, undefined]}
+          />
+          <mod.Area type="monotone" dataKey="saldo" stroke="#ef4444" fill="url(#colorSaldo)" strokeWidth={2} name="Saldo" />
+          <mod.Area type="monotone" dataKey="capitalPagado" stroke="#10b981" fill="url(#colorCapital)" strokeWidth={2} name="Capital Pagado" />
+        </mod.AreaChart>
+      </mod.ResponsiveContainer>
+    ),
+  }))
+);
 
 const STRATEGY_LABELS: Record<string, { name: string; desc: string }> = {
   avalanche: { name: 'Avalancha', desc: 'Prioriza la tasa de interés más alta: ahorras más en intereses.' },
@@ -360,35 +394,9 @@ export default function DashboardView() {
 
         {chartData.length > 0 && debts.length > 0 ? (
           <div className="h-72 w-full pt-4">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="colorSaldo" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#ef4444" stopOpacity={0.4} />
-                    <stop offset="95%" stopColor="#ef4444" stopOpacity={0.0} />
-                  </linearGradient>
-                  <linearGradient id="colorCapital" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.4} />
-                    <stop offset="95%" stopColor="#10b981" stopOpacity={0.0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke={isLight ? '#e5e5e5' : '#262626'} />
-                <XAxis dataKey="name" stroke="#737373" fontSize={11} />
-                <YAxis stroke="#737373" fontSize={11} tickFormatter={(val) => `$${val}`} />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: isLight ? '#ffffff' : '#171717',
-                    borderColor: isLight ? '#e5e5e5' : '#262626',
-                    color: isLight ? '#171717' : '#f5f5f5',
-                    borderRadius: '12px',
-                    fontSize: '12px',
-                  }}
-                  formatter={(val: any) => [formatCurrency(Number(val)), '']}
-                />
-                <Area type="monotone" dataKey="saldo" name="Saldo Deuda" stroke="#ef4444" fillOpacity={1} fill="url(#colorSaldo)" strokeWidth={2} />
-                <Area type="monotone" dataKey="capitalPagado" name="Capital Pagado" stroke="#10b981" fillOpacity={1} fill="url(#colorCapital)" strokeWidth={2} />
-              </AreaChart>
-            </ResponsiveContainer>
+            <Suspense fallback={<div className="flex h-full items-center justify-center text-xs text-text-muted">Cargando gráfico...</div>}>
+              <LazyChart chartData={chartData} isLight={isLight} />
+            </Suspense>
           </div>
         ) : (
           <div className="flex h-48 items-center justify-center rounded-xl border border-dashed border-border-default text-xs text-text-muted">

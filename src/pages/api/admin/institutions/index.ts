@@ -1,20 +1,8 @@
 import type { APIRoute } from 'astro';
-
-// In-memory / curated list of Ecuadorian Financial Entities with reference rates
-let institutions = [
-  { id: '1', name: 'Banco Pichincha', type: 'Banco', code: 'BPIC', defaultApr: 15.6, maxTermMonths: 60, status: 'active' },
-  { id: '2', name: 'Banco Guayaquil', type: 'Banco', code: 'BGYE', defaultApr: 16.06, maxTermMonths: 60, status: 'active' },
-  { id: '3', name: 'Produbanco', type: 'Banco', code: 'PROD', defaultApr: 15.8, maxTermMonths: 48, status: 'active' },
-  { id: '4', name: 'Banco del Pacífico', type: 'Banco', code: 'BPAC', defaultApr: 15.2, maxTermMonths: 60, status: 'active' },
-  { id: '5', name: 'Banco Bolivariano', type: 'Banco', code: 'BBOL', defaultApr: 16.0, maxTermMonths: 48, status: 'active' },
-  { id: '6', name: 'Banco Internacional', type: 'Banco', code: 'BINT', defaultApr: 15.5, maxTermMonths: 48, status: 'active' },
-  { id: '7', name: 'BIESS — Préstamo Quirografario', type: 'Pública', code: 'BIESS-Q', defaultApr: 11.0, maxTermMonths: 60, status: 'active' },
-  { id: '8', name: 'BIESS — Préstamo Hipotecario', type: 'Pública', code: 'BIESS-H', defaultApr: 6.99, maxTermMonths: 300, status: 'active' },
-  { id: '9', name: 'Coop. Policía Nacional', type: 'Cooperativa', code: 'CPN', defaultApr: 14.5, maxTermMonths: 60, status: 'active' },
-  { id: '10', name: 'Coop. JEP (Juventud Ecuatoriana)', type: 'Cooperativa', code: 'JEP', defaultApr: 14.8, maxTermMonths: 60, status: 'active' },
-  { id: '11', name: 'Coop. Alianza del Valle', type: 'Cooperativa', code: 'ADV', defaultApr: 15.0, maxTermMonths: 48, status: 'active' },
-  { id: '12', name: 'Diners Club Ecuador', type: 'Tarjeta', code: 'DINERS', defaultApr: 16.06, maxTermMonths: 36, status: 'active' },
-];
+import { db } from '@/lib/db';
+import { institutions } from '@/lib/db/schema';
+import { eq, asc } from 'drizzle-orm';
+import { generateId } from '@/lib/utils';
 
 export const GET: APIRoute = async (ctx) => {
   const currentUser = ctx.locals.user as any;
@@ -22,10 +10,25 @@ export const GET: APIRoute = async (ctx) => {
     return new Response(JSON.stringify({ error: 'Acceso denegado' }), { status: 403 });
   }
 
-  return new Response(JSON.stringify({ success: true, data: institutions }), {
-    status: 200,
-    headers: { 'Content-Type': 'application/json' },
-  });
+  try {
+    const rows = await db.select().from(institutions).orderBy(asc(institutions.name));
+    const data = rows.map((r) => ({
+      id: r.id,
+      name: r.name,
+      type: r.type,
+      code: r.code,
+      defaultApr: parseFloat(r.defaultApr as string),
+      maxTermMonths: r.maxTermMonths,
+      status: r.status,
+    }));
+
+    return new Response(JSON.stringify({ success: true, data }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  } catch (err: any) {
+    return new Response(JSON.stringify({ error: err.message }), { status: 500 });
+  }
 };
 
 export const POST: APIRoute = async (ctx) => {
@@ -36,8 +39,20 @@ export const POST: APIRoute = async (ctx) => {
 
   try {
     const body = await ctx.request.json();
+    const id = generateId();
+
+    await db.insert(institutions).values({
+      id,
+      name: body.name,
+      type: body.type || 'Banco',
+      code: body.code || '',
+      defaultApr: String(Number(body.defaultApr) || 16.06),
+      maxTermMonths: Number(body.maxTermMonths) || 60,
+      status: 'active',
+    });
+
     const newInst = {
-      id: String(Date.now()),
+      id,
       name: body.name,
       type: body.type || 'Banco',
       code: body.code || '',
@@ -45,9 +60,11 @@ export const POST: APIRoute = async (ctx) => {
       maxTermMonths: Number(body.maxTermMonths) || 60,
       status: 'active',
     };
-    institutions.unshift(newInst);
 
-    return new Response(JSON.stringify({ success: true, data: newInst }), { status: 201 });
+    return new Response(JSON.stringify({ success: true, data: newInst }), {
+      status: 201,
+      headers: { 'Content-Type': 'application/json' },
+    });
   } catch (err: any) {
     return new Response(JSON.stringify({ error: err.message }), { status: 500 });
   }
@@ -62,8 +79,16 @@ export const DELETE: APIRoute = async (ctx) => {
   try {
     const url = new URL(ctx.request.url);
     const id = url.searchParams.get('id');
-    institutions = institutions.filter((i) => i.id !== id);
-    return new Response(JSON.stringify({ success: true }), { status: 200 });
+    if (!id) {
+      return new Response(JSON.stringify({ error: 'ID requerido' }), { status: 400 });
+    }
+
+    await db.delete(institutions).where(eq(institutions.id, id));
+
+    return new Response(JSON.stringify({ success: true }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
   } catch (err: any) {
     return new Response(JSON.stringify({ error: err.message }), { status: 500 });
   }

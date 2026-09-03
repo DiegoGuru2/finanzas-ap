@@ -238,9 +238,93 @@ async function migrateAll() {
       FOREIGN KEY (\`userId\`) REFERENCES \`user\`(\`id\`) ON DELETE CASCADE
     );
   `);
-  console.log('✅ Tabla vault_items lista');
+  // 11. Admin Settings (Configuración Global del Sistema)
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS \`admin_settings\` (
+      \`id\` VARCHAR(36) PRIMARY KEY,
+      \`sbuAmount\` DECIMAL(10,2) DEFAULT 460.00,
+      \`iessPercentagePrivate\` DECIMAL(5,2) DEFAULT 9.45,
+      \`iessPercentagePublic\` DECIMAL(5,2) DEFAULT 11.45,
+      \`maxDebtToIncomeRatio\` DECIMAL(5,2) DEFAULT 40.00,
+      \`emergencyReserveMonthsDefault\` INT DEFAULT 3,
+      \`systemName\` VARCHAR(100) DEFAULT 'ProyecAhorro',
+      \`systemVersion\` VARCHAR(50) DEFAULT '1.2.0',
+      \`legalDecimoTerceroDate\` VARCHAR(20) DEFAULT '12-24',
+      \`legalDecimoCuartoCostaDate\` VARCHAR(20) DEFAULT '03-15',
+      \`legalDecimoCuartoSierraDate\` VARCHAR(20) DEFAULT '08-15',
+      \`createdAt\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      \`updatedAt\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    );
+  `);
+  // Semilla inicial de admin_settings si está vacía
+  const [existingSettings]: any = await db.execute(sql`SELECT COUNT(*) as cnt FROM \`admin_settings\``);
+  if (existingSettings[0]?.cnt === 0 || existingSettings[0]?.cnt === '0') {
+    await db.execute(sql`
+      INSERT INTO \`admin_settings\` (\`id\`, \`sbuAmount\`, \`iessPercentagePrivate\`, \`iessPercentagePublic\`, \`maxDebtToIncomeRatio\`, \`emergencyReserveMonthsDefault\`, \`systemName\`, \`systemVersion\`, \`legalDecimoTerceroDate\`, \`legalDecimoCuartoCostaDate\`, \`legalDecimoCuartoSierraDate\`)
+      VALUES ('global', 460.00, 9.45, 11.45, 40.00, 3, 'ProyecAhorro', '1.2.0', '12-24', '03-15', '08-15');
+    `);
+    console.log('✅ Configuración global sembrada');
+  }
+  console.log('✅ Tabla admin_settings lista');
 
-  console.log('🎉 Todas las tablas fueron migradas y verificadas.');
+  // 12. Institutions (Entidades Financieras de Ecuador)
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS \`institutions\` (
+      \`id\` VARCHAR(36) PRIMARY KEY,
+      \`name\` VARCHAR(255) NOT NULL,
+      \`type\` VARCHAR(50) NOT NULL DEFAULT 'Banco',
+      \`code\` VARCHAR(50) NOT NULL,
+      \`defaultApr\` DECIMAL(5,2) NOT NULL DEFAULT 15.00,
+      \`maxTermMonths\` INT NOT NULL DEFAULT 60,
+      \`status\` VARCHAR(50) NOT NULL DEFAULT 'active',
+      \`createdAt\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      \`updatedAt\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    );
+  `);
+
+  const [existingInst]: any = await db.execute(sql`SELECT COUNT(*) as cnt FROM \`institutions\``);
+  if (existingInst[0]?.cnt === 0 || existingInst[0]?.cnt === '0') {
+    await db.execute(sql`
+      INSERT INTO \`institutions\` (\`id\`, \`name\`, \`type\`, \`code\`, \`defaultApr\`, \`maxTermMonths\`, \`status\`) VALUES
+      ('1', 'Banco Pichincha', 'Banco', 'BPIC', 15.60, 60, 'active'),
+      ('2', 'Banco Guayaquil', 'Banco', 'BGYE', 16.06, 60, 'active'),
+      ('3', 'Produbanco', 'Banco', 'PROD', 15.80, 48, 'active'),
+      ('4', 'Banco del Pacífico', 'Banco', 'BPAC', 15.20, 60, 'active'),
+      ('5', 'Banco Bolivariano', 'Banco', 'BBOL', 16.00, 48, 'active'),
+      ('6', 'Banco Internacional', 'Banco', 'BINT', 15.50, 48, 'active'),
+      ('7', 'BIESS — Préstamo Quirografario', 'Pública', 'BIESS-Q', 11.00, 60, 'active'),
+      ('8', 'BIESS — Préstamo Hipotecario', 'Pública', 'BIESS-H', 6.99, 300, 'active'),
+      ('9', 'Coop. Policía Nacional', 'Cooperativa', 'CPN', 14.50, 60, 'active'),
+      ('10', 'Coop. JEP (Juventud Ecuatoriana)', 'Cooperativa', 'JEP', 14.80, 60, 'active'),
+      ('11', 'Coop. Alianza del Valle', 'Cooperativa', 'ADV', 15.00, 48, 'active'),
+      ('12', 'Diners Club Ecuador', 'Tarjeta', 'DINERS', 16.06, 36, 'active');
+    `);
+    console.log('✅ Entidades financieras ecuatorianas sembradas');
+  }
+  console.log('✅ Tabla institutions lista');
+
+  // 13. Índices Compuestos para Alto Rendimiento
+  try {
+    await db.execute(sql`CREATE INDEX \`payments_user_paid_idx\` ON \`payments\` (\`userId\`, \`paidAt\`);`);
+    console.log('✅ Índice payments_user_paid_idx creado');
+  } catch {}
+
+  try {
+    await db.execute(sql`CREATE INDEX \`vault_items_user_fav_idx\` ON \`vault_items\` (\`userId\`, \`isFavorite\`);`);
+    console.log('✅ Índice vault_items_user_fav_idx creado');
+  } catch {}
+
+  try {
+    await db.execute(sql`CREATE INDEX \`debts_user_balance_idx\` ON \`debts\` (\`userId\`, \`currentBalance\`);`);
+    console.log('✅ Índice debts_user_balance_idx creado');
+  } catch {}
+
+  try {
+    await db.execute(sql`CREATE INDEX \`expenses_user_timing_idx\` ON \`expenses\` (\`userId\`, \`paymentTiming\`);`);
+    console.log('✅ Índice expenses_user_timing_idx creado');
+  } catch {}
+
+  console.log('🎉 Todas las tablas e índices fueron migrados y verificados.');
 }
 
 migrateAll().catch(console.error);

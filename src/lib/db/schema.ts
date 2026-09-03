@@ -8,6 +8,7 @@ import {
   int,
   date,
   json,
+  index,
 } from 'drizzle-orm/mysql-core';
 
 // ═══════════════════════════════════════════
@@ -104,63 +105,81 @@ export const incomes = mysqlTable('incomes', {
   updatedAt: timestamp('updatedAt').notNull().defaultNow().onUpdateNow(),
 });
 
-export const expenses = mysqlTable('expenses', {
-  id: varchar('id', { length: 36 }).primaryKey(),
-  userId: varchar('userId', { length: 36 })
-    .notNull()
-    .references(() => user.id, { onDelete: 'cascade' }),
-  name: varchar('name', { length: 255 }).notNull(),
-  amount: decimal('amount', { precision: 15, scale: 2 }).notNull(),
-  category: varchar('category', { length: 100 }).notNull(), // 'housing', 'food', etc.
-  frequency: varchar('frequency', { length: 50 }).notNull().default('monthly'),
-  isEssential: boolean('isEssential').notNull().default(false),
-  paymentTiming: varchar('paymentTiming', { length: 50 }).default('ambas'), // 'quincena' | 'fin_de_mes' | 'ambas'
-  activeFrom: date('activeFrom'), // El gasto entra al cronograma desde esta fecha (null = siempre)
-  activeUntil: date('activeUntil'), // Y sale después de esta fecha (null = indefinido)
-  date: date('date'),
-  description: varchar('description', { length: 255 }),
-  isActive: boolean('isActive').default(true),
-  createdAt: timestamp('createdAt').notNull().defaultNow(),
-  updatedAt: timestamp('updatedAt').notNull().defaultNow().onUpdateNow(),
-});
+export const expenses = mysqlTable(
+  'expenses',
+  {
+    id: varchar('id', { length: 36 }).primaryKey(),
+    userId: varchar('userId', { length: 36 })
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    name: varchar('name', { length: 255 }).notNull(),
+    amount: decimal('amount', { precision: 15, scale: 2 }).notNull(),
+    category: varchar('category', { length: 100 }).notNull(), // 'housing', 'food', etc.
+    frequency: varchar('frequency', { length: 50 }).notNull().default('monthly'),
+    isEssential: boolean('isEssential').notNull().default(false),
+    paymentTiming: varchar('paymentTiming', { length: 50 }).default('ambas'), // 'quincena' | 'fin_de_mes' | 'ambas'
+    activeFrom: date('activeFrom'), // El gasto entra al cronograma desde esta fecha (null = siempre)
+    activeUntil: date('activeUntil'), // Y sale después de esta fecha (null = indefinido)
+    date: date('date'),
+    description: varchar('description', { length: 255 }),
+    isActive: boolean('isActive').default(true),
+    createdAt: timestamp('createdAt').notNull().defaultNow(),
+    updatedAt: timestamp('updatedAt').notNull().defaultNow().onUpdateNow(),
+  },
+  (table) => [
+    index('expenses_user_timing_idx').on(table.userId, table.paymentTiming),
+  ]
+);
 
-export const debts = mysqlTable('debts', {
-  id: varchar('id', { length: 36 }).primaryKey(),
-  userId: varchar('userId', { length: 36 })
-    .notNull()
-    .references(() => user.id, { onDelete: 'cascade' }),
-  name: varchar('name', { length: 255 }).notNull(),
-  creditor: varchar('creditor', { length: 255 }),
-  currentBalance: decimal('currentBalance', { precision: 15, scale: 2 }).notNull(),
-  originalBalance: decimal('originalBalance', { precision: 15, scale: 2 }).notNull(),
-  apr: decimal('apr', { precision: 5, scale: 2 }).notNull(),
-  minimumPayment: decimal('minimumPayment', { precision: 15, scale: 2 }).notNull(),
-  dueDay: int('dueDay').notNull().default(15),
-  type: varchar('type', { length: 50 }).notNull().default('credit_card'), // 'credit_card', 'biess_quirografario', etc.
-  paymentTiming: varchar('paymentTiming', { length: 50 }).default('fin_de_mes'), // 'quincena' | 'fin_de_mes' | 'any'
-  hasInstallmentPlan: boolean('hasInstallmentPlan').default(false), // Pagar en cuotas fijas
-  termMonths: int('termMonths'), // Número de cuotas del plan (null si no aplica)
-  currency: varchar('currency', { length: 10 }).notNull().default('USD'),
-  status: varchar('status', { length: 50 }).notNull().default('active'),
-  createdAt: timestamp('createdAt').notNull().defaultNow(),
-  updatedAt: timestamp('updatedAt').notNull().defaultNow().onUpdateNow(),
-});
+export const debts = mysqlTable(
+  'debts',
+  {
+    id: varchar('id', { length: 36 }).primaryKey(),
+    userId: varchar('userId', { length: 36 })
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    name: varchar('name', { length: 255 }).notNull(),
+    creditor: varchar('creditor', { length: 255 }),
+    currentBalance: decimal('currentBalance', { precision: 15, scale: 2 }).notNull(),
+    originalBalance: decimal('originalBalance', { precision: 15, scale: 2 }).notNull(),
+    apr: decimal('apr', { precision: 5, scale: 2 }).notNull(),
+    minimumPayment: decimal('minimumPayment', { precision: 15, scale: 2 }).notNull(),
+    dueDay: int('dueDay').notNull().default(15),
+    type: varchar('type', { length: 50 }).notNull().default('credit_card'), // 'credit_card', 'biess_quirografario', etc.
+    paymentTiming: varchar('paymentTiming', { length: 50 }).default('fin_de_mes'), // 'quincena' | 'fin_de_mes' | 'any'
+    hasInstallmentPlan: boolean('hasInstallmentPlan').default(false), // Pagar en cuotas fijas
+    termMonths: int('termMonths'), // Número de cuotas del plan (null si no aplica)
+    currency: varchar('currency', { length: 10 }).notNull().default('USD'),
+    status: varchar('status', { length: 50 }).notNull().default('active'),
+    createdAt: timestamp('createdAt').notNull().defaultNow(),
+    updatedAt: timestamp('updatedAt').notNull().defaultNow().onUpdateNow(),
+  },
+  (table) => [
+    index('debts_user_balance_idx').on(table.userId, table.currentBalance),
+  ]
+);
 
-export const payments = mysqlTable('payments', {
-  id: varchar('id', { length: 36 }).primaryKey(),
-  userId: varchar('userId', { length: 36 })
-    .notNull()
-    .references(() => user.id, { onDelete: 'cascade' }),
-  debtId: varchar('debtId', { length: 36 })
-    .notNull()
-    .references(() => debts.id, { onDelete: 'cascade' }),
-  amount: decimal('amount', { precision: 15, scale: 2 }).notNull(),
-  type: varchar('type', { length: 50 }).notNull().default('minimum'),
-  paidAt: date('paidAt').notNull(),
-  notes: text('notes'),
-  createdAt: timestamp('createdAt').notNull().defaultNow(),
-  updatedAt: timestamp('updatedAt').notNull().defaultNow().onUpdateNow(),
-});
+export const payments = mysqlTable(
+  'payments',
+  {
+    id: varchar('id', { length: 36 }).primaryKey(),
+    userId: varchar('userId', { length: 36 })
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    debtId: varchar('debtId', { length: 36 })
+      .notNull()
+      .references(() => debts.id, { onDelete: 'cascade' }),
+    amount: decimal('amount', { precision: 15, scale: 2 }).notNull(),
+    type: varchar('type', { length: 50 }).notNull().default('minimum'),
+    paidAt: date('paidAt').notNull(),
+    notes: text('notes'),
+    createdAt: timestamp('createdAt').notNull().defaultNow(),
+    updatedAt: timestamp('updatedAt').notNull().defaultNow().onUpdateNow(),
+  },
+  (table) => [
+    index('payments_user_paid_idx').on(table.userId, table.paidAt),
+  ]
+);
 
 export const expensePayments = mysqlTable('expense_payments', {
   id: varchar('id', { length: 36 }).primaryKey(),
@@ -266,19 +285,57 @@ export const vaultKeys = mysqlTable('vault_keys', {
   updatedAt: timestamp('updatedAt').notNull().defaultNow().onUpdateNow(),
 });
 
-export const vaultItems = mysqlTable('vault_items', {
+export const vaultItems = mysqlTable(
+  'vault_items',
+  {
+    id: varchar('id', { length: 36 }).primaryKey(),
+    userId: varchar('userId', { length: 36 })
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    title: varchar('title', { length: 255 }).notNull(),
+    category: varchar('category', { length: 50 }).notNull().default('other'), // 'banking', 'cards', 'email', 'social', 'streaming', 'notes', 'other'
+    websiteUrl: varchar('websiteUrl', { length: 500 }),
+    usernameEncrypted: text('usernameEncrypted'), // Base64 de ciphertext
+    passwordEncrypted: text('passwordEncrypted').notNull(), // Base64 de ciphertext
+    notesEncrypted: text('notesEncrypted'), // Base64 de ciphertext
+    iv: varchar('iv', { length: 64 }).notNull(), // Base64 del IV de este registro
+    isFavorite: boolean('isFavorite').default(false),
+    createdAt: timestamp('createdAt').notNull().defaultNow(),
+    updatedAt: timestamp('updatedAt').notNull().defaultNow().onUpdateNow(),
+  },
+  (table) => [
+    index('vault_items_user_fav_idx').on(table.userId, table.isFavorite),
+  ]
+);
+
+// ═══════════════════════════════════════════
+// Configuración Global y Entidades del Sistema
+// ═══════════════════════════════════════════
+
+export const adminSettings = mysqlTable('admin_settings', {
   id: varchar('id', { length: 36 }).primaryKey(),
-  userId: varchar('userId', { length: 36 })
-    .notNull()
-    .references(() => user.id, { onDelete: 'cascade' }),
-  title: varchar('title', { length: 255 }).notNull(),
-  category: varchar('category', { length: 50 }).notNull().default('other'), // 'banking', 'cards', 'email', 'social', 'streaming', 'notes', 'other'
-  websiteUrl: varchar('websiteUrl', { length: 500 }),
-  usernameEncrypted: text('usernameEncrypted'), // Base64 de ciphertext
-  passwordEncrypted: text('passwordEncrypted').notNull(), // Base64 de ciphertext
-  notesEncrypted: text('notesEncrypted'), // Base64 de ciphertext
-  iv: varchar('iv', { length: 64 }).notNull(), // Base64 del IV de este registro
-  isFavorite: boolean('isFavorite').default(false),
+  sbuAmount: decimal('sbuAmount', { precision: 10, scale: 2 }).default('460.00'),
+  iessPercentagePrivate: decimal('iessPercentagePrivate', { precision: 5, scale: 2 }).default('9.45'),
+  iessPercentagePublic: decimal('iessPercentagePublic', { precision: 5, scale: 2 }).default('11.45'),
+  maxDebtToIncomeRatio: decimal('maxDebtToIncomeRatio', { precision: 5, scale: 2 }).default('40.00'),
+  emergencyReserveMonthsDefault: int('emergencyReserveMonthsDefault').default(3),
+  systemName: varchar('systemName', { length: 100 }).default('ProyecAhorro'),
+  systemVersion: varchar('systemVersion', { length: 50 }).default('1.2.0'),
+  legalDecimoTerceroDate: varchar('legalDecimoTerceroDate', { length: 20 }).default('12-24'),
+  legalDecimoCuartoCostaDate: varchar('legalDecimoCuartoCostaDate', { length: 20 }).default('03-15'),
+  legalDecimoCuartoSierraDate: varchar('legalDecimoCuartoSierraDate', { length: 20 }).default('08-15'),
+  createdAt: timestamp('createdAt').notNull().defaultNow(),
+  updatedAt: timestamp('updatedAt').notNull().defaultNow().onUpdateNow(),
+});
+
+export const institutions = mysqlTable('institutions', {
+  id: varchar('id', { length: 36 }).primaryKey(),
+  name: varchar('name', { length: 255 }).notNull(),
+  type: varchar('type', { length: 50 }).notNull().default('Banco'), // 'Banco' | 'Cooperativa' | 'Pública' | 'Tarjeta'
+  code: varchar('code', { length: 50 }).notNull(),
+  defaultApr: decimal('defaultApr', { precision: 5, scale: 2 }).notNull().default('15.00'),
+  maxTermMonths: int('maxTermMonths').notNull().default(60),
+  status: varchar('status', { length: 50 }).notNull().default('active'), // 'active' | 'inactive'
   createdAt: timestamp('createdAt').notNull().defaultNow(),
   updatedAt: timestamp('updatedAt').notNull().defaultNow().onUpdateNow(),
 });
