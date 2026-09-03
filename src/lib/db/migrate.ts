@@ -204,7 +204,44 @@ async function migrateAll() {
   `);
   console.log('✅ Tabla alerts lista');
 
+  // 9. Vault Keys (Bóveda de Contraseñas - Semilla y Verificador de PIN)
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS \`vault_keys\` (
+      \`id\` VARCHAR(36) PRIMARY KEY,
+      \`userId\` VARCHAR(36) NOT NULL UNIQUE,
+      \`salt\` VARCHAR(64) NOT NULL,
+      \`verifier\` TEXT NOT NULL,
+      \`verifierIv\` VARCHAR(64) NOT NULL,
+      \`hint\` VARCHAR(255),
+      \`createdAt\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      \`updatedAt\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      FOREIGN KEY (\`userId\`) REFERENCES \`user\`(\`id\`) ON DELETE CASCADE
+    );
+  `);
+  console.log('✅ Tabla vault_keys lista');
+
+  // 10. Vault Items (Contraseñas y Secretos Cifrados en Cliente)
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS \`vault_items\` (
+      \`id\` VARCHAR(36) PRIMARY KEY,
+      \`userId\` VARCHAR(36) NOT NULL,
+      \`title\` VARCHAR(255) NOT NULL,
+      \`category\` VARCHAR(50) NOT NULL DEFAULT 'other',
+      \`websiteUrl\` VARCHAR(500),
+      \`usernameEncrypted\` TEXT,
+      \`passwordEncrypted\` TEXT NOT NULL,
+      \`notesEncrypted\` TEXT,
+      \`iv\` VARCHAR(64) NOT NULL,
+      \`isFavorite\` BOOLEAN DEFAULT FALSE,
+      \`createdAt\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      \`updatedAt\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      FOREIGN KEY (\`userId\`) REFERENCES \`user\`(\`id\`) ON DELETE CASCADE
+    );
+  `);
+  console.log('✅ Tabla vault_items lista');
+
   console.log('🎉 Todas las tablas fueron migradas y verificadas.');
 }
 
 migrateAll().catch(console.error);
+

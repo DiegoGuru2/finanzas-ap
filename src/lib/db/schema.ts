@@ -248,3 +248,39 @@ export const catalogOptions = mysqlTable('catalog_options', {
   updatedAt: timestamp('updatedAt').notNull().defaultNow().onUpdateNow(),
 });
 
+// ═══════════════════════════════════════════
+// Bóveda de Contraseñas (Password Vault)
+// ═══════════════════════════════════════════
+
+export const vaultKeys = mysqlTable('vault_keys', {
+  id: varchar('id', { length: 36 }).primaryKey(),
+  userId: varchar('userId', { length: 36 })
+    .notNull()
+    .unique()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  salt: varchar('salt', { length: 64 }).notNull(), // Hex/Base64 de la semilla PBKDF2
+  verifier: text('verifier').notNull(), // Canario cifrado para verificar PIN sin guardarlo
+  verifierIv: varchar('verifierIv', { length: 64 }).notNull(), // IV de cifrado del canario
+  hint: varchar('hint', { length: 255 }), // Pista opcional
+  createdAt: timestamp('createdAt').notNull().defaultNow(),
+  updatedAt: timestamp('updatedAt').notNull().defaultNow().onUpdateNow(),
+});
+
+export const vaultItems = mysqlTable('vault_items', {
+  id: varchar('id', { length: 36 }).primaryKey(),
+  userId: varchar('userId', { length: 36 })
+    .notNull()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  title: varchar('title', { length: 255 }).notNull(),
+  category: varchar('category', { length: 50 }).notNull().default('other'), // 'banking', 'cards', 'email', 'social', 'streaming', 'notes', 'other'
+  websiteUrl: varchar('websiteUrl', { length: 500 }),
+  usernameEncrypted: text('usernameEncrypted'), // Base64 de ciphertext
+  passwordEncrypted: text('passwordEncrypted').notNull(), // Base64 de ciphertext
+  notesEncrypted: text('notesEncrypted'), // Base64 de ciphertext
+  iv: varchar('iv', { length: 64 }).notNull(), // Base64 del IV de este registro
+  isFavorite: boolean('isFavorite').default(false),
+  createdAt: timestamp('createdAt').notNull().defaultNow(),
+  updatedAt: timestamp('updatedAt').notNull().defaultNow().onUpdateNow(),
+});
+
+
