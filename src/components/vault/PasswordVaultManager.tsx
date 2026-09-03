@@ -7,7 +7,6 @@ import {
   encryptVaultData,
   decryptVaultData,
   generateSecurePassword,
-  type PasswordGeneratorOptions,
 } from '@/lib/crypto/vault-crypto';
 
 interface EncryptedVaultItem {
@@ -31,18 +30,122 @@ interface DecryptedItemData {
   notes?: string;
 }
 
+// ═══════════════════════════════════════════════════════════════
+// ICONOS SVG PREMIUM
+// ═══════════════════════════════════════════════════════════════
+
+const SvgIcons = {
+  all: (
+    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+    </svg>
+  ),
+  banking: (
+    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M3 21h18M3 10h18M5 10v8m4-8v8m6-8v8m4-8v8M12 3l9 5H3l9-5z" />
+    </svg>
+  ),
+  cards: (
+    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+    </svg>
+  ),
+  email: (
+    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+    </svg>
+  ),
+  streaming: (
+    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+  ),
+  social: (
+    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+    </svg>
+  ),
+  notes: (
+    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+    </svg>
+  ),
+  other: (
+    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+    </svg>
+  ),
+  lock: (
+    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+    </svg>
+  ),
+  unlock: (
+    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
+    </svg>
+  ),
+  eye: (
+    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+    </svg>
+  ),
+  eyeOff: (
+    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18" />
+    </svg>
+  ),
+  copy: (
+    <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+    </svg>
+  ),
+  check: (
+    <svg className="h-3.5 w-3.5 text-accent-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+    </svg>
+  ),
+  edit: (
+    <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+    </svg>
+  ),
+  trash: (
+    <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+    </svg>
+  ),
+  sparkles: (
+    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M13 10V3L4 14h7v7l9-11h-7z" />
+    </svg>
+  ),
+  globe: (
+    <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+    </svg>
+  ),
+  shieldCheck: (
+    <svg className="h-5 w-5 text-accent-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+    </svg>
+  ),
+};
+
 const CATEGORIES = [
-  { id: 'all', label: 'Todos', icon: '🔑' },
-  { id: 'banking', label: 'Bancos y Finanzas', icon: '🏦' },
-  { id: 'cards', label: 'Tarjetas', icon: '💳' },
-  { id: 'email', label: 'Correos', icon: '📧' },
-  { id: 'streaming', label: 'Suscripciones / Streaming', icon: '🎬' },
-  { id: 'social', label: 'Redes y Cuentas', icon: '🌐' },
-  { id: 'notes', label: 'Notas Seguras / PINs', icon: '📝' },
-  { id: 'other', label: 'Otros', icon: '🔒' },
+  { id: 'all', label: 'Todos', icon: SvgIcons.all },
+  { id: 'banking', label: 'Bancos y Finanzas', icon: SvgIcons.banking },
+  { id: 'cards', label: 'Tarjetas', icon: SvgIcons.cards },
+  { id: 'email', label: 'Correos', icon: SvgIcons.email },
+  { id: 'streaming', label: 'Suscripciones / Streaming', icon: SvgIcons.streaming },
+  { id: 'social', label: 'Redes y Cuentas', icon: SvgIcons.social },
+  { id: 'notes', label: 'Notas Seguras / PINs', icon: SvgIcons.notes },
+  { id: 'other', label: 'Otros', icon: SvgIcons.other },
 ];
 
-const AUTO_LOCK_SECONDS = 300; // 5 minutos de inactividad
+const AUTO_LOCK_SECONDS = 900; // 15 minutos de inactividad efectiva
 
 export default function PasswordVaultManager() {
   // Estado de inicialización y configuración
@@ -75,8 +178,15 @@ export default function PasswordVaultManager() {
   // Lista de elementos de la bóveda
   const [items, setItems] = useState<EncryptedVaultItem[]>([]);
   const [decryptedCache, setDecryptedCache] = useState<Record<string, DecryptedItemData>>({});
-  const [revealedPasswords, setRevealedPasswords] = useState<Record<string, boolean>>({});
+  const [revealedItems, setRevealedItems] = useState<Record<string, boolean>>({});
   const [loadingItems, setLoadingItems] = useState(false);
+
+  // Modal de Autenticación de Contraseña del Sistema para revelar
+  const [authModalItem, setAuthModalItem] = useState<EncryptedVaultItem | null>(null);
+  const [systemPassword, setSystemPassword] = useState('');
+  const [showSystemPassword, setShowSystemPassword] = useState(false);
+  const [systemAuthError, setSystemAuthError] = useState<string | null>(null);
+  const [verifyingSystem, setVerifyingSystem] = useState(false);
 
   // Filtros y Búsqueda
   const [searchQuery, setSearchQuery] = useState('');
@@ -108,11 +218,11 @@ export default function PasswordVaultManager() {
   // Notificación de copiado
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
-  // Temporizador de Auto-bloqueo
+  // Temporizador de Auto-bloqueo por inactividad
   const [secondsRemaining, setSecondsRemaining] = useState(AUTO_LOCK_SECONDS);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // 1. Cargar estado de la bóveda (si el usuario ya creó su PIN)
+  // 1. Cargar estado de la bóveda
   const fetchVaultSetup = async () => {
     try {
       setLoading(true);
@@ -143,14 +253,15 @@ export default function PasswordVaultManager() {
     setMasterKey(null);
     setIsUnlocked(false);
     setDecryptedCache({});
-    setRevealedPasswords({});
+    setRevealedItems({});
     setUnlockPin('');
     setUnlockError(null);
     setModalOpen(false);
     setGenModalOpen(false);
+    setAuthModalItem(null);
   }, []);
 
-  // Control de Inactividad y Auto-bloqueo
+  // Control de Inactividad (Sin bloqueo agresivo al cambiar de pestaña)
   const resetInactivityTimer = useCallback(() => {
     setSecondsRemaining(AUTO_LOCK_SECONDS);
   }, []);
@@ -160,8 +271,9 @@ export default function PasswordVaultManager() {
 
     const handleActivity = () => resetInactivityTimer();
     window.addEventListener('mousemove', handleActivity);
+    window.addEventListener('mousedown', handleActivity);
     window.addEventListener('keydown', handleActivity);
-    window.addEventListener('click', handleActivity);
+    window.addEventListener('touchstart', handleActivity);
     window.addEventListener('scroll', handleActivity);
 
     timerRef.current = setInterval(() => {
@@ -176,24 +288,13 @@ export default function PasswordVaultManager() {
 
     return () => {
       window.removeEventListener('mousemove', handleActivity);
+      window.removeEventListener('mousedown', handleActivity);
       window.removeEventListener('keydown', handleActivity);
-      window.removeEventListener('click', handleActivity);
+      window.removeEventListener('touchstart', handleActivity);
       window.removeEventListener('scroll', handleActivity);
       if (timerRef.current) clearInterval(timerRef.current);
     };
   }, [isUnlocked, lockVault, resetInactivityTimer]);
-
-  // Bloqueo cuando la pestaña pasa a segundo plano
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.hidden && isUnlocked) {
-        // Al ocultar la pestaña, se bloquea por seguridad
-        lockVault();
-      }
-    };
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [isUnlocked, lockVault]);
 
   // Cargar elementos cifrados de la bóveda
   const fetchVaultItems = async (keyToUse: CryptoKey) => {
@@ -203,7 +304,6 @@ export default function PasswordVaultManager() {
       const json = await res.json();
       if (res.ok && Array.isArray(json.items)) {
         setItems(json.items);
-        // Descifrar elementos en segundo plano en memoria
         const newCache: Record<string, DecryptedItemData> = {};
         for (const item of json.items) {
           try {
@@ -241,9 +341,7 @@ export default function PasswordVaultManager() {
       setUnlocking(true);
       setUnlockError(null);
 
-      // Derivar la llave candidata
       const candidateKey = await deriveMasterKey(unlockPin, salt);
-      // Validar contra el canario
       const isValid = await verifyMasterKey(candidateKey, verifier, verifierIv);
 
       if (!isValid) {
@@ -252,7 +350,6 @@ export default function PasswordVaultManager() {
         return;
       }
 
-      // PIN correcto: guardar llave en memoria e ingresar
       setMasterKey(candidateKey);
       setIsUnlocked(true);
       setUnlockPin('');
@@ -282,14 +379,10 @@ export default function PasswordVaultManager() {
 
     try {
       setSettingUp(true);
-      // Generar sal aleatoria
       const newSalt = generateSalt();
-      // Derivar llave simétrica AES-GCM
       const derived = await deriveMasterKey(newPin, newSalt);
-      // Crear verificador canario
       const { verifier: newVerifier, verifierIv: newVerifierIv } = await createCanaryVerifier(derived);
 
-      // Guardar en backend
       const res = await fetch('/api/vault/setup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -321,6 +414,57 @@ export default function PasswordVaultManager() {
       setSetupError(err.message || 'Error al configurar la bóveda');
     } finally {
       setSettingUp(false);
+    }
+  };
+
+  // 4. Solicitar Contraseña del Sistema antes de Revelar
+  const handleRequestReveal = (item: EncryptedVaultItem) => {
+    if (revealedItems[item.id]) {
+      // Ya está revelado: permite ocultarlo inmediatamente sin contraseña
+      setRevealedItems((prev) => ({ ...prev, [item.id]: false }));
+      return;
+    }
+    // Requiere la contraseña del sistema para revelar
+    setAuthModalItem(item);
+    setSystemPassword('');
+    setShowSystemPassword(false);
+    setSystemAuthError(null);
+  };
+
+  const handleConfirmSystemPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!authModalItem) return;
+    if (!systemPassword) {
+      setSystemAuthError('Ingresa la contraseña del sistema');
+      return;
+    }
+
+    try {
+      setVerifyingSystem(true);
+      setSystemAuthError(null);
+
+      const res = await fetch('/api/vault/verify-system-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: systemPassword }),
+      });
+
+      const json = await res.json();
+      if (!res.ok || !json.valid) {
+        setSystemAuthError(json.error || 'Contraseña del sistema incorrecta');
+        return;
+      }
+
+      // Autenticación correcta: revelar este elemento
+      setRevealedItems((prev) => ({ ...prev, [authModalItem.id]: true }));
+      setAuthModalItem(null);
+      setSystemPassword('');
+      resetInactivityTimer();
+    } catch (err: any) {
+      console.error('Error verifying system password:', err);
+      setSystemAuthError('Error de verificación');
+    } finally {
+      setVerifyingSystem(false);
     }
   };
 
@@ -375,7 +519,6 @@ export default function PasswordVaultManager() {
       setSavingItem(true);
       setModalError(null);
 
-      // Cifrar los campos sensibles con la clave maestra
       const passEnc = await encryptVaultData(modalPassword, masterKey);
       const userEnc = modalUsername
         ? await encryptVaultData(modalUsername, masterKey)
@@ -489,8 +632,8 @@ export default function PasswordVaultManager() {
       <div className="max-w-xl mx-auto py-8 px-4">
         <div className="rounded-3xl border border-brand-500/30 bg-surface-50 p-6 sm:p-8 shadow-2xl space-y-6 animate-fade-up">
           <div className="flex items-center gap-4">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-500/15 border border-brand-500/30 text-3xl shadow-inner">
-              🔐
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-500/15 border border-brand-500/30 text-brand-400 shadow-inner">
+              {SvgIcons.lock}
             </div>
             <div>
               <h2 className="text-xl sm:text-2xl font-bold text-text-primary">
@@ -504,7 +647,8 @@ export default function PasswordVaultManager() {
 
           <div className="rounded-2xl border border-warning-500/30 bg-warning-500/10 p-4 text-xs text-warning-400 space-y-1.5 leading-relaxed">
             <div className="font-bold flex items-center gap-1.5 text-sm">
-              <span>⚠️</span> Importante sobre tu Clave Maestra
+              <span className="h-4 w-4">{SvgIcons.other}</span>
+              Importante sobre tu Clave Maestra
             </div>
             <p>
               Tus contraseñas se cifran en tu dispositivo antes de viajar a la base de datos.
@@ -540,7 +684,7 @@ export default function PasswordVaultManager() {
                   onClick={() => setShowNewPin(!showNewPin)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary text-xs"
                 >
-                  {showNewPin ? 'Ocultar' : 'Ver'}
+                  {showNewPin ? SvgIcons.eyeOff : SvgIcons.eye}
                 </button>
               </div>
             </div>
@@ -579,9 +723,10 @@ export default function PasswordVaultManager() {
             <button
               type="submit"
               disabled={settingUp}
-              className="w-full rounded-xl bg-brand-500 py-3 text-sm font-bold text-white shadow-lg hover:bg-brand-400 transition-all cursor-pointer disabled:opacity-50"
+              className="w-full flex items-center justify-center gap-2 rounded-xl bg-brand-500 py-3 text-sm font-bold text-white shadow-lg hover:bg-brand-400 transition-all cursor-pointer disabled:opacity-50"
             >
-              {settingUp ? 'Generando llaves seguras...' : '🔒 Activar Bóveda Segura'}
+              <span className="h-4 w-4">{SvgIcons.lock}</span>
+              <span>{settingUp ? 'Generando llaves seguras...' : 'Activar Bóveda Segura'}</span>
             </button>
           </form>
         </div>
@@ -596,8 +741,8 @@ export default function PasswordVaultManager() {
     return (
       <div className="max-w-md mx-auto py-12 px-4">
         <div className="rounded-3xl border border-border-default bg-surface-50 p-6 sm:p-8 shadow-2xl text-center space-y-6 animate-fade-up">
-          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-brand-500/15 border border-brand-500/30 text-4xl shadow-inner">
-            🔒
+          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-brand-500/15 border border-brand-500/30 text-brand-400 shadow-inner">
+            <span className="h-9 w-9 flex items-center justify-center">{SvgIcons.lock}</span>
           </div>
 
           <div>
@@ -632,16 +777,17 @@ export default function PasswordVaultManager() {
                 className="absolute right-3.5 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary text-xs p-1 cursor-pointer"
                 title={showUnlockPin ? 'Ocultar' : 'Ver'}
               >
-                {showUnlockPin ? '👁️‍🗨️' : '👁️'}
+                {showUnlockPin ? SvgIcons.eyeOff : SvgIcons.eye}
               </button>
             </div>
 
             <button
               type="submit"
               disabled={unlocking}
-              className="w-full rounded-xl bg-brand-500 py-3.5 text-sm font-bold text-white shadow-lg hover:bg-brand-400 transition-all cursor-pointer disabled:opacity-50"
+              className="w-full flex items-center justify-center gap-2 rounded-xl bg-brand-500 py-3.5 text-sm font-bold text-white shadow-lg hover:bg-brand-400 transition-all cursor-pointer disabled:opacity-50"
             >
-              {unlocking ? 'Descifrando datos...' : '🔓 Desbloquear Bóveda'}
+              <span className="h-4 w-4">{SvgIcons.unlock}</span>
+              <span>{unlocking ? 'Descifrando datos...' : 'Desbloquear Bóveda'}</span>
             </button>
           </form>
 
@@ -674,29 +820,30 @@ export default function PasswordVaultManager() {
       {/* Barra Superior de Estado y Auto-Bloqueo */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-2xl border border-border-default bg-surface-50 p-4 shadow-sm">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent-500/15 text-accent-400 border border-accent-500/30 text-xl font-bold">
-            🔓
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent-500/15 text-accent-400 border border-accent-500/30">
+            {SvgIcons.unlock}
           </div>
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-base sm:text-lg font-bold text-text-primary">
                 Bóveda Desbloqueada
               </h2>
-              <span className="inline-flex items-center rounded-md bg-accent-500/15 border border-accent-500/30 px-2 py-0.5 text-[10px] font-bold text-accent-400">
+              <span className="inline-flex items-center gap-1 rounded-md bg-accent-500/15 border border-accent-500/30 px-2 py-0.5 text-[10px] font-bold text-accent-400">
+                {SvgIcons.shieldCheck}
                 AES-256 Activo
               </span>
             </div>
             <p className="text-xs text-text-muted">
-              {items.length} {items.length === 1 ? 'cuenta guardada' : 'cuentas guardadas'}
+              {items.length} {items.length === 1 ? 'cuenta protegida' : 'cuentas protegidas'}
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-2.5 self-end sm:self-auto">
-          {/* Indicador de Auto-bloqueo */}
+          {/* Indicador de Auto-bloqueo por inactividad */}
           <div
             className="flex items-center gap-1.5 rounded-xl border border-border-default bg-surface-100 px-3 py-1.5 text-xs text-text-secondary"
-            title="Se bloqueará automáticamente por inactividad"
+            title="Se bloqueará automáticamente por inactividad prolongada"
           >
             <span className="h-2 w-2 rounded-full bg-accent-400 animate-pulse" />
             <span className="font-mono text-[11px] font-semibold">
@@ -710,7 +857,7 @@ export default function PasswordVaultManager() {
             onClick={openQuickGenerator}
             className="inline-flex items-center gap-1.5 rounded-xl border border-brand-500/30 bg-brand-500/10 px-3 py-1.5 text-xs font-semibold text-brand-400 hover:bg-brand-500/20 transition-all cursor-pointer"
           >
-            <span>⚡</span>
+            {SvgIcons.sparkles}
             <span className="hidden sm:inline">Generar Clave</span>
           </button>
 
@@ -721,7 +868,7 @@ export default function PasswordVaultManager() {
             className="inline-flex items-center gap-1.5 rounded-xl border border-danger-500/30 bg-danger-500/10 px-3 py-1.5 text-xs font-semibold text-danger-400 hover:bg-danger-500/20 transition-all cursor-pointer"
             title="Bloquear la bóveda y borrar clave de la memoria"
           >
-            <span>🔒</span>
+            {SvgIcons.lock}
             <span>Bloquear</span>
           </button>
         </div>
@@ -740,7 +887,9 @@ export default function PasswordVaultManager() {
               className="w-full rounded-xl border border-border-default bg-surface-50 px-3.5 py-2 pl-9 text-xs sm:text-sm text-text-primary placeholder:text-text-muted focus:border-brand-500 focus:outline-none"
             />
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted text-xs">
-              🔍
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
             </span>
             {searchQuery && (
               <button
@@ -758,7 +907,7 @@ export default function PasswordVaultManager() {
           onClick={openCreateModal}
           className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand-500 px-4 py-2.5 text-xs sm:text-sm font-bold text-white shadow-md hover:bg-brand-400 transition-all cursor-pointer"
         >
-          <span>+</span>
+          <span className="text-base font-bold">+</span>
           <span>Nueva Contraseña</span>
         </button>
       </div>
@@ -789,7 +938,9 @@ export default function PasswordVaultManager() {
         </div>
       ) : filteredItems.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-border-default p-8 text-center space-y-3 bg-surface-50/50">
-          <div className="text-3xl">🔑</div>
+          <div className="flex justify-center text-text-muted">
+            <span className="h-10 w-10">{SvgIcons.all}</span>
+          </div>
           <h3 className="text-sm font-bold text-text-primary">
             {searchQuery ? 'No se encontraron resultados' : 'Tu bóveda está vacía'}
           </h3>
@@ -811,7 +962,7 @@ export default function PasswordVaultManager() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
           {filteredItems.map((item) => {
             const dec = decryptedCache[item.id] || {};
-            const isRevealed = !!revealedPasswords[item.id];
+            const isRevealed = !!revealedItems[item.id];
             const catObj = CATEGORIES.find((c) => c.id === item.category) || CATEGORIES[CATEGORIES.length - 1];
 
             return (
@@ -823,7 +974,7 @@ export default function PasswordVaultManager() {
                 <div className="space-y-2">
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-center gap-2.5 min-w-0">
-                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-surface-100 border border-border-default text-lg shadow-2xs">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-surface-100 border border-border-default text-text-primary shadow-2xs">
                         {catObj.icon}
                       </div>
                       <div className="min-w-0">
@@ -845,7 +996,7 @@ export default function PasswordVaultManager() {
                           className="rounded-lg p-1.5 text-text-muted hover:text-brand-400 hover:bg-surface-100 transition-colors"
                           title="Abrir sitio web"
                         >
-                          🌐
+                          {SvgIcons.globe}
                         </a>
                       )}
                       <button
@@ -854,7 +1005,7 @@ export default function PasswordVaultManager() {
                         className="rounded-lg p-1.5 text-text-muted hover:text-text-primary hover:bg-surface-100 transition-colors cursor-pointer"
                         title="Editar"
                       >
-                        ✏️
+                        {SvgIcons.edit}
                       </button>
                       <button
                         type="button"
@@ -862,13 +1013,46 @@ export default function PasswordVaultManager() {
                         className="rounded-lg p-1.5 text-text-muted hover:text-danger-400 hover:bg-danger-500/10 transition-colors cursor-pointer"
                         title="Eliminar"
                       >
-                        🗑️
+                        {SvgIcons.trash}
                       </button>
                     </div>
                   </div>
 
-                  {/* Campos Usuario y Contraseña */}
-                  <div className="space-y-1.5 pt-1">
+                  {/* Campos Usuario y Contraseña protegidos por Contraseña del Sistema */}
+                  <div className="space-y-2 pt-1">
+                    {/* Botón de Revelación con Contraseña del Sistema */}
+                    <div className="flex items-center justify-between rounded-xl bg-surface-100/60 p-2 border border-border-default/60">
+                      <div className="flex items-center gap-1.5 text-xs text-text-secondary">
+                        <span className="h-3.5 w-3.5 text-brand-400">{SvgIcons.other}</span>
+                        <span className="text-[11px] font-medium">
+                          {isRevealed ? 'Credenciales reveladas' : 'Protegido por contraseña'}
+                        </span>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => handleRequestReveal(item)}
+                        className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                          isRevealed
+                            ? 'bg-surface-200 text-text-secondary hover:text-text-primary'
+                            : 'bg-brand-500/15 border border-brand-500/30 text-brand-400 hover:bg-brand-500/25'
+                        }`}
+                        title={isRevealed ? 'Ocultar credenciales' : 'Requiere contraseña del sistema para ver'}
+                      >
+                        {isRevealed ? (
+                          <>
+                            {SvgIcons.eyeOff}
+                            <span>Ocultar</span>
+                          </>
+                        ) : (
+                          <>
+                            {SvgIcons.eye}
+                            <span>Ver credenciales</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+
                     {/* Usuario / Email */}
                     {dec.username && (
                       <div className="flex items-center justify-between rounded-xl bg-surface-100/70 px-3 py-1.5 border border-border-default/60 text-xs">
@@ -877,17 +1061,29 @@ export default function PasswordVaultManager() {
                             Usuario / Correo
                           </span>
                           <span className="font-medium text-text-primary truncate block font-mono text-[11px]">
-                            {dec.username}
+                            {isRevealed ? dec.username : '••••••••••••'}
                           </span>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => handleCopy(dec.username || '', `user-${item.id}`)}
-                          className="shrink-0 rounded-lg p-1 text-text-muted hover:text-brand-400 hover:bg-surface-200 transition-colors cursor-pointer text-xs"
-                          title="Copiar usuario"
-                        >
-                          {copiedKey === `user-${item.id}` ? '✓ Copiado' : '📋'}
-                        </button>
+                        {isRevealed && (
+                          <button
+                            type="button"
+                            onClick={() => handleCopy(dec.username || '', `user-${item.id}`)}
+                            className="shrink-0 inline-flex items-center gap-1 rounded-lg px-2 py-1 text-text-muted hover:text-brand-400 hover:bg-surface-200 transition-colors cursor-pointer text-xs font-semibold"
+                            title="Copiar usuario"
+                          >
+                            {copiedKey === `user-${item.id}` ? (
+                              <>
+                                {SvgIcons.check}
+                                <span className="text-accent-400">Copiado</span>
+                              </>
+                            ) : (
+                              <>
+                                {SvgIcons.copy}
+                                <span>Copiar</span>
+                              </>
+                            )}
+                          </button>
+                        )}
                       </div>
                     )}
 
@@ -898,34 +1094,34 @@ export default function PasswordVaultManager() {
                           Contraseña
                         </span>
                         <span className="font-bold text-text-primary truncate block font-mono text-xs tracking-wider">
-                          {isRevealed ? dec.password : '••••••••••••'}
+                          {isRevealed ? dec.password : '••••••••••••••••'}
                         </span>
                       </div>
-                      <div className="flex items-center gap-1 shrink-0">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setRevealedPasswords((prev) => ({ ...prev, [item.id]: !prev[item.id] }))
-                          }
-                          className="rounded-lg p-1 text-text-muted hover:text-text-primary hover:bg-surface-200 transition-colors cursor-pointer text-xs"
-                          title={isRevealed ? 'Ocultar' : 'Mostrar'}
-                        >
-                          {isRevealed ? '🙈' : '👁️'}
-                        </button>
+                      {isRevealed && (
                         <button
                           type="button"
                           onClick={() => handleCopy(dec.password || '', `pass-${item.id}`)}
-                          className="rounded-lg px-1.5 py-1 text-xs font-semibold text-brand-400 hover:bg-brand-500/15 transition-colors cursor-pointer"
+                          className="shrink-0 inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold text-brand-400 hover:bg-brand-500/15 transition-colors cursor-pointer"
                           title="Copiar contraseña"
                         >
-                          {copiedKey === `pass-${item.id}` ? '✓ Copiada' : 'Copiar'}
+                          {copiedKey === `pass-${item.id}` ? (
+                            <>
+                              {SvgIcons.check}
+                              <span className="text-accent-400">Copiada</span>
+                            </>
+                          ) : (
+                            <>
+                              {SvgIcons.copy}
+                              <span>Copiar</span>
+                            </>
+                          )}
                         </button>
-                      </div>
+                      )}
                     </div>
                   </div>
 
                   {/* Notas Seguras */}
-                  {dec.notes && (
+                  {dec.notes && isRevealed && (
                     <details className="text-[11px] text-text-secondary pt-1">
                       <summary className="cursor-pointer text-text-muted hover:text-text-primary select-none font-medium">
                         Ver notas seguras...
@@ -939,6 +1135,82 @@ export default function PasswordVaultManager() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════════
+          MODAL: CONFIRMAR CONTRASEÑA DEL SISTEMA
+      ═══════════════════════════════════════════════════════════════ */}
+      {authModalItem && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-fade-in">
+          <div className="w-full max-w-md rounded-3xl border border-border-default bg-surface-50 p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-border-default pb-3">
+              <div className="flex items-center gap-2">
+                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-brand-500/15 text-brand-400">
+                  {SvgIcons.lock}
+                </div>
+                <h3 className="font-bold text-base text-text-primary">
+                  Autenticación Requerida
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setAuthModalItem(null)}
+                className="text-text-muted hover:text-text-primary p-1 text-sm cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <p className="text-xs text-text-secondary leading-relaxed">
+              Para visualizar y copiar el usuario y la contraseña de <strong>{authModalItem.title}</strong>,
+              ingresa tu contraseña de inicio de sesión de <strong>ProyecAhorro</strong>.
+            </p>
+
+            {systemAuthError && (
+              <div className="rounded-xl border border-danger-500/30 bg-danger-500/10 p-3 text-xs font-semibold text-danger-400">
+                {systemAuthError}
+              </div>
+            )}
+
+            <form onSubmit={handleConfirmSystemPassword} className="space-y-4">
+              <div className="relative">
+                <input
+                  type={showSystemPassword ? 'text' : 'password'}
+                  value={systemPassword}
+                  onChange={(e) => setSystemPassword(e.target.value)}
+                  placeholder="Contraseña del sistema..."
+                  autoFocus
+                  className="w-full rounded-xl border border-border-default bg-surface-100 px-3.5 py-2.5 text-sm text-text-primary placeholder:text-text-muted focus:border-brand-500 focus:outline-none pr-10"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowSystemPassword(!showSystemPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary text-xs"
+                >
+                  {showSystemPassword ? SvgIcons.eyeOff : SvgIcons.eye}
+                </button>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setAuthModalItem(null)}
+                  className="rounded-xl border border-border-default px-4 py-2 text-xs font-semibold text-text-secondary hover:text-text-primary cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={verifyingSystem}
+                  className="rounded-xl bg-brand-500 px-5 py-2 text-xs font-bold text-white shadow-md hover:bg-brand-400 transition-all cursor-pointer disabled:opacity-50"
+                >
+                  {verifyingSystem ? 'Verificando...' : 'Confirmar y Revelar'}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 
@@ -994,7 +1266,7 @@ export default function PasswordVaultManager() {
                   >
                     {CATEGORIES.filter((c) => c.id !== 'all').map((cat) => (
                       <option key={cat.id} value={cat.id}>
-                        {cat.icon} {cat.label}
+                        {cat.label}
                       </option>
                     ))}
                   </select>
@@ -1039,9 +1311,10 @@ export default function PasswordVaultManager() {
                       setModalPassword(pwd);
                       setShowModalPassword(true);
                     }}
-                    className="text-[11px] font-semibold text-brand-400 hover:underline cursor-pointer"
+                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-brand-400 hover:underline cursor-pointer"
                   >
-                    ⚡ Generar Segura
+                    {SvgIcons.sparkles}
+                    <span>Generar Segura</span>
                   </button>
                 </div>
                 <div className="relative">
@@ -1058,7 +1331,7 @@ export default function PasswordVaultManager() {
                     onClick={() => setShowModalPassword(!showModalPassword)}
                     className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-text-muted hover:text-text-primary p-1 cursor-pointer"
                   >
-                    {showModalPassword ? 'Ocultar' : 'Ver'}
+                    {showModalPassword ? SvgIcons.eyeOff : SvgIcons.eye}
                   </button>
                 </div>
               </div>
@@ -1105,7 +1378,7 @@ export default function PasswordVaultManager() {
           <div className="w-full max-w-md rounded-3xl border border-border-default bg-surface-50 p-6 shadow-2xl space-y-4">
             <div className="flex items-center justify-between border-b border-border-default pb-3">
               <div className="flex items-center gap-2">
-                <span className="text-xl">⚡</span>
+                <span className="text-brand-400">{SvgIcons.sparkles}</span>
                 <h3 className="font-bold text-base text-text-primary">
                   Generador de Contraseñas Seguras
                 </h3>
@@ -1132,14 +1405,24 @@ export default function PasswordVaultManager() {
                 onClick={handleGenerate}
                 className="flex-1 rounded-xl border border-border-default bg-surface-100 py-2.5 text-xs font-semibold text-text-primary hover:bg-surface-200 transition-all cursor-pointer"
               >
-                🔄 Otra combinación
+                Otra combinación
               </button>
               <button
                 type="button"
                 onClick={() => handleCopy(generatedResult, 'gen-modal')}
-                className="flex-1 rounded-xl bg-brand-500 py-2.5 text-xs font-bold text-white hover:bg-brand-400 transition-all cursor-pointer shadow-sm"
+                className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl bg-brand-500 py-2.5 text-xs font-bold text-white hover:bg-brand-400 transition-all cursor-pointer shadow-sm"
               >
-                {copiedKey === 'gen-modal' ? '✓ Copiada' : '📋 Copiar Clave'}
+                {copiedKey === 'gen-modal' ? (
+                  <>
+                    {SvgIcons.check}
+                    <span>Copiada</span>
+                  </>
+                ) : (
+                  <>
+                    {SvgIcons.copy}
+                    <span>Copiar Clave</span>
+                  </>
+                )}
               </button>
             </div>
 
