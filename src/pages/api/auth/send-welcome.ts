@@ -5,6 +5,15 @@ import { user } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 
 export const POST: APIRoute = async (ctx) => {
+  // Proteger contra abuso: solo usuarios autenticados pueden enviar correos
+  const currentUser = ctx.locals.user;
+  if (!currentUser) {
+    return new Response(JSON.stringify({ error: 'No autorizado' }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
   try {
     const body = await ctx.request.json();
     const { email, name, birthDate } = body;

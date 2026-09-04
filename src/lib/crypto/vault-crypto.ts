@@ -216,33 +216,41 @@ export function generateSecurePassword(options: PasswordGeneratorOptions = {}): 
   const numbers = '23456789'; // Sin 0, 1 para evitar confusión
   const symbols = '!@#$%^&*()-_=+[]{}<>?~';
 
+  const cryptoApi = getCrypto();
+
+  /** Devuelve un entero aleatorio criptográficamente seguro en [0, max). */
+  function secureRandomInt(max: number): number {
+    const arr = new Uint32Array(1);
+    cryptoApi.getRandomValues(arr);
+    return arr[0] % max;
+  }
+
   let charset = '';
   const mandatoryChars: string[] = [];
 
   if (includeUppercase) {
     charset += upper;
-    mandatoryChars.push(upper[Math.floor(Math.random() * upper.length)]);
+    mandatoryChars.push(upper[secureRandomInt(upper.length)]);
   }
   if (includeLowercase) {
     charset += lower;
-    mandatoryChars.push(lower[Math.floor(Math.random() * lower.length)]);
+    mandatoryChars.push(lower[secureRandomInt(lower.length)]);
   }
   if (includeNumbers) {
     charset += numbers;
-    mandatoryChars.push(numbers[Math.floor(Math.random() * numbers.length)]);
+    mandatoryChars.push(numbers[secureRandomInt(numbers.length)]);
   }
   if (includeSymbols) {
     charset += symbols;
-    mandatoryChars.push(symbols[Math.floor(Math.random() * symbols.length)]);
+    mandatoryChars.push(symbols[secureRandomInt(symbols.length)]);
   }
 
   if (!charset) {
     charset = lower + numbers;
   }
 
-  const crypto = getCrypto();
   const randomValues = new Uint32Array(length);
-  crypto.getRandomValues(randomValues);
+  cryptoApi.getRandomValues(randomValues);
 
   const result: string[] = [...mandatoryChars];
   for (let i = result.length; i < length; i++) {
@@ -250,9 +258,11 @@ export function generateSecurePassword(options: PasswordGeneratorOptions = {}): 
     result.push(charset[idx]);
   }
 
-  // Mezclar el resultado (Fisher-Yates shuffle)
+  // Mezclar el resultado (Fisher-Yates shuffle con CSPRNG)
+  const shuffleRandom = new Uint32Array(result.length);
+  cryptoApi.getRandomValues(shuffleRandom);
   for (let i = result.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
+    const j = shuffleRandom[i] % (i + 1);
     [result[i], result[j]] = [result[j], result[i]];
   }
 

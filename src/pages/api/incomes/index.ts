@@ -144,14 +144,14 @@ export const PUT: APIRoute = async (ctx) => {
   }
 
   try {
-    const url = new URL(ctx.request.url);
-    const id = url.searchParams.get('id');
+    const body = await ctx.request.json();
+    const { id, ...rest } = body;
+
     if (!id) {
-      return new Response(JSON.stringify({ error: 'ID requerido' }), { status: 400 });
+      return new Response(JSON.stringify({ error: 'ID de ingreso requerido' }), { status: 400 });
     }
 
-    const body = await ctx.request.json();
-    const parsed = incomeSchema.safeParse(body);
+    const parsed = incomeSchema.safeParse(rest);
 
     if (!parsed.success) {
       return new Response(

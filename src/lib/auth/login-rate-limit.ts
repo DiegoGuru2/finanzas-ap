@@ -53,7 +53,12 @@ export async function checkLoginRateLimit(identifier: string): Promise<RateLimit
     };
   } catch (err) {
     console.error('[RateLimit] Check error:', err);
-    return { allowed: true, attemptsLeft: MAX_LOGIN_ATTEMPTS }; // Fail open if DB issue
+    // Fail closed: si la DB falla, no permitir login para evitar bypass
+    return {
+      allowed: false,
+      attemptsLeft: 0,
+      message: 'Error al verificar estado de la cuenta. Por favor intenta de nuevo en unos minutos.',
+    };
   }
 }
 

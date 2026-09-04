@@ -1,5 +1,6 @@
 ---
 // src/pages/404.astro
+import '../styles/global.css';
 ---
 
 <!DOCTYPE html>
@@ -8,95 +9,189 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>404 - Página no encontrada | ProyecAhorro</title>
+  <meta name="description" content="La página que buscas no existe o fue movida." />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/css/bootstrap.min.css" />
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Arvo" />
   <style>
-    .page_404 {
-      padding: 40px 0;
-      background: #fff;
-      font-family: 'Arvo', serif;
+    body {
+      margin: 0;
+      padding: 0;
       min-height: 100vh;
       display: flex;
       align-items: center;
+      justify-content: center;
+      background: var(--color-bg-app, #0b0f19);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      color: var(--color-text-primary, #f1f5f9);
+      overflow: hidden;
     }
 
-    .page_404 img {
-      width: 100%;
+    .error-container {
+      text-align: center;
+      padding: 2rem;
+      max-width: 520px;
+      position: relative;
+      z-index: 1;
     }
 
-    .four_zero_four_bg {
-      background-image: url(https://cdn.dribbble.com/users/285475/screenshots/2083086/dribbble_1.gif);
-      height: 400px;
-      background-position: center;
-      background-repeat: no-repeat;
+    /* Animated 404 number */
+    .error-code {
+      font-size: clamp(100px, 20vw, 180px);
+      font-weight: 900;
+      letter-spacing: -6px;
+      line-height: 1;
+      margin: 0 0 1rem 0;
+      background: linear-gradient(135deg, #6366f1 0%, #06b6d4 50%, #818cf8 100%);
+      background-size: 200% 200%;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      animation: gradientShift 4s ease-in-out infinite;
     }
 
-    .four_zero_four_bg h1 {
-      font-size: 80px;
-      margin-top: 0;
-      color: #222;
+    @keyframes gradientShift {
+      0%, 100% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+    }
+
+    /* Shield icon */
+    .shield-container {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 72px;
+      height: 72px;
+      background: rgba(99, 102, 241, 0.12);
+      border: 1px solid rgba(99, 102, 241, 0.25);
+      border-radius: 20px;
+      margin-bottom: 1.5rem;
+      animation: pulse 3s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.2); }
+      50% { transform: scale(1.05); box-shadow: 0 0 20px 4px rgba(99, 102, 241, 0.15); }
+    }
+
+    .shield-container svg {
+      width: 36px;
+      height: 36px;
+    }
+
+    .error-title {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: var(--color-text-primary, #f1f5f9);
+      margin: 0 0 0.5rem 0;
+      letter-spacing: -0.3px;
+    }
+
+    .error-description {
+      font-size: 0.9rem;
+      color: var(--color-text-secondary, #94a3b8);
+      line-height: 1.6;
+      margin: 0 0 2rem 0;
+    }
+
+    .home-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+      color: #ffffff;
       font-weight: 700;
-    }
-
-    .four_zero_four_bg h3 {
-      font-size: 80px;
-    }
-
-    .link_404 {
-      color: #fff !important;
-      padding: 12px 28px;
-      background: #39ac31;
-      margin: 20px 0;
-      display: inline-block;
+      font-size: 0.9rem;
+      padding: 0.8rem 2rem;
+      border-radius: 12px;
       text-decoration: none;
-      border-radius: 6px;
-      font-weight: 600;
-      transition: background-color 0.2s ease, transform 0.2s ease;
+      transition: all 0.25s ease;
+      box-shadow: 0 4px 14px 0 rgba(79, 70, 229, 0.35);
     }
 
-    .link_404:hover {
-      background: #2e8b27;
-      text-decoration: none;
+    .home-link:hover {
       transform: translateY(-2px);
+      box-shadow: 0 6px 20px 0 rgba(79, 70, 229, 0.45);
     }
 
-    .contant_box_404 {
-      margin-top: -50px;
+    .home-link svg {
+      width: 18px;
+      height: 18px;
+      transition: transform 0.2s ease;
     }
 
-    .contant_box_404 h3 {
-      font-size: 32px;
-      color: #1a1a1a;
-      font-weight: bold;
+    .home-link:hover svg {
+      transform: translateX(-3px);
     }
 
-    .contant_box_404 p {
-      font-size: 16px;
-      color: #666;
+    /* Decorative background orbs */
+    .bg-orb {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(80px);
+      opacity: 0.15;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .bg-orb-1 {
+      width: 400px;
+      height: 400px;
+      background: #6366f1;
+      top: -100px;
+      right: -100px;
+    }
+
+    .bg-orb-2 {
+      width: 300px;
+      height: 300px;
+      background: #06b6d4;
+      bottom: -80px;
+      left: -80px;
+    }
+
+    .footer-text {
+      margin-top: 2.5rem;
+      font-size: 0.7rem;
+      color: var(--color-text-muted, #64748b);
+    }
+
+    .footer-text strong {
+      color: #34d399;
     }
   </style>
 </head>
 
 <body>
-  <section class="page_404">
-    <div class="container">
-      <div class="row">
-        <div class="col-sm-12">
-          <div class="col-sm-10 col-sm-offset-1 text-center">
-            <div class="four_zero_four_bg">
-              <h1 class="text-center">404</h1>
-            </div>
+  <!-- Decorative orbs -->
+  <div class="bg-orb bg-orb-1"></div>
+  <div class="bg-orb bg-orb-2"></div>
 
-            <div class="contant_box_404">
-              <h3 class="h2">Look like you're lost</h3>
-              <p>the page you are looking for not avaible!</p>
-              <a href="/app/dashboard" class="link_404">Go to Home</a>
-            </div>
-          </div>
-        </div>
-      </div>
+  <div class="error-container">
+    <div class="shield-container">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8"/>
+        <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
     </div>
-  </section>
+
+    <h1 class="error-code">404</h1>
+
+    <h2 class="error-title">Página no encontrada</h2>
+    <p class="error-description">
+      La página que estás buscando no existe, fue movida o no está disponible.
+      Verifica la URL o regresa al inicio.
+    </p>
+
+    <a href="/app/dashboard" class="home-link">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="19" y1="12" x2="5" y2="12"/>
+        <polyline points="12 19 5 12 12 5"/>
+      </svg>
+      Volver al inicio
+    </a>
+
+    <div class="footer-text">
+      © 2026 ProyecAhorro · Desarrollado por <strong>DG design</strong>
+    </div>
+  </div>
 </body>
 </html>

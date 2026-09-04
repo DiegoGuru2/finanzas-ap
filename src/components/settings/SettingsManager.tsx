@@ -137,11 +137,12 @@ export default function SettingsManager() {
     try {
       // Actualiza en sitio (PUT) si el sueldo ya existe; nunca se borra
       // antes de guardar, así un fallo no puede perder la configuración.
-      const url = salaryId ? `/api/incomes?id=${salaryId}` : '/api/incomes';
+      const url = '/api/incomes';
       const res = await fetch(url, {
         method: salaryId ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          ...(salaryId ? { id: salaryId } : {}),
           name: salaryName,
           amount: Number(salaryAmount),
           frequency: 'monthly',

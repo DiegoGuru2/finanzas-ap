@@ -19,6 +19,6 @@ export default defineConfig({
   },
 
   security: {
-    checkOrigin: false,
+    checkOrigin: true,
   },
 });

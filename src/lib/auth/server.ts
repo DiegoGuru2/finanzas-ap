@@ -78,5 +78,14 @@ export const auth = betterAuth({
     },
     useSecureCookies: process.env.NODE_ENV === 'production',
   },
-  secret: process.env.BETTER_AUTH_SECRET || 'finanzas_ap_super_secret_key_32_chars_long_minimum',
+  secret: (() => {
+    const secret = process.env.BETTER_AUTH_SECRET;
+    if (!secret || secret.length < 32) {
+      throw new Error(
+        'BETTER_AUTH_SECRET no está configurado o es demasiado corto (mínimo 32 caracteres). ' +
+        'Genera uno con: node -e "console.log(crypto.randomUUID()+crypto.randomUUID())"'
+      );
+    }
+    return secret;
+  })(),
 });

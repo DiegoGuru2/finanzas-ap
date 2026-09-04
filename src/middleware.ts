@@ -37,11 +37,8 @@ export const onRequest = defineMiddleware(async (context, next) => {
   context.locals.session = session ? session.session : null;
 
   const currentUser = session?.user as any;
-  let userRole = currentUser?.role;
-  if (!userRole && currentUser?.email === 'admin@finanzas.app') {
-    userRole = 'admin';
-  }
-  const isAdmin = userRole === 'admin' || currentUser?.email === 'admin@finanzas.app';
+  const userRole = currentUser?.role || 'user';
+  const isAdmin = userRole === 'admin';
 
   // ─── Logged-in user visiting login / register / root ───
   if (session && (pathname === '/login' || pathname === '/register')) {

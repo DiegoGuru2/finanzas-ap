@@ -1,15 +1,21 @@
 import nodemailer from 'nodemailer';
 
-const SMTP_USER = process.env.SMTP_USER || 'dismardxy@gmail.com';
-const SMTP_PASS = process.env.SMTP_PASS || 'uccu mnyv atvb bing';
+const SMTP_USER = process.env.SMTP_USER;
+const SMTP_PASS = process.env.SMTP_PASS;
 
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: SMTP_USER,
-    pass: SMTP_PASS.replace(/\s+/g, ''), // clean spaces from app password
-  },
-});
+if (!SMTP_USER || !SMTP_PASS) {
+  console.warn('[ProyecAhorro] ⚠️ SMTP_USER y SMTP_PASS no están configurados. Los correos no se enviarán.');
+}
+
+const transporter = SMTP_USER && SMTP_PASS
+  ? nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: SMTP_USER,
+        pass: SMTP_PASS.replace(/\s+/g, ''), // clean spaces from app password
+      },
+    })
+  : null;
 
 export interface WelcomeEmailData {
   to: string;
