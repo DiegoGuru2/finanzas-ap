@@ -228,6 +228,15 @@ export default function PasswordVaultManager() {
   // Notificación de copiado
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
+  // Modal Importar CSV de Contraseñas (Google Chrome, etc.)
+  const [importModalOpen, setImportModalOpen] = useState(false);
+  const [parsedCsvItems, setParsedCsvItems] = useState<Array<{ title: string; url: string; username: string; password: string; note: string; category: string }>>([]);
+  const [csvFileName, setCsvFileName] = useState('');
+  const [csvPasteText, setCsvPasteText] = useState('');
+  const [importing, setImporting] = useState(false);
+  const [importError, setImportError] = useState<string | null>(null);
+  const [importSuccess, setImportSuccess] = useState<string | null>(null);
+
   // Temporizador de Auto-bloqueo por inactividad
   const [secondsRemaining, setSecondsRemaining] = useState(AUTO_LOCK_SECONDS);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -257,6 +266,198 @@ export default function PasswordVaultManager() {
   useEffect(() => {
     fetchVaultSetup();
   }, []);
+
+  // Función para autodetectar categoría según nombre o dominio
+  const detectCategory = (url: string = '', name: string = ''): string => {
+    const str = `${url} ${name}`.toLowerCase();
+    if (/netflix|disney|spotify|prime|youtube|hbomax|hbo|crunchyroll|twitch|apple.*tv/.test(str)) return 'streaming';
+    if (/banco|pichincha|guayaquil|pacifico|produbanco|bolivariano|austro|internacional|deuna|payphone|coop|jeep|coopmego|mutualista|diners|visa|mastercard/.test(str)) return 'banking';
+    if (/tarjeta|credit.*card/.test(str)) return 'cards';
+    if (/gmail|google|outlook|hotmail|yahoo|mail|icloud|proton/.test(str)) return 'email';
+    if (/facebook|instagram|twitter|tiktok|linkedin|reddit|threads|whatsapp|telegram/.test(str)) return 'social';
+    return 'other';
+  };
+
+  // Parser robusto para CSV de Google Passwords / Chrome
+  const parseGooglePasswordsCsv = (text: string) => {
+    const lines: string[] = [];
+    let currentLine = '';
+    let inQuotes = false;
+
+    for (let i = 0; i < text.length; i++) {
+      const char = text[i];
+      if (char === '"') {
+        inQuotes = !inQuotes;
+        currentLine += char;
+      } else if ((char === '\n' || char === '\r') && !inQuotes) {
+        if (currentLine.trim()) {
+          lines.push(currentLine);
+        }
+        currentLine = '';
+        if (char === '\r' && text[i + 1] === '\n') {
+          i++;
+        }
+      } else {
+        currentLine += char;
+      }
+    }
+    if (currentLine.trim()) {
+      lines.push(currentLine);
+    }
+
+    if (lines.length < 2) return [];
+
+    const parseLine = (line: string): string[] => {
+      const cells: string[] = [];
+      let cell = '';
+      let insideQuotes = false;
+      for (let i = 0; i < line.length; i++) {
+        const c = line[i];
+        if (c === '"') {
+          if (insideQuotes && line[i + 1] === '"') {
+            cell += '"';
+            i++;
+          } else {
+            insideQuotes = !insideQuotes;
+          }
+        } else if (c === ',' && !insideQuotes) {
+          cells.push(cell.trim());
+          cell = '';
+        } else {
+          cell += c;
+        }
+      }
+      cells.push(cell.trim());
+      return cells;
+    };
+
+    const headerCells = parseLine(lines[0]).map((h) => h.toLowerCase().replace(/[\s_"]/g, ''));
+    const nameIdx = headerCells.findIndex((h) => h === 'name' || h === 'title' || h === 'nombre');
+    const urlIdx = headerCells.findIndex((h) => h === 'url' || h === 'website' || h === 'sitio');
+    const userIdx = headerCells.findIndex((h) => h === 'username' || h === 'user' || h === 'usuario' || h === 'login');
+    const passIdx = headerCells.findIndex((h) => h === 'password' || h === 'pass' || h === 'contraseña' || h === 'clave');
+    const noteIdx = headerCells.findIndex((h) => h === 'note' || h === 'notes' || h === 'nota' || h === 'notas');
+
+    if (passIdx === -1) {
+      throw new Error('No se encontró columna de contraseña (password) en el archivo CSV');
+    }
+
+    const items: Array<{ title: string; url: string; username: string; password: string; note: string; category: string }> = [];
+
+    for (let i = 1; i < lines.length; i++) {
+      const row = parseLine(lines[i]);
+      const password = row[passIdx] || '';
+      if (!password) continue;
+
+      const url = urlIdx !== -1 ? row[urlIdx] || '' : '';
+      let rawName = nameIdx !== -1 ? row[nameIdx] || '' : '';
+      if (!rawName && url) {
+        try {
+          rawName = new URL(url).hostname.replace(/^www\./, '');
+        } catch {
+          rawName = url;
+        }
+      }
+      const title = rawName || 'Cuenta';
+      const username = userIdx !== -1 ? row[userIdx] || '' : '';
+      const note = noteIdx !== -1 ? row[noteIdx] || '' : '';
+
+      items.push({
+        title,
+        url,
+        username,
+        password,
+        note,
+        category: detectCategory(url, title),
+      });
+    }
+
+    return items;
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setCsvFileName(file.name);
+    setImportError(null);
+    setImportSuccess(null);
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const text = event.target?.result as string;
+      try {
+        const parsed = parseGooglePasswordsCsv(text);
+        if (parsed.length === 0) {
+          setImportError('No se encontraron contraseñas válidas en el archivo seleccionado');
+          return;
+        }
+        setParsedCsvItems(parsed);
+      } catch (err: any) {
+        setImportError(err.message || 'Error al procesar el archivo CSV');
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const handleProcessImport = async () => {
+    if (!masterKey || parsedCsvItems.length === 0) return;
+    try {
+      setImporting(true);
+      setImportError(null);
+
+      // Cifrar todas las contraseñas con la llave maestra en memoria
+      const encryptedBatch = [];
+      for (const item of parsedCsvItems) {
+        const { ciphertext: passwordEncrypted, iv } = await encryptVaultData(item.password, masterKey);
+        let usernameEncrypted = null;
+        if (item.username) {
+          const res = await encryptVaultData(item.username, masterKey);
+          usernameEncrypted = res.ciphertext;
+        }
+        let notesEncrypted = null;
+        if (item.note) {
+          const res = await encryptVaultData(item.note, masterKey);
+          notesEncrypted = res.ciphertext;
+        }
+
+        encryptedBatch.push({
+          title: item.title,
+          category: item.category,
+          websiteUrl: item.url || null,
+          usernameEncrypted,
+          passwordEncrypted,
+          notesEncrypted,
+          iv,
+        });
+      }
+
+      const res = await fetch('/api/vault/batch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items: encryptedBatch }),
+      });
+
+      const json = await res.json();
+      if (!res.ok) {
+        throw new Error(json.error || 'Error al guardar el lote de contraseñas');
+      }
+
+      setImportSuccess(`¡Se han importado ${json.count} contraseñas exitosamente a tu bóveda!`);
+      await fetchVaultItems(masterKey);
+      setTimeout(() => {
+        setImportModalOpen(false);
+        setParsedCsvItems([]);
+        setCsvFileName('');
+        setCsvPasteText('');
+        setImportSuccess(null);
+      }, 1600);
+    } catch (err: any) {
+      console.error('Error importing CSV:', err);
+      setImportError(err.message || 'Error durante el cifrado e importación');
+    } finally {
+      setImporting(false);
+    }
+  };
 
   // Función de Bloqueo Inmediato
   const lockVault = useCallback(() => {
@@ -1081,14 +1282,33 @@ export default function PasswordVaultManager() {
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={openCreateModal}
-          className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand-500 px-4 py-2.5 text-xs sm:text-sm font-bold text-white shadow-md hover:bg-brand-400 transition-all cursor-pointer"
-        >
-          <span className="text-base font-bold">+</span>
-          <span>Nueva Contraseña</span>
-        </button>
+        <div className="flex items-center gap-2">
+          {/* Botón Importar CSV */}
+          <button
+            type="button"
+            onClick={() => {
+              setImportModalOpen(true);
+              setImportError(null);
+              setImportSuccess(null);
+            }}
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-accent-500/30 bg-accent-500/10 px-4 py-2.5 text-xs sm:text-sm font-bold text-accent-400 shadow-sm hover:bg-accent-500/20 transition-all cursor-pointer"
+            title="Importar contraseñas desde CSV (Google Passwords, etc.)"
+          >
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+            </svg>
+            <span>Importar CSV</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={openCreateModal}
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand-500 px-4 py-2.5 text-xs sm:text-sm font-bold text-white shadow-md hover:bg-brand-400 transition-all cursor-pointer"
+          >
+            <span className="text-base font-bold">+</span>
+            <span>Nueva Contraseña</span>
+          </button>
+        </div>
       </div>
 
       {/* Selector de Categorías Horizontal */}
@@ -1732,6 +1952,185 @@ export default function PasswordVaultManager() {
                   <span>Símbolos (!@#$)</span>
                 </label>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* ═══════════════════════════════════════════════════════════════
+          MODAL: IMPORTAR CONTRASEÑAS DESDE CSV (GOOGLE PASSWORDS)
+      ═══════════════════════════════════════════════════════════════ */}
+      {importModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-fade-in">
+          <div className="w-full max-w-xl max-h-[90vh] overflow-y-auto rounded-3xl border border-border-default bg-surface-50 p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-border-default pb-3">
+              <div className="flex items-center gap-2">
+                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-accent-500/15 text-accent-400">
+                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                  </svg>
+                </span>
+                <div>
+                  <h3 className="font-bold text-base sm:text-lg text-text-primary">
+                    Importar Contraseñas a la Bóveda
+                  </h3>
+                  <p className="text-xs text-text-muted">
+                    Compatible con Google Chrome (Google Passwords.csv)
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setImportModalOpen(false)}
+                className="rounded-lg p-1.5 text-text-muted hover:text-text-primary hover:bg-surface-100 transition-colors cursor-pointer"
+                title="Cerrar modal"
+              >
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {importError && (
+              <div className="rounded-xl border border-danger-500/30 bg-danger-500/10 p-3 text-xs font-semibold text-danger-400">
+                {importError}
+              </div>
+            )}
+
+            {importSuccess && (
+              <div className="rounded-xl border border-accent-500/30 bg-accent-500/10 p-3 text-xs font-semibold text-accent-400 flex items-center gap-2">
+                <svg className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                </svg>
+                <span>{importSuccess}</span>
+              </div>
+            )}
+
+            {/* Selector de Archivo CSV */}
+            <div className="rounded-2xl border-2 border-dashed border-border-default hover:border-accent-400/50 bg-surface-100/50 p-6 text-center transition-colors">
+              <input
+                type="file"
+                id="csvFileInput"
+                accept=".csv,text/csv"
+                onChange={handleFileUpload}
+                className="hidden"
+              />
+              <label
+                htmlFor="csvFileInput"
+                className="cursor-pointer flex flex-col items-center justify-center space-y-2"
+              >
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-accent-500/10 text-accent-400">
+                  <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                  </svg>
+                </div>
+                <div className="text-sm font-bold text-text-primary">
+                  {csvFileName ? (
+                    <span className="text-accent-400">Archivo: {csvFileName}</span>
+                  ) : (
+                    <span>Haz clic para seleccionar tu archivo CSV</span>
+                  )}
+                </div>
+                <p className="text-xs text-text-muted max-w-sm">
+                  Selecciona tu archivo <strong>Google Passwords.csv</strong> descargado de Chrome o exportado de tu navegador.
+                </p>
+              </label>
+            </div>
+
+            {/* Alternativa: Pegar contenido CSV */}
+            <div>
+              <label className="block text-xs font-semibold text-text-secondary mb-1">
+                O pega el texto CSV directamente:
+              </label>
+              <textarea
+                value={csvPasteText}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setCsvPasteText(val);
+                  if (val.trim()) {
+                    try {
+                      const items = parseGooglePasswordsCsv(val);
+                      setParsedCsvItems(items);
+                      setImportError(null);
+                    } catch (err: any) {
+                      setImportError(err.message);
+                    }
+                  } else {
+                    setParsedCsvItems([]);
+                  }
+                }}
+                placeholder="name,url,username,password,note..."
+                rows={3}
+                className="w-full rounded-xl border border-border-default bg-surface-100 px-3 py-2 text-xs font-mono text-text-primary placeholder:text-text-muted focus:border-brand-500 focus:outline-none resize-none"
+              />
+            </div>
+
+            {/* Vista Previa de Contraseñas Detectadas */}
+            {parsedCsvItems.length > 0 && (
+              <div className="space-y-2 rounded-2xl border border-border-default bg-surface-100 p-3.5">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-bold text-text-primary">
+                    🔍 Cuentas encontradas: <strong className="text-accent-400">{parsedCsvItems.length}</strong>
+                  </span>
+                  <span className="text-text-muted text-[11px]">
+                    Se cifrarán con AES-256 antes de guardarse
+                  </span>
+                </div>
+
+                <div className="max-h-48 overflow-y-auto space-y-1.5 pr-1">
+                  {parsedCsvItems.slice(0, 50).map((item, idx) => (
+                    <div
+                      key={idx}
+                      className="flex items-center justify-between rounded-lg bg-surface-50 border border-border-default px-2.5 py-1.5 text-xs"
+                    >
+                      <div className="min-w-0 truncate">
+                        <span className="font-bold text-text-primary block truncate">{item.title}</span>
+                        <span className="text-[10px] text-text-muted truncate block">
+                          {item.username || 'Sin usuario'} • {item.url || 'Sin URL'}
+                        </span>
+                      </div>
+                      <span className="text-[10px] font-mono text-text-muted ml-2 shrink-0">
+                        ••••••••
+                      </span>
+                    </div>
+                  ))}
+                  {parsedCsvItems.length > 50 && (
+                    <div className="text-center text-[11px] text-text-muted py-1">
+                      ... y {parsedCsvItems.length - 50} cuentas más
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Acciones */}
+            <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-border-default">
+              <button
+                type="button"
+                onClick={() => setImportModalOpen(false)}
+                className="rounded-xl border border-border-default px-4 py-2 text-xs font-semibold text-text-secondary hover:text-text-primary cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleProcessImport}
+                disabled={importing || parsedCsvItems.length === 0}
+                className="inline-flex items-center gap-2 rounded-xl bg-accent-500 px-5 py-2.5 text-xs sm:text-sm font-bold text-white shadow-md hover:bg-accent-400 transition-all cursor-pointer disabled:opacity-40"
+              >
+                {importing ? (
+                  <>
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                    <span>Cifrando y Guardando...</span>
+                  </>
+                ) : (
+                  <>
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span>Cifrar e Importar {parsedCsvItems.length > 0 ? `(${parsedCsvItems.length})` : ''}</span>
+                  </>
+                )}
+              </button>
             </div>
           </div>
         </div>
