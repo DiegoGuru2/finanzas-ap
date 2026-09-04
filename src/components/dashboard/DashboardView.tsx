@@ -151,10 +151,17 @@ export default function DashboardView() {
     setOnboardingFinDeMes(onboardingPreview.finDeMesAmount);
   }, [onboardingAmount, deductIess, iessPercentage, onboardingScheme]);
 
+  const [fetchError, setFetchError] = useState<string | null>(null);
+
   const fetchDashboard = async () => {
     try {
       setLoading(true);
+      setFetchError(null);
       const res = await fetch(`/api/dashboard?strategy=${strategy}`);
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.error || `Error del servidor HTTP ${res.status}`);
+      }
       const json = await res.json();
       if (json.data) {
         setData(json.data);
@@ -162,9 +169,12 @@ export default function DashboardView() {
         if (!json.data.incomes || json.data.incomes.length === 0) {
           setShowOnboarding(true);
         }
+      } else {
+        throw new Error(json.error || 'Respuesta de datos vacía');
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error fetching dashboard:', err);
+      setFetchError(err.message || 'Error al conectar con la base de datos');
     } finally {
       setLoading(false);
     }
@@ -218,6 +228,24 @@ export default function DashboardView() {
         <div className="text-center space-y-3">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-brand-500 border-t-transparent mx-auto"></div>
           <p className="text-sm text-text-muted">Calculando tu motor financiero con TiDB Cloud...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (fetchError) {
+    return (
+      <div className="flex h-96 items-center justify-center">
+        <div className="text-center space-y-4 max-w-md p-6 rounded-2xl border border-danger-500/20 bg-danger-500/5">
+          <div className="text-3xl">⚠️</div>
+          <h3 className="text-lg font-bold text-text-primary">Error al cargar el Dashboard</h3>
+          <p className="text-xs text-danger-400">{fetchError}</p>
+          <button
+            onClick={() => fetchDashboard()}
+            className="rounded-xl bg-brand-500 hover:bg-brand-400 px-4 py-2 text-xs font-semibold text-white shadow transition-all cursor-pointer"
+          >
+            Reintentar conexión
+          </button>
         </div>
       </div>
     );

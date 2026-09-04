@@ -1,8 +1,8 @@
 import type { APIRoute } from 'astro';
 import { db } from '@/lib/db';
-import { incomes, expenses, debts, savingsGoals, budgets, payments } from '@/lib/db/schema';
+import { incomes, expenses, debts, savingsGoals, budgets, payments, expensePayments } from '@/lib/db/schema';
 import { eq, desc } from 'drizzle-orm';
-import { calculateCashflow } from '@/modules/financial-engine/cashflow';
+import { calculateCashflow, normalizeToMonthly } from '@/modules/financial-engine/cashflow';
 import { optimizeDebt, compareStrategies } from '@/modules/financial-engine/optimizer';
 import { projectAmortization } from '@/modules/financial-engine/projection';
 import type { Debt, Expense, Income } from '@/modules/financial-engine/types';
@@ -20,13 +20,14 @@ export const GET: APIRoute = async (ctx) => {
       ? strategyParam
       : 'avalanche') as 'avalanche' | 'snowball' | 'liquidity';
 
-    const [userIncomes, userExpenses, userDebts, userSavings, userBudgets, userPayments] = await Promise.all([
+    const [userIncomes, userExpenses, userDebts, userSavings, userBudgets, userPayments, userExpensePayments] = await Promise.all([
       db.select().from(incomes).where(eq(incomes.userId, user.id)),
       db.select().from(expenses).where(eq(expenses.userId, user.id)),
       db.select().from(debts).where(eq(debts.userId, user.id)),
       db.select().from(savingsGoals).where(eq(savingsGoals.userId, user.id)),
       db.select().from(budgets).where(eq(budgets.userId, user.id)),
       db.select().from(payments).where(eq(payments.userId, user.id)).orderBy(desc(payments.paidAt)),
+      db.select().from(expensePayments).where(eq(expensePayments.userId, user.id)),
     ]);
 
     // Format incomes
@@ -115,12 +116,54 @@ export const GET: APIRoute = async (ctx) => {
     const totalDebtProgress = totalOriginalDebt > 0 ? Math.round(((totalOriginalDebt - totalDebt) / totalOriginalDebt) * 1000) / 10 : 0;
     const paidOffDebtsCount = userDebts.filter((d) => parseFloat(d.currentBalance as string) <= 0).length;
 
+    // Metas de ahorro enriquecidas considerando pagos marcados si están vinculadas
+    const enrichedSavingsGoals = userSavings.map((s) => {
+      let currentAmount = parseFloat(s.currentAmount as string || '0');
+      let monthlyContribution = parseFloat(s.monthlyContribution as string || '0');
+      const targetAmount = parseFloat(s.targetAmount as string || '0');
+
+      if (s.linkedExpenseId) {
+        const linkedExp = userExpenses.find((e) => e.id === s.linkedExpenseId);
+        if (linkedExp) {
+          monthlyContribution = normalizeToMonthly(
+            parseFloat(linkedExp.amount as string),
+            (linkedExp.frequency as any) || 'monthly'
+          );
+          const sinceStr = (s.linkedSince ? String(s.linkedSince) : String(s.startDate || '')).slice(0, 10);
+          const paymentsForExp = userExpensePayments.filter((p) => {
+            if (p.expenseId !== linkedExp.id) return false;
+            const paidAtStr = p.paidAt instanceof Date
+              ? p.paidAt.toISOString().slice(0, 10)
+              : String(p.paidAt).slice(0, 10);
+            return paidAtStr >= sinceStr;
+          });
+          const totalPaidAmt = paymentsForExp.reduce((sum, p) => sum + parseFloat(p.amount as string), 0);
+          currentAmount = Math.min(targetAmount, Math.round((currentAmount + totalPaidAmt) * 100) / 100);
+        }
+      }
+
+      const isCompleted = s.status === 'active' && currentAmount >= targetAmount;
+      const percent = targetAmount > 0 ? Math.min(100, Math.round((currentAmount / targetAmount) * 1000) / 10) : 0;
+
+      return {
+        id: s.id,
+        name: s.name,
+        currentAmount,
+        targetAmount,
+        monthlyContribution,
+        category: s.category,
+        icon: s.icon || '🎯',
+        status: isCompleted ? 'completed' : s.status,
+        percent,
+      };
+    });
+
     // Métricas avanzadas adicionales: Ahorro y Metas
-    const totalSaved = userSavings.reduce((sum, s) => sum + parseFloat(s.currentAmount as string || '0'), 0);
-    const totalSavingsTarget = userSavings.reduce((sum, s) => sum + parseFloat(s.targetAmount as string || '0'), 0);
-    const totalMonthlySavingsContribution = userSavings
+    const totalSaved = enrichedSavingsGoals.reduce((sum, s) => sum + s.currentAmount, 0);
+    const totalSavingsTarget = enrichedSavingsGoals.reduce((sum, s) => sum + s.targetAmount, 0);
+    const totalMonthlySavingsContribution = enrichedSavingsGoals
       .filter((s) => s.status === 'active')
-      .reduce((sum, s) => sum + parseFloat(s.monthlyContribution as string || '0'), 0);
+      .reduce((sum, s) => sum + s.monthlyContribution, 0);
     const savingsProgress = totalSavingsTarget > 0 ? Math.round((totalSaved / totalSavingsTarget) * 1000) / 10 : 0;
 
     // Total histórico abonado a deudas
@@ -138,21 +181,6 @@ export const GET: APIRoute = async (ctx) => {
     const expensesByCategory = Object.entries(expensesByCategoryMap).map(([cat, amount]) => ({
       name: cat,
       amount: Math.round(amount * 100) / 100,
-    }));
-
-    // Metas de ahorro estructuradas
-    const formattedSavingsGoals = userSavings.map((s) => ({
-      id: s.id,
-      name: s.name,
-      currentAmount: parseFloat(s.currentAmount as string || '0'),
-      targetAmount: parseFloat(s.targetAmount as string || '0'),
-      monthlyContribution: parseFloat(s.monthlyContribution as string || '0'),
-      category: s.category,
-      icon: s.icon || '🎯',
-      status: s.status,
-      percent: parseFloat(s.targetAmount as string) > 0
-        ? Math.min(100, Math.round((parseFloat(s.currentAmount as string || '0') / parseFloat(s.targetAmount as string)) * 1000) / 10)
-        : 0,
     }));
 
     // Pagos recientes
@@ -206,7 +234,7 @@ export const GET: APIRoute = async (ctx) => {
             budgetsCount: userBudgets.length,
           },
           expensesByCategory,
-          savingsGoals: formattedSavingsGoals,
+          savingsGoals: enrichedSavingsGoals,
           recentPayments,
           strategy,
           optimization,
