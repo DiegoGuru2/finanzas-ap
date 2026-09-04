@@ -797,7 +797,7 @@ export default function DebtsManager() {
                       {/* Name / Details */}
                       <td className="px-3 py-2.5 border-r border-border-default/40">
                         <div className="flex flex-col gap-0.5">
-                          <span className={`font-semibold ${isPaid ? 'text-emerald-400' : 'text-text-primary'}`}>
+                          <span className={`font-semibold ${isPaid ? 'text-emerald-400 line-through' : 'text-text-primary'}`}>
                             {debt.name}
                           </span>
                           <div className="flex items-center gap-1.5 flex-wrap">
@@ -851,7 +851,9 @@ export default function DebtsManager() {
 
                       {/* Saldo Original */}
                       <td className="px-3 py-2.5 text-right font-mono tabular-nums text-text-secondary border-r border-border-default/40 whitespace-nowrap">
-                        {formatCurrency(debt.originalBalance)}
+                        <span className={isPaid ? 'line-through text-text-muted/60' : ''}>
+                          {formatCurrency(debt.originalBalance)}
+                        </span>
                       </td>
 
                       {/* Saldo Actual */}
@@ -870,7 +872,7 @@ export default function DebtsManager() {
                       {/* Cuota Mínima */}
                       <td className="px-3 py-2.5 text-right font-mono tabular-nums border-r border-border-default/40 whitespace-nowrap">
                         {isPaid ? (
-                          <span className="text-emerald-400 font-medium">$0.00</span>
+                          <span className="text-emerald-400/80 line-through font-medium">$0.00</span>
                         ) : (
                           <span className="text-warning-400 font-semibold">
                             {formatCurrency(debt.minimumPayment)}
@@ -1030,7 +1032,7 @@ export default function DebtsManager() {
                 >
                   <div className="space-y-1.5 flex-1">
                     <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-                      <span className={`font-semibold text-base ${isPaid ? 'text-emerald-400' : 'text-text-primary'}`}>
+                      <span className={`font-semibold text-base ${isPaid ? 'text-emerald-400 line-through' : 'text-text-primary'}`}>
                         {debt.name}
                       </span>
                       {debt.creditor && (
@@ -1057,7 +1059,7 @@ export default function DebtsManager() {
                       </span>
                       <span>
                         Mínimo requerido:{' '}
-                        <strong className={isPaid ? 'text-emerald-400' : 'text-warning-400'}>
+                        <strong className={isPaid ? 'text-emerald-400 line-through' : 'text-warning-400'}>
                           {isPaid ? '$0.00 (Liquidada)' : formatCurrency(debt.minimumPayment)}
                         </strong>
                       </span>
@@ -1086,7 +1088,7 @@ export default function DebtsManager() {
                         {formatCurrency(debt.currentBalance)}
                       </div>
                       <div className="text-xs font-mono text-text-muted">
-                        de {formatCurrency(debt.originalBalance)}
+                        de <span className={isPaid ? 'line-through text-text-muted/60' : ''}>{formatCurrency(debt.originalBalance)}</span>
                       </div>
                     </div>
 
