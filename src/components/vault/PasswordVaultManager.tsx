@@ -166,6 +166,8 @@ export default function PasswordVaultManager() {
   const [unlockError, setUnlockError] = useState<string | null>(null);
   const [unlocking, setUnlocking] = useState(false);
   const [showHintModal, setShowHintModal] = useState(false);
+  const [attemptsLeft, setAttemptsLeft] = useState<number | null>(null);
+  const [vaultWiped, setVaultWiped] = useState(false);
 
   // Formulario de Setup Inicial
   const [newPin, setNewPin] = useState('');
@@ -351,7 +353,7 @@ export default function PasswordVaultManager() {
     }
   };
 
-  // 2. Desbloquear Bóveda
+  // 2. Desbloquear Bóveda (Verificación en servidor con autodestrucción y alerta por correo)
   const handleUnlock = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!salt || !verifier || !verifierIv) return;
@@ -364,18 +366,44 @@ export default function PasswordVaultManager() {
       setUnlocking(true);
       setUnlockError(null);
 
-      const candidateKey = await deriveMasterKey(unlockPin, salt);
-      const isValid = await verifyMasterKey(candidateKey, verifier, verifierIv);
+      // 1. Validar intento en el servidor (control de 3 intentos y envío de correo)
+      const res = await fetch('/api/vault/unlock', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pin: unlockPin }),
+      });
 
-      if (!isValid) {
-        setUnlockError('PIN o contraseña maestra incorrecta');
-        setUnlocking(false);
+      const json = await res.json();
+
+      if (!res.ok) {
+        if (json.wiped) {
+          // AUTODESTRUCCIÓN TRAS 3 INTENTOS FALLIDOS
+          setHasVault(false);
+          setMasterKey(null);
+          setIsUnlocked(false);
+          setItems([]);
+          setDecryptedCache({});
+          setVaultWiped(true);
+          setUnlockError(
+            '🚨 Has fallado 3 intentos consecutivos. Por seguridad extrema, tu bóveda y todas las contraseñas han sido eliminadas permanentemente.'
+          );
+          return;
+        }
+
+        if (json.attemptsLeft !== undefined) {
+          setAttemptsLeft(json.attemptsLeft);
+        }
+        setUnlockError(json.error || 'PIN o contraseña maestra incorrecta');
         return;
       }
 
+      // 2. Desbloqueo exitoso (correo de seguridad enviado por el servidor)
+      // Derivar la llave simétrica localmente en memoria para descifrar contraseñas
+      const candidateKey = await deriveMasterKey(unlockPin, salt);
       setMasterKey(candidateKey);
       setIsUnlocked(true);
       setUnlockPin('');
+      setAttemptsLeft(3);
       resetInactivityTimer();
       await fetchVaultItems(candidateKey);
     } catch (err: any) {
@@ -709,7 +737,9 @@ export default function PasswordVaultManager() {
               className="absolute right-4 top-4 rounded-xl p-2 text-text-muted hover:text-text-primary hover:bg-surface-100 transition-colors cursor-pointer"
               title="Cerrar y volver"
             >
-              ✕
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
             </button>
 
             <div className="flex items-center gap-4">
@@ -848,7 +878,9 @@ export default function PasswordVaultManager() {
               className="absolute right-4 top-4 rounded-xl p-2 text-text-muted hover:text-text-primary hover:bg-surface-100 transition-colors cursor-pointer"
               title="Cerrar y volver"
             >
-              ✕
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
             </button>
 
             <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-brand-500/15 border border-brand-500/30 text-brand-400 shadow-inner">
@@ -860,14 +892,47 @@ export default function PasswordVaultManager() {
                 Bóveda Protegida
               </h2>
               <p className="text-xs sm:text-sm text-text-muted mt-1">
-                Ingresa tu Clave Maestra para acceder a tus contraseñas.
+                Ingresa tu Clave Maestra. Por seguridad, tras 3 intentos fallidos toda la información será borrada permanentemente.
               </p>
             </div>
 
-            {unlockError && (
-              <div className="rounded-xl border border-danger-500/30 bg-danger-500/10 p-3 text-xs font-semibold text-danger-400">
-                {unlockError}
+            {vaultWiped ? (
+              <div className="rounded-2xl border border-danger-500/50 bg-danger-500/15 p-4 text-xs font-semibold text-danger-300 space-y-2 text-left">
+                <div className="flex items-center gap-2 text-danger-400 font-bold text-sm">
+                  <svg className="h-5 w-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                  Bóveda Eliminada por Seguridad
+                </div>
+                <p className="text-text-secondary leading-relaxed">
+                  Has superado el límite de 3 intentos fallidos consecutivos. Por protección de tus datos confidenciales, la bóveda y todas las contraseñas han sido borradas permanentemente.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setVaultWiped(false);
+                    setHasVault(false);
+                    setUnlockError(null);
+                  }}
+                  className="mt-2 w-full rounded-xl bg-danger-500 text-white font-bold py-2.5 text-xs hover:bg-danger-400 transition-colors cursor-pointer"
+                >
+                  Configurar nueva bóveda desde cero
+                </button>
               </div>
+            ) : (
+              unlockError && (
+                <div className="rounded-xl border border-danger-500/30 bg-danger-500/10 p-3 text-xs font-semibold text-danger-400 text-left">
+                  {unlockError}
+                  {attemptsLeft !== null && attemptsLeft > 0 && attemptsLeft < 3 && (
+                    <div className="mt-1.5 text-[11px] font-bold text-warning-400 flex items-center gap-1.5">
+                      <svg className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                      </svg>
+                      <span>Intentos restantes: {attemptsLeft} de 3 antes del borrado total</span>
+                    </div>
+                  )}
+                </div>
+              )
             )}
 
             <form onSubmit={handleUnlock} className="space-y-4 text-left">
@@ -1005,9 +1070,12 @@ export default function PasswordVaultManager() {
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary text-xs"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary p-1 cursor-pointer"
+                title="Limpiar búsqueda"
               >
-                ✕
+                <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
               </button>
             )}
           </div>
@@ -1178,9 +1246,12 @@ export default function PasswordVaultManager() {
               <button
                 type="button"
                 onClick={() => setViewModalItem(null)}
-                className="text-text-muted hover:text-text-primary p-1 text-sm cursor-pointer"
+                className="rounded-lg p-1.5 text-text-muted hover:text-text-primary hover:bg-surface-100 transition-colors cursor-pointer"
+                title="Cerrar modal"
               >
-                ✕
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
               </button>
             </div>
 
@@ -1384,9 +1455,12 @@ export default function PasswordVaultManager() {
               <button
                 type="button"
                 onClick={() => setModalOpen(false)}
-                className="text-text-muted hover:text-text-primary p-1 text-sm cursor-pointer"
+                className="rounded-lg p-1.5 text-text-muted hover:text-text-primary hover:bg-surface-100 transition-colors cursor-pointer"
+                title="Cerrar modal"
               >
-                ✕
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
               </button>
             </div>
 
@@ -1543,9 +1617,12 @@ export default function PasswordVaultManager() {
               <button
                 type="button"
                 onClick={() => setGenModalOpen(false)}
-                className="text-text-muted hover:text-text-primary p-1 text-sm cursor-pointer"
+                className="rounded-lg p-1.5 text-text-muted hover:text-text-primary hover:bg-surface-100 transition-colors cursor-pointer"
+                title="Cerrar generador"
               >
-                ✕
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
               </button>
             </div>
 

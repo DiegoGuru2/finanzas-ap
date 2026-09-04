@@ -322,7 +322,12 @@ export default function SavingsGoalsManager() {
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-text-primary">🎯 Metas de Ahorro</h2>
+          <h2 className="text-xl sm:text-2xl font-bold text-text-primary flex items-center gap-2.5">
+            <svg className="h-6 w-6 text-accent-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 2a10 10 0 1010 10A10 10 0 0012 2zm0 4a6 6 0 106 6 6 6 0 00-6-6zm0 3a3 3 0 103 3 3 3 0 00-3-3z" />
+            </svg>
+            <span>Metas de Ahorro</span>
+          </h2>
           <p className="text-xs sm:text-sm text-text-secondary mt-1">
             Define tus objetivos financieros, contribuye mensualmente y proyecta cuándo los alcanzarás.
           </p>
@@ -373,7 +378,11 @@ export default function SavingsGoalsManager() {
       {/* Active Goals */}
       {activeGoals.length === 0 && completedGoals.length === 0 && (
         <div className="rounded-2xl border border-border-default bg-surface-50 p-12 text-center">
-          <div className="text-4xl mb-3">🎯</div>
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-accent-500/15 border border-accent-500/30 text-accent-400 mb-4 shadow-sm">
+            <svg className="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 2a10 10 0 1010 10A10 10 0 0012 2zm0 4a6 6 0 106 6 6 6 0 00-6-6zm0 3a3 3 0 103 3 3 3 0 00-3-3z" />
+            </svg>
+          </div>
           <h3 className="text-lg font-bold text-text-primary">Aún no tienes metas de ahorro</h3>
           <p className="text-sm text-text-secondary mt-1">
             Crea tu primera meta para empezar a proyectar tu futuro financiero.
@@ -569,14 +578,32 @@ export default function SavingsGoalsManager() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl border border-border-default bg-surface-50 p-6 shadow-2xl space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-bold text-text-primary">{editingId ? '✏️ Editar Meta' : '🎯 Nueva Meta de Ahorro'}</h3>
+              <h3 className="text-lg font-bold text-text-primary flex items-center gap-2">
+                {editingId ? (
+                  <>
+                    <svg className="h-5 w-5 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                    <span>Editar Meta</span>
+                  </>
+                ) : (
+                  <>
+                    <svg className="h-5 w-5 text-accent-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 2a10 10 0 1010 10A10 10 0 0012 2zm0 4a6 6 0 106 6 6 6 0 00-6-6zm0 3a3 3 0 103 3 3 3 0 00-3-3z" />
+                    </svg>
+                    <span>Nueva Meta de Ahorro</span>
+                  </>
+                )}
+              </h3>
               <button
                 type="button"
                 onClick={() => { setShowModal(false); resetForm(); }}
                 className="flex h-8 w-8 items-center justify-center rounded-xl bg-surface-100 border border-border-default text-text-muted hover:text-text-primary hover:bg-surface-200 transition-colors cursor-pointer"
                 title="Cerrar modal"
               >
-                ✕
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
               </button>
             </div>
 
@@ -787,14 +814,21 @@ export default function SavingsGoalsManager() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="w-full max-w-sm rounded-2xl border border-border-default bg-surface-50 p-6 shadow-2xl space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-base font-bold text-text-primary">💰 Registrar Depósito</h3>
+              <h3 className="text-base font-bold text-text-primary flex items-center gap-2">
+                <svg className="h-5 w-5 text-accent-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>Registrar Depósito</span>
+              </h3>
               <button
                 type="button"
                 onClick={() => { setDepositGoalId(null); setDepositAmount(''); }}
                 className="flex h-8 w-8 items-center justify-center rounded-xl bg-surface-100 border border-border-default text-text-muted hover:text-text-primary hover:bg-surface-200 transition-colors cursor-pointer"
                 title="Cerrar modal"
               >
-                ✕
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
               </button>
             </div>
 

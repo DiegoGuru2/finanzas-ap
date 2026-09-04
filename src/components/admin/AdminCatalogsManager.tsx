@@ -224,15 +224,32 @@ export default function AdminCatalogsManager() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="w-full max-w-md rounded-2xl border border-border-default bg-surface-50 p-6 shadow-2xl space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-base font-bold text-text-primary">
-                {editingId ? '✏️ Editar opción' : `+ Nueva opción · ${CATALOG_META[activeTab].title}`}
+              <h3 className="text-base font-bold text-text-primary flex items-center gap-2">
+                {editingId ? (
+                  <>
+                    <svg className="h-4 w-4 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                    <span>Editar opción</span>
+                  </>
+                ) : (
+                  <>
+                    <svg className="h-4 w-4 text-accent-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+                    </svg>
+                    <span>Nueva opción · {CATALOG_META[activeTab].title}</span>
+                  </>
+                )}
               </h3>
               <button
                 type="button"
                 onClick={() => setShowModal(false)}
-                className="flex h-8 w-8 items-center justify-center rounded-xl bg-surface-100 border border-border-default text-text-muted hover:text-text-primary cursor-pointer"
+                className="flex h-8 w-8 items-center justify-center rounded-xl bg-surface-100 border border-border-default text-text-muted hover:text-text-primary hover:bg-surface-200 transition-colors cursor-pointer"
+                title="Cerrar modal"
               >
-                ✕
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
               </button>
             </div>
 
@@ -316,11 +333,13 @@ export default function AdminCatalogsManager() {
                     type="button"
                     onClick={() => setFormColor('')}
                     title="Sin color"
-                    className={`h-7 w-7 rounded-full border-2 text-[10px] text-text-muted bg-surface-100 cursor-pointer ${
+                    className={`h-7 w-7 rounded-full border-2 text-[10px] text-text-muted bg-surface-100 cursor-pointer flex items-center justify-center ${
                       formColor === '' ? 'border-brand-500 scale-110' : 'border-border-default hover:scale-105'
                     }`}
                   >
-                    ✕
+                    <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
                   </button>
                 </div>
               </div>

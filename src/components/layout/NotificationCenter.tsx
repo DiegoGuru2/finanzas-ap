@@ -269,9 +269,12 @@ export default function NotificationCenter() {
             </div>
             <button
               onClick={() => setIsOpen(false)}
-              className="text-text-muted hover:text-text-primary text-xs p-1 cursor-pointer"
+              className="text-text-muted hover:text-text-primary p-1 rounded-lg hover:bg-surface-200 transition-colors cursor-pointer"
+              title="Cerrar notificaciones"
             >
-              ✕
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
             </button>
           </div>
 
@@ -509,7 +512,15 @@ export default function NotificationCenter() {
           <div className="w-full max-w-sm rounded-2xl border border-border-default bg-surface-50 p-5 shadow-2xl space-y-3.5">
             <div className="flex items-center justify-between">
               <h3 className="text-base font-bold text-text-primary">Registrar Abono</h3>
-              <button onClick={() => setQuickPayDebt(null)} className="text-text-muted hover:text-text-primary cursor-pointer p-1">✕</button>
+              <button
+                onClick={() => setQuickPayDebt(null)}
+                className="text-text-muted hover:text-text-primary cursor-pointer p-1 rounded-lg hover:bg-surface-100 transition-colors"
+                title="Cerrar"
+              >
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
             </div>
             <p className="text-xs text-text-secondary">
               Abono de <strong className="text-text-primary">{quickPayDebt.name}</strong> para el corte actual.

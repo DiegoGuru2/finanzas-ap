@@ -459,7 +459,9 @@ export default function DashboardView() {
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <span className="text-lg">🎯</span>
+              <svg className="h-5 w-5 text-brand-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 2a10 10 0 1010 10A10 10 0 0012 2zm0 4a6 6 0 106 6 6 6 0 00-6-6zm0 3a3 3 0 103 3 3 3 0 00-3-3z" />
+              </svg>
               <h3 className="text-base font-bold text-brand-400">
                 Recomendación de Pago del Mes (Estrategia {STRATEGY_LABELS[strategy].name})
               </h3>
@@ -750,7 +752,10 @@ export default function DashboardView() {
           <div className="flex items-center justify-between">
             <div>
               <h3 className="font-bold text-base text-text-primary flex items-center gap-2">
-                <span>🎯</span> Progreso de Metas de Ahorro
+                <svg className="h-5 w-5 text-emerald-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 2a10 10 0 1010 10A10 10 0 0012 2zm0 4a6 6 0 106 6 6 6 0 00-6-6zm0 3a3 3 0 103 3 3 3 0 00-3-3z" />
+                </svg>
+                Progreso de Metas de Ahorro
               </h3>
               <p className="text-xs text-text-muted mt-0.5">
                 Visualiza cuánto llevas ahorrado en cada meta activa
@@ -868,7 +873,9 @@ export default function DashboardView() {
               className="absolute top-5 right-5 flex h-8 w-8 items-center justify-center rounded-xl bg-surface-100 border border-border-default text-text-muted hover:text-text-primary hover:bg-surface-200 transition-colors cursor-pointer"
               title="Cerrar modal"
             >
-              ✕
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
             </button>
 
             <div className="text-center space-y-2">
@@ -962,7 +969,12 @@ export default function DashboardView() {
                         : 'border-border-default bg-surface-100 text-text-muted hover:border-border-hover'
                     }`}
                   >
-                    <div className="text-xs font-bold">📅 Quincena y Fin de Mes</div>
+                    <div className="flex items-center gap-2 text-xs font-bold">
+                      <svg className="h-4 w-4 text-brand-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                      <span>Quincena y Fin de Mes</span>
+                    </div>
                     <div className="mt-1 text-[11px] opacity-80">Cobro el 15 y el 30</div>
                   </button>
 
@@ -975,7 +987,12 @@ export default function DashboardView() {
                         : 'border-border-default bg-surface-100 text-text-muted hover:border-border-hover'
                     }`}
                   >
-                    <div className="text-xs font-bold">💳 Un Solo Pago</div>
+                    <div className="flex items-center gap-2 text-xs font-bold">
+                      <svg className="h-4 w-4 text-brand-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                      </svg>
+                      <span>Un Solo Pago</span>
+                    </div>
                     <div className="mt-1 text-[11px] opacity-80">100% a fin de mes</div>
                   </button>
                 </div>
@@ -1034,9 +1051,12 @@ export default function DashboardView() {
               <button
                 type="submit"
                 disabled={savingOnboarding}
-                className="w-full rounded-2xl bg-brand-500 py-3.5 text-sm font-bold text-white shadow-lg shadow-brand-500/25 hover:bg-brand-400 hover:shadow-brand-400/30 transition-all disabled:opacity-50 cursor-pointer"
+                className="w-full flex items-center justify-center gap-2 rounded-2xl bg-brand-500 py-3.5 text-sm font-bold text-white shadow-lg shadow-brand-500/25 hover:bg-brand-400 hover:shadow-brand-400/30 transition-all disabled:opacity-50 cursor-pointer"
               >
-                {savingOnboarding ? 'Guardando configuración...' : 'Comenzar a optimizar mis finanzas 🚀'}
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+                <span>{savingOnboarding ? 'Guardando configuración...' : 'Comenzar a optimizar mis finanzas'}</span>
               </button>
             </form>
           </div>
