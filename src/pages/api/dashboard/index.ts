@@ -125,9 +125,22 @@ export const GET: APIRoute = async (ctx) => {
     const totalDebtProgress = totalOriginalDebt > 0 ? Math.round(((totalOriginalDebt - totalDebt) / totalOriginalDebt) * 1000) / 10 : 0;
     const paidOffDebtsCount = userDebts.filter((d) => parseFloat(d.currentBalance as string) <= 0).length;
 
+    // Helper ISO date string
+    const toIsoStr = (v: unknown): string | null => {
+      if (!v) return null;
+      if (typeof v === 'string') {
+        if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return v;
+        if (v.length >= 10 && /^\d{4}-\d{2}-\d{2}/.test(v)) return v.slice(0, 10);
+      }
+      const d = new Date(v as any);
+      if (Number.isNaN(d.getTime())) return null;
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    };
+
     // Metas de ahorro enriquecidas considerando pagos marcados si están vinculadas
     const enrichedSavingsGoals = userSavings.map((s) => {
-      let currentAmount = parseFloat(s.currentAmount as string || '0');
+      const baseAmount = parseFloat(s.currentAmount as string || '0');
+      let currentAmount = baseAmount;
       let monthlyContribution = parseFloat(s.monthlyContribution as string || '0');
       const targetAmount = parseFloat(s.targetAmount as string || '0');
 
@@ -138,16 +151,14 @@ export const GET: APIRoute = async (ctx) => {
             parseFloat(linkedExp.amount as string),
             (linkedExp.frequency as any) || 'monthly'
           );
-          const sinceStr = (s.linkedSince ? String(s.linkedSince) : String(s.startDate || '')).slice(0, 10);
+          const sinceStr = toIsoStr(s.linkedSince) || toIsoStr(s.startDate) || '2000-01-01';
           const paymentsForExp = userExpensePayments.filter((p) => {
             if (p.expenseId !== linkedExp.id) return false;
-            const paidAtStr = p.paidAt instanceof Date
-              ? p.paidAt.toISOString().slice(0, 10)
-              : String(p.paidAt).slice(0, 10);
-            return paidAtStr >= sinceStr;
+            const paidAtStr = toIsoStr(p.paidAt);
+            return !paidAtStr || paidAtStr >= sinceStr;
           });
-          const totalPaidAmt = paymentsForExp.reduce((sum, p) => sum + parseFloat(p.amount as string), 0);
-          currentAmount = Math.min(targetAmount, Math.round((currentAmount + totalPaidAmt) * 100) / 100);
+          const totalPaidAmt = paymentsForExp.reduce((sum, p) => sum + parseFloat(p.amount as string || '0'), 0);
+          currentAmount = Math.min(targetAmount, Math.round((baseAmount + totalPaidAmt) * 100) / 100);
         }
       }
 

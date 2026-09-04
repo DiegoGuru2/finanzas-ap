@@ -311,21 +311,21 @@ export default function DashboardView() {
       {/* Ecuadorian Payroll & Cashflow Cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {/* Total Debt */}
-        <div className="rounded-2xl border border-danger-500/20 bg-danger-500/5 p-5">
+        <div className="rounded-2xl border border-danger-500/25 bg-surface-50 p-5 shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-danger-400">Deuda Total Activa</span>
-            <span className="rounded bg-danger-500/20 px-2 py-0.5 text-[10px] font-bold text-danger-300">
+            <span className="text-xs font-bold text-danger-500">Deuda Total Activa</span>
+            <span className="rounded-md bg-danger-500/10 border border-danger-500/20 px-2.5 py-0.5 text-[11px] font-bold text-danger-500">
               {summary.activeDebtsCount || 0} activa{summary.activeDebtsCount === 1 ? '' : 's'}
               {summary.paidOffDebtsCount > 0 ? ` · ${summary.paidOffDebtsCount} liquidada(s)` : ''}
             </span>
           </div>
-          <div className="mt-3 text-2xl font-extrabold text-danger-400">
+          <div className="mt-3 text-2xl font-extrabold text-danger-500">
             {formatCurrency(summary.totalDebt || 0)}
           </div>
-          <div className="mt-1 flex items-center justify-between text-xs text-text-muted">
+          <div className="mt-1 flex items-center justify-between text-xs text-text-secondary">
             <span>Mínimo: {formatCurrency(summary.totalMinimumPayments || 0)}/mes</span>
             {summary.totalDebtPaidOff > 0 && (
-              <span className="font-semibold text-accent-400">
+              <span className="font-bold text-accent-500">
                 Pagado: {formatCurrency(summary.totalDebtPaidOff)} ({summary.totalDebtProgress}%)
               </span>
             )}
@@ -333,82 +333,92 @@ export default function DashboardView() {
         </div>
 
         {/* Sueldo Neto Líquido */}
-        <div className="rounded-2xl border border-accent-500/20 bg-accent-500/5 p-5">
+        <div className="rounded-2xl border border-accent-500/25 bg-surface-50 p-5 shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-accent-400">Sueldo Neto Líquido</span>
-            <span className="text-[10px] text-text-muted">Descontado IESS</span>
+            <span className="text-xs font-bold text-accent-500">Sueldo Neto Líquido</span>
+            <span className="rounded-md bg-surface-200/80 px-2 py-0.5 text-[10px] font-semibold text-text-secondary">
+              Descontado IESS
+            </span>
           </div>
-          <div className="mt-3 text-2xl font-extrabold text-accent-400">
+          <div className="mt-3 text-2xl font-extrabold text-accent-500">
             {formatCurrency(summary.totalNetIncome || 0)}
           </div>
-          <div className="mt-1 text-xs text-text-muted">
+          <div className="mt-1 text-xs text-text-secondary">
             Bruto: {formatCurrency(summary.totalGrossIncome || 0)} (IESS: -{formatCurrency(summary.totalIessDeductions || 0)})
           </div>
           {(summary.totalBenefitsMonthly || 0) > 0 && (
-            <div className="mt-1 text-xs font-semibold text-accent-400">
+            <div className="mt-1 text-xs font-bold text-accent-500">
               + {formatCurrency(summary.totalBenefitsMonthly)} beneficios de ley mensualizados
             </div>
           )}
         </div>
 
         {/* Flujo Quincena / Fin de mes */}
-        <div className="rounded-2xl border border-border-default bg-surface-50 p-5">
+        <div className="rounded-2xl border border-border-default bg-surface-50 p-5 shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-brand-400">Flujo Quincena vs Fin de Mes</span>
+            <span className="text-xs font-bold text-brand-500">Flujo Quincena vs Fin de Mes</span>
             {summary.totalProgrammedSavings > 0 && (
-              <span className="text-[10px] font-bold text-accent-400 bg-accent-500/10 px-2 py-0.5 rounded border border-accent-500/20">
+              <span className="text-[11px] font-bold text-accent-500 bg-accent-500/10 px-2.5 py-0.5 rounded-md border border-accent-500/30">
                 Ahorro: {formatCurrency(summary.totalProgrammedSavings)}
               </span>
             )}
           </div>
-          <div className="mt-2 text-xs space-y-1">
+          <div className="mt-2 text-xs space-y-1.5">
             <div className="flex justify-between">
-              <span className="text-text-muted">Quincena (15):</span>
-              <strong className="text-text-primary">{formatCurrency(summary.quincenaAvailable || 0)}</strong>
+              <span className="text-text-secondary">Quincena (15):</span>
+              <strong className="text-text-primary font-bold">{formatCurrency(summary.quincenaAvailable || 0)}</strong>
             </div>
             <div className="flex justify-between">
-              <span className="text-text-muted">Fin de Mes (30):</span>
-              <strong className="text-text-primary">{formatCurrency(summary.finDeMesAvailable || 0)}</strong>
+              <span className="text-text-secondary">Fin de Mes (30):</span>
+              <strong className="text-text-primary font-bold">{formatCurrency(summary.finDeMesAvailable || 0)}</strong>
             </div>
           </div>
-          <div className="mt-1 pt-1 border-t border-border-default text-[11px] text-text-muted">
-            Gastos fijos: {formatCurrency(summary.totalExpenses || 0)}
+          <div className="mt-1.5 pt-1.5 border-t border-border-default text-[11px] text-text-secondary">
+            Gastos fijos: <strong className="text-text-primary font-semibold">{formatCurrency(summary.totalExpenses || 0)}</strong>
           </div>
         </div>
 
         {/* Excedente Libre */}
-        <div className="rounded-2xl border border-brand-500/30 bg-brand-500/10 p-5">
+        <div className="rounded-2xl border border-brand-500/25 bg-surface-50 p-5 shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-brand-400">Excedente para Pagar Deuda</span>
-            <span className="rounded bg-brand-500/20 px-2 py-0.5 text-[10px] font-bold text-brand-300">
+            <span className="text-xs font-bold text-brand-500">Excedente para Pagar Deuda</span>
+            <span
+              className={`rounded-md px-2.5 py-0.5 text-[11px] font-bold border ${
+                summary.status === 'healthy'
+                  ? 'bg-accent-500/10 border-accent-500/30 text-accent-500'
+                  : summary.status === 'tight'
+                  ? 'bg-warning-500/10 border-warning-500/30 text-warning-500'
+                  : 'bg-danger-500/10 border-danger-500/30 text-danger-500'
+              }`}
+            >
               {summary.status === 'healthy' ? 'Saludable' : summary.status === 'tight' ? 'Ajustado' : 'Déficit'}
             </span>
           </div>
-          <div className="mt-3 text-2xl font-extrabold text-brand-400">
+          <div className={`mt-3 text-2xl font-extrabold ${summary.surplus < 0 ? 'text-danger-500' : 'text-brand-500'}`}>
             {formatCurrency(summary.surplus || 0)}
           </div>
-          <div className="mt-1 text-xs text-text-muted">
-            Libre tras gastos y mínimos
+          <div className="mt-1 text-xs text-text-secondary">
+            Libre tras gastos y cuotas mínimas
           </div>
         </div>
 
         {/* Metas de Ahorro Acumulado */}
-        <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-5">
+        <div className="rounded-2xl border border-emerald-500/25 bg-surface-50 p-5 shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-emerald-400">Ahorro en Metas</span>
-            <span className="text-[10px] text-emerald-300 bg-emerald-500/20 px-2 py-0.5 rounded font-bold">
+            <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">Ahorro en Metas</span>
+            <span className="text-[11px] text-emerald-700 dark:text-emerald-300 bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-0.5 rounded-md font-bold">
               {summary.totalSavingsTarget > 0
                 ? `${summary.savingsProgress}% de meta`
                 : 'Activo'}
             </span>
           </div>
-          <div className="mt-3 text-2xl font-extrabold text-emerald-400">
+          <div className="mt-3 text-2xl font-extrabold text-emerald-600 dark:text-emerald-400">
             {formatCurrency(summary.totalSaved || 0)}
           </div>
-          <div className="mt-1 flex items-center justify-between text-xs text-text-muted">
+          <div className="mt-1 flex items-center justify-between text-xs text-text-secondary">
             <span>Objetivo: {formatCurrency(summary.totalSavingsTarget || 0)}</span>
             {(summary.totalMonthlySavingsContribution || 0) > 0 && (
-              <span className="text-emerald-400 font-medium">
+              <span className="text-emerald-600 dark:text-emerald-400 font-bold">
                 +{formatCurrency(summary.totalMonthlySavingsContribution)}/mes
               </span>
             )}
@@ -416,16 +426,16 @@ export default function DashboardView() {
         </div>
 
         {/* Ratio Deuda/Ingreso (DTI) */}
-        <div className="rounded-2xl border border-border-default bg-surface-50 p-5">
+        <div className="rounded-2xl border border-border-default bg-surface-50 p-5 shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-text-secondary">Carga Financiera (DTI)</span>
+            <span className="text-xs font-bold text-text-secondary">Carga Financiera (DTI)</span>
             <span
-              className={`rounded px-2 py-0.5 text-[10px] font-bold ${
+              className={`rounded-md px-2.5 py-0.5 text-[11px] font-bold border ${
                 (summary.debtToIncomeRatio || 0) <= 20
-                  ? 'bg-accent-500/20 text-accent-400'
+                  ? 'bg-accent-500/10 border-accent-500/30 text-accent-500'
                   : (summary.debtToIncomeRatio || 0) <= 40
-                  ? 'bg-warning-500/20 text-warning-400'
-                  : 'bg-danger-500/20 text-danger-400'
+                  ? 'bg-warning-500/10 border-warning-500/30 text-warning-500'
+                  : 'bg-danger-500/10 border-danger-500/30 text-danger-500'
               }`}
             >
               {(summary.debtToIncomeRatio || 0) <= 20
@@ -438,7 +448,7 @@ export default function DashboardView() {
           <div className="mt-3 text-2xl font-extrabold text-text-primary">
             {summary.debtToIncomeRatio || 0}%
           </div>
-          <div className="mt-1 text-xs text-text-muted">
+          <div className="mt-1 text-xs text-text-secondary">
             Máx recomendado Ecuador: 40%
           </div>
         </div>
