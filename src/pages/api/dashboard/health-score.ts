@@ -18,13 +18,22 @@ export const GET: APIRoute = async (ctx) => {
   }
 
   try {
+    const safeQuery = async <T>(promise: Promise<T>, fallback: T): Promise<T> => {
+      try {
+        return await promise;
+      } catch (err: any) {
+        console.warn('HealthScore safeQuery caught error:', err?.message || err);
+        return fallback;
+      }
+    };
+
     const [userIncomes, userExpenses, userDebts, userPayments, userSavings, userBudgets] = await Promise.all([
-      db.select().from(incomes).where(eq(incomes.userId, user.id)),
-      db.select().from(expenses).where(eq(expenses.userId, user.id)),
-      db.select().from(debts).where(eq(debts.userId, user.id)),
-      db.select().from(payments).where(eq(payments.userId, user.id)).orderBy(desc(payments.paidAt)),
-      db.select().from(savingsGoals).where(eq(savingsGoals.userId, user.id)),
-      db.select().from(budgets).where(eq(budgets.userId, user.id)),
+      safeQuery(db.select().from(incomes).where(eq(incomes.userId, user.id)), []),
+      safeQuery(db.select().from(expenses).where(eq(expenses.userId, user.id)), []),
+      safeQuery(db.select().from(debts).where(eq(debts.userId, user.id)), []),
+      safeQuery(db.select().from(payments).where(eq(payments.userId, user.id)).orderBy(desc(payments.paidAt)), []),
+      safeQuery(db.select().from(savingsGoals).where(eq(savingsGoals.userId, user.id)), []),
+      safeQuery(db.select().from(budgets).where(eq(budgets.userId, user.id)), []),
     ]);
 
     // ═══ Métricas Base ═══

@@ -11,10 +11,8 @@ export const GET: APIRoute = async (ctx) => {
   }
 
   try {
-    const [userBudgets, userExpenses] = await Promise.all([
-      db.select().from(budgets).where(eq(budgets.userId, user.id)),
-      db.select().from(expenses).where(eq(expenses.userId, user.id)),
-    ]);
+    const userBudgets = await db.select().from(budgets).where(eq(budgets.userId, user.id)).catch(() => []);
+    const userExpenses = await db.select().from(expenses).where(eq(expenses.userId, user.id)).catch(() => []);
 
     // Calcular gasto real mensual por categoría
     const spentByCategory: Record<string, number> = {};
