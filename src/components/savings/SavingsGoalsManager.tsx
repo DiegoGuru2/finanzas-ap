@@ -380,7 +380,9 @@ export default function SavingsGoalsManager() {
         <div className="rounded-2xl border border-border-default bg-surface-50 p-12 text-center">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-accent-500/15 border border-accent-500/30 text-accent-400 mb-4 shadow-sm">
             <svg className="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 2a10 10 0 1010 10A10 10 0 0012 2zm0 4a6 6 0 106 6 6 6 0 00-6-6zm0 3a3 3 0 103 3 3 3 0 00-3-3z" />
+              <circle cx="12" cy="12" r="9" strokeWidth="1.8" />
+              <circle cx="12" cy="12" r="5" strokeWidth="1.8" />
+              <circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none" />
             </svg>
           </div>
           <h3 className="text-lg font-bold text-text-primary">Aún no tienes metas de ahorro</h3>
@@ -432,14 +434,22 @@ export default function SavingsGoalsManager() {
                     ) : (
                       <span className="rounded-full bg-warning-500/15 px-2.5 py-0.5 text-[10px] font-bold text-warning-400">⚠ Atrasado</span>
                     )}
-                    <button onClick={() => setDepositGoalId(goal.id)} className="rounded-lg bg-accent-500 px-3 py-1 text-[11px] font-semibold text-white hover:bg-accent-400 transition-colors cursor-pointer">
-                      💰 Depositar
+                    <button onClick={() => setDepositGoalId(goal.id)} className="flex items-center gap-1 rounded-lg bg-accent-500 px-3 py-1 text-[11px] font-semibold text-white hover:bg-accent-400 transition-colors cursor-pointer">
+                      <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                        <polyline points="17 6 23 6 23 12" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                      <span>Depositar</span>
                     </button>
-                    <button onClick={() => openEdit(goal)} className="rounded-lg border border-border-default px-2.5 py-1 text-[11px] font-semibold text-text-secondary hover:text-text-primary hover:bg-surface-100 transition-colors cursor-pointer">
-                      ✏️
+                    <button onClick={() => openEdit(goal)} title="Editar meta" className="rounded-lg border border-border-default p-1 text-text-secondary hover:text-text-primary hover:bg-surface-100 transition-colors cursor-pointer">
+                      <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                      </svg>
                     </button>
-                    <button onClick={() => handleDelete(goal.id)} className="rounded-lg border border-danger-500/30 px-2.5 py-1 text-[11px] font-semibold text-danger-400 hover:bg-danger-500/10 transition-colors cursor-pointer">
-                      🗑️
+                    <button onClick={() => handleDelete(goal.id)} title="Eliminar meta" className="rounded-lg border border-danger-500/30 p-1 text-danger-400 hover:bg-danger-500/10 transition-colors cursor-pointer">
+                      <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
                     </button>
                   </div>
                 </div>
@@ -565,7 +575,11 @@ export default function SavingsGoalsManager() {
                       <span className="text-[10px] text-accent-400 ml-2">✓ {formatCurrency(goal.targetAmount)}</span>
                     </div>
                   </div>
-                  <button onClick={() => handleDelete(goal.id)} className="text-[10px] text-text-muted hover:text-danger-400 cursor-pointer">🗑️</button>
+                  <button onClick={() => handleDelete(goal.id)} title="Eliminar meta" className="p-1 text-text-muted hover:text-danger-400 transition-colors cursor-pointer">
+                    <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
                 </div>
               );
             })}

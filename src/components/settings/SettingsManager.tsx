@@ -228,7 +228,12 @@ export default function SettingsManager() {
         {/* ═══ SUELDO ═══ */}
         <div className="rounded-3xl border border-border-default bg-surface-50 p-6 sm:p-8 space-y-6 shadow-xl">
           <div className="flex items-center gap-3 border-b border-border-default pb-5">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-500/20 text-brand-400 text-xl">🇪🇨</div>
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-500/20 text-brand-400">
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <rect x="2" y="6" width="20" height="12" rx="3" strokeWidth="1.8" />
+                <circle cx="12" cy="12" r="2.5" strokeWidth="1.8" />
+              </svg>
+            </div>
             <div>
               <h3 className="text-lg font-bold text-text-primary">Ajuste de Sueldo e Ingreso Mensual</h3>
               <p className="text-xs text-text-muted">Si tu sueldo subió, cambió tu contrato o varias de ingresos, actualízalo aquí.</p>
@@ -300,7 +305,14 @@ export default function SettingsManager() {
                 <input type="checkbox" id="settingsProgrammedSavingsToggle" checked={hasProgrammedSavings} onChange={(e) => setHasProgrammedSavings(e.target.checked)} className="h-4 w-4 rounded border-accent-500 text-accent-500 focus:ring-accent-500 cursor-pointer" />
                 <div>
                   <label htmlFor="settingsProgrammedSavingsToggle" className="text-xs font-bold text-text-primary cursor-pointer flex items-center gap-2">
-                    <span>🏦 Activar Ahorro Programado / Débito Automático</span>
+                    <span className="flex items-center gap-1.5">
+                      <svg className="h-4 w-4 text-accent-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="9" strokeWidth="1.8" />
+                        <circle cx="12" cy="12" r="5" strokeWidth="1.8" />
+                        <circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none" />
+                      </svg>
+                      Activar Ahorro Programado / Débito Automático
+                    </span>
                     <span className="rounded bg-accent-500/20 text-accent-400 px-2 py-0.5 text-[10px] font-semibold">Descontado a Fin de Mes</span>
                   </label>
                   <p className="text-[11px] text-text-muted">Se reserva automáticamente del pago del día 30.</p>
@@ -329,11 +341,27 @@ export default function SettingsManager() {
             <label className="block text-xs font-semibold text-text-secondary">Modalidad de Cobro en el Mes</label>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <button type="button" onClick={() => setPaymentScheme('quincena_fin_mes')} className={`rounded-2xl border p-4 text-left transition-all cursor-pointer ${paymentScheme === 'quincena_fin_mes' ? 'border-brand-500 bg-brand-500/15 text-brand-400 shadow-sm ring-1 ring-brand-500' : 'border-border-default bg-surface-100 text-text-muted hover:border-border-hover'}`}>
-                <div className="text-xs font-bold">📅 Quincena y Fin de Mes</div>
+                <div className="flex items-center gap-2 text-xs font-bold">
+                  <svg className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <rect x="3" y="4" width="18" height="17" rx="3" strokeWidth="1.8" />
+                    <line x1="3" y1="9" x2="21" y2="9" strokeWidth="1.8" />
+                    <line x1="8" y1="2" x2="8" y2="5" strokeWidth="1.8" strokeLinecap="round" />
+                    <line x1="16" y1="2" x2="16" y2="5" strokeWidth="1.8" strokeLinecap="round" />
+                  </svg>
+                  <span>Quincena y Fin de Mes</span>
+                </div>
                 <div className="mt-1 text-[11px] opacity-80">Anticipo el día 15 y saldo el 30</div>
               </button>
               <button type="button" onClick={() => setPaymentScheme('monthly')} className={`rounded-2xl border p-4 text-left transition-all cursor-pointer ${paymentScheme === 'monthly' ? 'border-brand-500 bg-brand-500/15 text-brand-400 shadow-sm ring-1 ring-brand-500' : 'border-border-default bg-surface-100 text-text-muted hover:border-border-hover'}`}>
-                <div className="text-xs font-bold">💳 Un Solo Pago</div>
+                <div className="flex items-center gap-2 text-xs font-bold">
+                  <svg className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <rect x="2" y="5" width="20" height="14" rx="3" strokeWidth="1.8" />
+                    <line x1="2" y1="10" x2="22" y2="10" strokeWidth="1.8" />
+                    <line x1="6" y1="15" x2="8" y2="15" strokeWidth="1.8" strokeLinecap="round" />
+                    <line x1="11" y1="15" x2="13" y2="15" strokeWidth="1.8" strokeLinecap="round" />
+                  </svg>
+                  <span>Un Solo Pago</span>
+                </div>
                 <div className="mt-1 text-[11px] opacity-80">100% cobrado a fin de mes</div>
               </button>
             </div>
@@ -350,9 +378,12 @@ export default function SettingsManager() {
                       type="button"
                       onClick={() => setSplitMode('auto')}
                       title="Volver al reparto automático 50/50"
-                      className="rounded bg-brand-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-brand-400 hover:bg-brand-500/20 cursor-pointer"
+                      className="inline-flex items-center gap-1 rounded bg-brand-500/10 px-2 py-0.5 text-[10px] font-semibold text-brand-400 hover:bg-brand-500/20 cursor-pointer"
                     >
-                      ↺ 50/50
+                      <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                      <span>50/50</span>
                     </button>
                   )}
                 </div>
@@ -389,7 +420,11 @@ export default function SettingsManager() {
         {/* ═══ BENEFICIOS DE LEY ECUADOR ═══ */}
         <div className="rounded-3xl border border-border-default bg-surface-50 p-6 sm:p-8 space-y-6 shadow-xl">
           <div className="flex items-center gap-3 border-b border-border-default pb-5">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-warning-500/20 text-warning-400 text-xl">⚖️</div>
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-warning-500/20 text-warning-400">
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M12 3v18m-7-5l7-13 7 13M5 16a3.5 3.5 0 0 1-3.5-3.5h7A3.5 3.5 0 0 1 5 16zm14 0a3.5 3.5 0 0 1-3.5-3.5h7a3.5 3.5 0 0 1-3.5 3.5zM8 21h8" />
+              </svg>
+            </div>
             <div>
               <h3 className="text-lg font-bold text-text-primary">Beneficios de Ley (Ecuador)</h3>
               <p className="text-xs text-text-muted">Configura fondos de reserva, décimos y utilidades. Se reflejan en el Dashboard.</p>
@@ -402,7 +437,12 @@ export default function SettingsManager() {
               <div className="flex items-center gap-3">
                 <input type="checkbox" id="hasFondosReserva" checked={hasFondosReserva} onChange={(e) => setHasFondosReserva(e.target.checked)} className="h-4 w-4 rounded border-brand-500 text-brand-500 focus:ring-brand-500 cursor-pointer" />
                 <div>
-                  <label htmlFor="hasFondosReserva" className="text-xs font-bold text-text-primary cursor-pointer">📋 Fondos de Reserva (8.33%)</label>
+                  <label htmlFor="hasFondosReserva" className="text-xs font-bold text-text-primary cursor-pointer flex items-center gap-1.5">
+                    <svg className="h-3.5 w-3.5 text-brand-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                    </svg>
+                    <span>Fondos de Reserva (8.33%)</span>
+                  </label>
                   <p className="text-[11px] text-text-muted">Se genera después de cumplir 1 año en la empresa</p>
                 </div>
               </div>
@@ -425,7 +465,14 @@ export default function SettingsManager() {
           <div className="rounded-2xl border border-warning-500/20 bg-warning-500/5 p-5 space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div>
-                <span className="text-xs font-bold text-text-primary">🎄 Décimo Tercer Sueldo</span>
+                <span className="text-xs font-bold text-text-primary flex items-center gap-1.5">
+                  <svg className="h-3.5 w-3.5 text-warning-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <rect x="3" y="8" width="18" height="13" rx="2" strokeWidth="1.8" />
+                    <line x1="12" y1="8" x2="12" y2="21" strokeWidth="1.8" />
+                    <line x1="3" y1="13" x2="21" y2="13" strokeWidth="1.8" />
+                  </svg>
+                  <span>Décimo Tercer Sueldo</span>
+                </span>
                 <p className="text-[11px] text-text-muted">1/12 del sueldo = {formatCurrency(decimoTerceroMensual)}/mes · Pago en Diciembre o Mensualizado</p>
               </div>
               <div className="flex items-center gap-3">
@@ -443,7 +490,14 @@ export default function SettingsManager() {
           <div className="rounded-2xl border border-warning-500/20 bg-warning-500/5 p-5 space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div>
-                <span className="text-xs font-bold text-text-primary">📚 Décimo Cuarto Sueldo (Bono Escolar)</span>
+                <span className="text-xs font-bold text-text-primary flex items-center gap-1.5">
+                  <svg className="h-3.5 w-3.5 text-warning-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M12 4l9 5-9 5-9-5 9-5z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M4 11.5v4.5c0 2 3.6 3.6 8 3.6s8-1.6 8-3.6v-4.5" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M21 9v6" />
+                  </svg>
+                  <span>Décimo Cuarto Sueldo (Bono Escolar)</span>
+                </span>
                 <p className="text-[11px] text-text-muted">1 SBU = {formatCurrency(sbuEfectivo)} · Pago en {region === 'costa' ? 'Marzo (Costa)' : 'Agosto (Sierra)'}</p>
               </div>
               <div className="flex items-center gap-3">
@@ -455,8 +509,19 @@ export default function SettingsManager() {
               <div>
                 <label className="block text-[11px] font-semibold text-text-secondary mb-1">Región</label>
                 <div className="flex gap-2">
-                  <button type="button" onClick={() => setRegion('costa')} className={`flex-1 rounded-lg px-3 py-1.5 text-[11px] font-semibold cursor-pointer ${region === 'costa' ? 'bg-brand-500/15 text-brand-400 border border-brand-500' : 'bg-surface-100 text-text-muted border border-border-default'}`}>🌴 Costa (Marzo)</button>
-                  <button type="button" onClick={() => setRegion('sierra')} className={`flex-1 rounded-lg px-3 py-1.5 text-[11px] font-semibold cursor-pointer ${region === 'sierra' ? 'bg-brand-500/15 text-brand-400 border border-brand-500' : 'bg-surface-100 text-text-muted border border-border-default'}`}>🏔️ Sierra (Agosto)</button>
+                  <button type="button" onClick={() => setRegion('costa')} className={`flex-1 flex items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-[11px] font-semibold cursor-pointer ${region === 'costa' ? 'bg-brand-500/15 text-brand-400 border border-brand-500' : 'bg-surface-100 text-text-muted border border-border-default'}`}>
+                    <svg className="h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <circle cx="12" cy="12" r="4" strokeWidth="1.8" />
+                      <path strokeLinecap="round" strokeWidth="1.8" d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32l1.41 1.41M2 12h2m16 0h2M4.93 19.07l1.41-1.41m11.32-11.32l1.41-1.41" />
+                    </svg>
+                    <span>Costa (Marzo)</span>
+                  </button>
+                  <button type="button" onClick={() => setRegion('sierra')} className={`flex-1 flex items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-[11px] font-semibold cursor-pointer ${region === 'sierra' ? 'bg-brand-500/15 text-brand-400 border border-brand-500' : 'bg-surface-100 text-text-muted border border-border-default'}`}>
+                    <svg className="h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M3 20l7-12 5 8 2-3 4 7H3z" />
+                    </svg>
+                    <span>Sierra (Agosto)</span>
+                  </button>
                 </div>
               </div>
               <div>
@@ -476,13 +541,19 @@ export default function SettingsManager() {
               <div className="flex items-center gap-3">
                 <input type="checkbox" id="hasUtilidades" checked={hasUtilidades} onChange={(e) => setHasUtilidades(e.target.checked)} className="h-4 w-4 rounded border-accent-500 text-accent-500 focus:ring-accent-500 cursor-pointer" />
                 <div>
-                  <label htmlFor="hasUtilidades" className="text-xs font-bold text-text-primary cursor-pointer">💰 La empresa reparte Utilidades (15%)</label>
+                  <label htmlFor="hasUtilidades" className="text-xs font-bold text-text-primary cursor-pointer flex items-center gap-1.5">
+                    <svg className="h-3.5 w-3.5 text-accent-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                      <polyline points="17 6 23 6 23 12" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                    <span>La empresa reparte Utilidades (15%)</span>
+                  </label>
                   <p className="text-[11px] text-text-muted">Si tu empresa no reparte utilidades (sin fines de lucro, pública, etc.), desactiva esto.</p>
                 </div>
               </div>
               {hasUtilidades && (
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-text-muted font-medium">Estimado anual:</span>
+                  <span className="text-xs text-text-muted font-medium">Monto:</span>
                   <div className="relative w-32">
                     <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted font-bold text-xs">$</span>
                     <input type="number" inputMode="decimal" step="0.01" min="0" value={utilidadesAmount} onChange={(e) => setUtilidadesAmount(parseFloat(e.target.value) || 0)} className="w-full rounded-lg border border-accent-500/40 bg-surface-50 pl-6 pr-2 py-1 text-xs font-bold text-accent-400 focus:outline-none" placeholder="0.00" />
@@ -500,7 +571,13 @@ export default function SettingsManager() {
 
           {/* Resumen de Beneficios */}
           <div className="rounded-2xl border border-border-default bg-surface-100 p-5">
-            <h4 className="text-xs font-bold text-text-primary mb-3">📊 Resumen de Beneficios Mensualizados</h4>
+            <h4 className="text-xs font-bold text-text-primary mb-3 flex items-center gap-1.5">
+              <svg className="h-4 w-4 text-brand-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M21.21 15.89A10 10 0 1 1 8 2.83" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M22 12A10 10 0 0 0 12 2v10z" />
+              </svg>
+              <span>Resumen de Beneficios Mensualizados</span>
+            </h4>
             <div className="space-y-2 text-xs">
               {hasFondosReserva && (
                 <div className="flex justify-between text-text-secondary">
@@ -537,7 +614,12 @@ export default function SettingsManager() {
             disabled={saving}
             className="rounded-2xl bg-brand-500 px-7 py-3 text-sm font-bold text-white shadow-lg shadow-brand-500/25 hover:bg-brand-400 hover:shadow-brand-400/30 transition-all disabled:opacity-50 cursor-pointer"
           >
-            {saving ? 'Guardando cambios...' : 'Guardar y Actualizar Dashboard 💾'}
+            <span className="flex items-center gap-2">
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+              </svg>
+              <span>{saving ? 'Guardando cambios...' : 'Guardar y Actualizar Dashboard'}</span>
+            </span>
           </button>
         </div>
       </form>

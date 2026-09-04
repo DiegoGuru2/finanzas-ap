@@ -495,7 +495,7 @@ export default function PaymentsView() {
         >
           <div className="flex items-start sm:items-center gap-3">
             <div
-              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-lg ${
+              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
                 daysDiff === 0
                   ? 'bg-danger-500/20 text-danger-400'
                   : daysDiff <= 3
@@ -503,7 +503,9 @@ export default function PaymentsView() {
                     : 'bg-brand-500/20 text-brand-400'
               }`}
             >
-              🔔
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+              </svg>
             </div>
             <div>
               <div className="flex items-center gap-2 flex-wrap">
@@ -517,10 +519,10 @@ export default function PaymentsView() {
                   }`}
                 >
                   {daysDiff === 0
-                    ? '🚨 ¡Hoy es el corte de pago!'
+                    ? '¡Hoy es el corte de pago!'
                     : daysDiff === 1
-                      ? '⏰ El corte es mañana'
-                      : `📅 Próximo corte en ${daysDiff} días`}
+                      ? 'El corte es mañana'
+                      : `Próximo corte en ${daysDiff} días`}
                 </span>
                 <span className="text-xs font-semibold text-text-primary">
                   ({nextPeriod.day} de {MONTH_NAMES[nextPeriod.month]})
@@ -709,13 +711,20 @@ export default function PaymentsView() {
                             {p.timing === 'quincena' ? 'Quincena (15)' : 'Fin de Mes'}
                           </span>
                           {isNext && (
-                            <span className="rounded-md bg-brand-500 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white shadow-sm">
-                              ⚡ Próximo corte
+                            <span className="inline-flex items-center gap-1 rounded-md bg-brand-500 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white shadow-sm">
+                              <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                              </svg>
+                              <span>Próximo corte</span>
                             </span>
                           )}
                           {isPast && !isNext && (
-                            <span className="rounded-md bg-surface-200 border border-border-default px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-text-muted">
-                              🕰️ Corte anterior
+                            <span className="inline-flex items-center gap-1 rounded-md bg-surface-200 border border-border-default px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-text-muted">
+                              <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <circle cx="12" cy="12" r="9" strokeWidth="1.8" />
+                                <polyline points="12 6 12 12 16 14" strokeWidth="1.8" strokeLinecap="round" />
+                              </svg>
+                              <span>Corte anterior</span>
                             </span>
                           )}
                         </div>
@@ -731,9 +740,14 @@ export default function PaymentsView() {
                         {payouts.map((b) => (
                           <div
                             key={b.label}
-                            className="inline-flex items-center gap-1 rounded-lg bg-accent-500/10 border border-accent-500/20 px-2.5 py-1 text-xs font-semibold text-accent-400"
+                            className="inline-flex items-center gap-1.5 rounded-lg bg-accent-500/10 border border-accent-500/20 px-2.5 py-1 text-xs font-semibold text-accent-400"
                           >
-                            🎁 {b.label}: {formatCurrency(b.amount)}
+                            <svg className="h-3.5 w-3.5 text-accent-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <rect x="3" y="8" width="18" height="13" rx="2" strokeWidth="1.8" />
+                              <line x1="12" y1="8" x2="12" y2="21" strokeWidth="1.8" />
+                              <line x1="3" y1="13" x2="21" y2="13" strokeWidth="1.8" />
+                            </svg>
+                            <span>{b.label}: {formatCurrency(b.amount)}</span>
                           </div>
                         ))}
                       </div>
@@ -776,7 +790,7 @@ export default function PaymentsView() {
 
                       {activeDebtsInPeriod.length === 0 ? (
                         <div className="rounded-xl border border-dashed border-border-default p-3 text-center text-xs text-text-muted">
-                          Sin pagos de deuda en este corte 🎉
+                          Sin pagos de deuda en este corte
                         </div>
                       ) : (
                         <div className="space-y-2">
@@ -795,8 +809,12 @@ export default function PaymentsView() {
                                   <div className="flex items-center gap-2 flex-wrap">
                                     <span className="font-semibold text-sm text-text-primary">{debt.name}</span>
                                     {isPayoff && (
-                                      <span className="rounded bg-accent-500/15 px-1.5 py-0.5 text-[10px] font-bold text-accent-400">
-                                        🎉 Última cuota
+                                      <span className="inline-flex items-center gap-1 rounded bg-accent-500/15 px-2 py-0.5 text-[10px] font-bold text-accent-400">
+                                        <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <circle cx="12" cy="12" r="9" strokeWidth="1.8" />
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M8 12l2.5 2.5L16 9" />
+                                        </svg>
+                                        <span>Última cuota</span>
                                       </span>
                                     )}
                                   </div>
@@ -848,7 +866,7 @@ export default function PaymentsView() {
 
                       {activeExpensesInPeriod.length === 0 ? (
                         <div className="rounded-xl border border-dashed border-border-default p-3 text-center text-xs text-text-muted">
-                          Sin gastos en este corte 🎉
+                          Sin gastos en este corte
                         </div>
                       ) : (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">

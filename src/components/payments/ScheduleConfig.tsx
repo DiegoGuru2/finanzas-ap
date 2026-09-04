@@ -161,7 +161,13 @@ export default function ScheduleConfig({ onClose, onSaved }: Props) {
         {/* Header */}
         <div className="flex items-center justify-between border-b border-border-default px-5 py-4 bg-surface-50 shrink-0">
           <div>
-            <h3 className="text-base sm:text-lg font-bold text-text-primary">⚙️ Configurar Cronograma</h3>
+            <h3 className="text-base sm:text-lg font-bold text-text-primary flex items-center gap-2">
+              <svg className="h-5 w-5 text-brand-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="3.5" strokeWidth="1.8" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M12 2.5a2 2 0 0 1 1.7 1 2 2 0 0 0 1.7 1 2 2 0 0 1 1.9 1.1 2 2 0 0 0 1.4 1.4 2 2 0 0 1 1.1 1.9 2 2 0 0 0 1 1.7 2 2 0 0 1 0 2.8 2 2 0 0 0-1 1.7 2 2 0 0 1-1.1 1.9 2 2 0 0 0-1.4 1.4 2 2 0 0 1-1.9 1.1 2 2 0 0 0-1.7 1 2 2 0 0 1-2.8 0 2 2 0 0 0-1.7-1 2 2 0 0 1-1.9-1.1 2 2 0 0 0-1.4-1.4 2 2 0 0 1-1.1-1.9 2 2 0 0 0-1-1.7 2 2 0 0 1 0-2.8 2 2 0 0 0 1-1.7 2 2 0 0 1 1.1-1.9 2 2 0 0 0 1.4-1.4 2 2 0 0 1 1.9-1.1 2 2 0 0 0 1.7-1 2 2 0 0 1 1.7-1z" />
+              </svg>
+              <span>Configurar Cronograma</span>
+            </h3>
             <p className="text-xs text-text-muted">
               Ajusta el corte de cada concepto, cuotas de deudas y vigencia de gastos.
             </p>

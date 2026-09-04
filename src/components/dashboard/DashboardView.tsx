@@ -295,15 +295,20 @@ export default function DashboardView() {
         <div className="flex items-center gap-3">
           <button
             onClick={() => setShowOnboarding(true)}
-            className="rounded-xl bg-surface-100 hover:bg-surface-200 border border-border-default px-4 py-2 text-xs font-semibold text-text-primary transition-all cursor-pointer"
+            className="flex items-center gap-2 rounded-xl bg-surface-100 hover:bg-surface-200 border border-border-default px-4 py-2 text-xs font-semibold text-text-primary transition-all cursor-pointer"
           >
-            ⚙️ Ajustar Sueldo e IESS
+            <svg className="h-4 w-4 text-text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="3.5" strokeWidth="1.8" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M12 2.5a2 2 0 0 1 1.7 1 2 2 0 0 0 1.7 1 2 2 0 0 1 1.9 1.1 2 2 0 0 0 1.4 1.4 2 2 0 0 1 1.1 1.9 2 2 0 0 0 1 1.7 2 2 0 0 1 0 2.8 2 2 0 0 0-1 1.7 2 2 0 0 1-1.1 1.9 2 2 0 0 0-1.4 1.4 2 2 0 0 1-1.9 1.1 2 2 0 0 0-1.7 1 2 2 0 0 1-2.8 0 2 2 0 0 0-1.7-1 2 2 0 0 1-1.9-1.1 2 2 0 0 0-1.4-1.4 2 2 0 0 1-1.1-1.9 2 2 0 0 0-1-1.7 2 2 0 0 1 0-2.8 2 2 0 0 0 1-1.7 2 2 0 0 1 1.1-1.9 2 2 0 0 0 1.4-1.4 2 2 0 0 1 1.9-1.1 2 2 0 0 0 1.7-1 2 2 0 0 1 1.7-1z" />
+            </svg>
+            <span>Ajustar Sueldo e IESS</span>
           </button>
           <a
             href="/app/debts"
-            className="rounded-xl bg-brand-500 hover:bg-brand-400 px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-brand-500/25 transition-all"
+            className="flex items-center gap-1.5 rounded-xl bg-brand-500 hover:bg-brand-400 px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-brand-500/25 transition-all"
           >
-            + Añadir Deuda
+            <span>+</span>
+            <span>Añadir Deuda</span>
           </a>
         </div>
       </div>
@@ -548,7 +553,13 @@ export default function DashboardView() {
         <div className="lg:col-span-2 rounded-2xl border border-border-default bg-surface-50 p-6 space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <div>
-              <h3 className="font-bold text-base text-text-primary">📉 Proyección de Amortización (24 Meses)</h3>
+              <h3 className="font-bold text-base text-text-primary flex items-center gap-2">
+                <svg className="h-4 w-4 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                  <polyline points="17 6 23 6 23 12" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                <span>Proyección de Amortización (24 Meses)</span>
+              </h3>
               <p className="text-xs text-text-muted">Visualización mes a mes de la reducción de capital e intereses</p>
             </div>
             <div className="flex items-center gap-4 text-xs">
@@ -579,7 +590,13 @@ export default function DashboardView() {
         {/* Expenses by Category Donut Chart */}
         <div className="rounded-2xl border border-border-default bg-surface-50 p-6 space-y-4 flex flex-col justify-between">
           <div>
-            <h3 className="font-bold text-base text-text-primary">🥧 Distribución de Gastos</h3>
+            <h3 className="font-bold text-base text-text-primary flex items-center gap-2">
+              <svg className="h-4 w-4 text-accent-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M21.21 15.89A10 10 0 1 1 8 2.83" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M22 12A10 10 0 0 0 12 2v10z" />
+              </svg>
+              <span>Distribución de Gastos</span>
+            </h3>
             <p className="text-xs text-text-muted">Desglose mensual de tus egresos por categoría</p>
           </div>
 
@@ -624,7 +641,13 @@ export default function DashboardView() {
           <div className="flex items-center justify-between">
             <div>
               <h3 className="font-bold text-base text-text-primary flex items-center gap-2">
-                <span>💳</span> Progreso de Amortización de Deudas
+                <svg className="h-4 w-4 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <rect x="2" y="5" width="20" height="14" rx="3" strokeWidth="1.8" />
+                  <line x1="2" y1="10" x2="22" y2="10" strokeWidth="1.8" />
+                  <line x1="6" y1="15" x2="8" y2="15" strokeWidth="1.8" strokeLinecap="round" />
+                  <line x1="11" y1="15" x2="13" y2="15" strokeWidth="1.8" strokeLinecap="round" />
+                </svg>
+                <span>Progreso de Amortización de Deudas</span>
               </h3>
               <p className="text-xs text-text-muted mt-0.5">
                 Seguimiento de cuánto has amortizado del monto original
@@ -676,7 +699,17 @@ export default function DashboardView() {
                   >
                     <div className="flex items-center justify-between">
                       <div className="min-w-0 flex items-center gap-2">
-                        <span className="text-sm">{isPaid ? '✅' : '💳'}</span>
+                        {isPaid ? (
+                          <svg className="h-4 w-4 text-accent-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <circle cx="12" cy="12" r="9" strokeWidth="1.8" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M8 12l2.5 2.5L16 9" />
+                          </svg>
+                        ) : (
+                          <svg className="h-4 w-4 text-text-muted shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <rect x="2" y="5" width="20" height="14" rx="3" strokeWidth="1.8" />
+                            <line x1="2" y1="10" x2="22" y2="10" strokeWidth="1.8" />
+                          </svg>
+                        )}
                         <div className="truncate">
                           <span className="font-bold text-xs text-text-primary truncate block">
                             {d.name}
@@ -753,9 +786,11 @@ export default function DashboardView() {
             <div>
               <h3 className="font-bold text-base text-text-primary flex items-center gap-2">
                 <svg className="h-5 w-5 text-emerald-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 2a10 10 0 1010 10A10 10 0 0012 2zm0 4a6 6 0 106 6 6 6 0 00-6-6zm0 3a3 3 0 103 3 3 3 0 00-3-3z" />
+                  <circle cx="12" cy="12" r="9" strokeWidth="1.8" />
+                  <circle cx="12" cy="12" r="5" strokeWidth="1.8" />
+                  <circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none" />
                 </svg>
-                Progreso de Metas de Ahorro
+                <span>Progreso de Metas de Ahorro</span>
               </h3>
               <p className="text-xs text-text-muted mt-0.5">
                 Visualiza cuánto llevas ahorrado en cada meta activa
