@@ -145,6 +145,11 @@ export async function sendWelcomeEmail({ to, name, birthDate }: WelcomeEmailData
 </html>
   `;
 
+  if (!transporter) {
+    console.warn('[ProyecAhorro] Correo no enviado: SMTP no configurado.');
+    return;
+  }
+
   return transporter.sendMail({
     from: `"ProyecAhorro" <${SMTP_USER}>`,
     to,
@@ -182,6 +187,11 @@ export async function sendPasswordResetEmail({ to, name, resetUrl }: { to: strin
 </body>
 </html>
   `;
+
+  if (!transporter) {
+    console.warn('[ProyecAhorro] Correo no enviado: SMTP no configurado.');
+    return;
+  }
 
   return transporter.sendMail({
     from: `"ProyecAhorro" <${SMTP_USER}>`,
@@ -281,6 +291,11 @@ export async function sendVaultAccessEmail({
 </body>
 </html>
   `;
+
+  if (!transporter) {
+    console.warn('[ProyecAhorro] Correo no enviado: SMTP no configurado.');
+    return;
+  }
 
   return transporter.sendMail({
     from: `"Seguridad ProyecAhorro" <${SMTP_USER}>`,
