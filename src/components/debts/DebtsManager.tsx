@@ -347,6 +347,8 @@ export default function DebtsManager() {
       const planStr =
         d.hasInstallmentPlan && d.termMonths ? `${d.termMonths} cuotas` : 'Pago regular';
       const timingStr = d.paymentTiming === 'quincena' ? 'Quincena (15)' : 'Fin de Mes (30)';
+      const isPaid = d.currentBalance <= 0;
+      const effectiveMin = isPaid ? 0 : d.minimumPayment;
 
       return [
         index + 1,
@@ -361,31 +363,32 @@ export default function DebtsManager() {
         d.currentBalance.toFixed(2),
         amortized.toFixed(2),
         `${paidPercent}%`,
-        d.minimumPayment.toFixed(2),
+        effectiveMin.toFixed(2),
         `"${statusStr}"`,
       ].join(';');
     });
 
-    const sumOrig = filteredAndSortedDebts.reduce((acc, d) => acc + d.originalBalance, 0);
-    const sumCur = filteredAndSortedDebts.reduce((acc, d) => acc + d.currentBalance, 0);
-    const sumAmort = Math.max(0, sumOrig - sumCur);
-    const sumProg = sumOrig > 0 ? Math.round((sumAmort / sumOrig) * 100) : 0;
-    const sumMin = filteredAndSortedDebts.reduce((acc, d) => acc + d.minimumPayment, 0);
+    const activeInFilter = filteredAndSortedDebts.filter((d) => d.currentBalance > 0);
+    const sumOrigActive = activeInFilter.reduce((acc, d) => acc + d.originalBalance, 0);
+    const sumCurActive = activeInFilter.reduce((acc, d) => acc + d.currentBalance, 0);
+    const sumAmortActive = Math.max(0, sumOrigActive - sumCurActive);
+    const sumProgActive = sumOrigActive > 0 ? Math.round((sumAmortActive / sumOrigActive) * 100) : 0;
+    const sumMinActive = activeInFilter.reduce((acc, d) => acc + d.minimumPayment, 0);
 
     const totalsRow = [
       'TOTAL',
-      `"CONSOLIDADO (${filteredAndSortedDebts.length} DEUDAS)"`,
+      `"TOTALES ACTIVOS (${activeInFilter.length} DEUDAS ACTIVAS)"`,
       '""',
       '""',
       '""',
       '""',
       '""',
       '""',
-      sumOrig.toFixed(2),
-      sumCur.toFixed(2),
-      sumAmort.toFixed(2),
-      `${sumProg}%`,
-      sumMin.toFixed(2),
+      sumOrigActive.toFixed(2),
+      sumCurActive.toFixed(2),
+      sumAmortActive.toFixed(2),
+      `${sumProgActive}%`,
+      sumMinActive.toFixed(2),
       '""',
     ].join(';');
 
@@ -401,16 +404,27 @@ export default function DebtsManager() {
     document.body.removeChild(link);
   };
 
-  const totalDebt = debts.reduce((sum, d) => sum + d.currentBalance, 0);
-  const totalOriginal = debts.reduce((sum, d) => sum + d.originalBalance, 0);
-  const totalAmortized = Math.max(0, totalOriginal - totalDebt);
-  const totalProgress = totalOriginal > 0 ? Math.round((totalAmortized / totalOriginal) * 100) : 0;
-  const totalMin = debts.reduce((sum, d) => sum + d.minimumPayment, 0);
-  const avgApr = debts.length > 0 ? debts.reduce((sum, d) => sum + d.apr, 0) / debts.length : 0;
+  // Calculations only over active debts (currentBalance > 0)
+  const activeDebts = debts.filter((d) => d.currentBalance > 0);
+  const totalDebt = activeDebts.reduce((sum, d) => sum + d.currentBalance, 0);
+  const totalOriginalActive = activeDebts.reduce((sum, d) => sum + d.originalBalance, 0);
+  const totalAmortized = Math.max(0, totalOriginalActive - totalDebt);
+  const totalProgress = totalOriginalActive > 0 ? Math.round((totalAmortized / totalOriginalActive) * 100) : 0;
+  const totalMin = activeDebts.reduce((sum, d) => sum + d.minimumPayment, 0);
+  const avgApr = activeDebts.length > 0 ? activeDebts.reduce((sum, d) => sum + d.apr, 0) / activeDebts.length : 0;
 
   // Active debts count
   const activeCount = debts.filter((d) => d.currentBalance > 0).length;
   const paidCount = debts.filter((d) => d.currentBalance <= 0).length;
+
+  // Table active footer totals
+  const activeFiltered = filteredAndSortedDebts.filter((d) => d.currentBalance > 0);
+  const footerActiveOriginal = activeFiltered.reduce((acc, d) => acc + d.originalBalance, 0);
+  const footerActiveCurrent = activeFiltered.reduce((acc, d) => acc + d.currentBalance, 0);
+  const footerAmortized = Math.max(0, footerActiveOriginal - footerActiveCurrent);
+  const footerProgress = footerActiveOriginal > 0 ? Math.round((footerAmortized / footerActiveOriginal) * 100) : 0;
+  const footerActiveMin = activeFiltered.reduce((acc, d) => acc + d.minimumPayment, 0);
+  const footerAvgApr = activeFiltered.length > 0 ? activeFiltered.reduce((sum, d) => sum + d.apr, 0) / activeFiltered.length : 0;
 
   return (
     <div className="space-y-6">
@@ -467,20 +481,20 @@ export default function DebtsManager() {
         </div>
 
         <div className="rounded-2xl border border-border-default bg-surface-50 p-4">
-          <span className="text-xs font-medium text-text-secondary">Saldo Original Registrado</span>
+          <span className="text-xs font-medium text-text-secondary">Capital Original Activo</span>
           <div className="mt-1.5 text-2xl font-bold font-mono tabular-nums text-text-primary">
-            {formatCurrency(totalOriginal)}
+            {formatCurrency(totalOriginalActive)}
           </div>
-          <div className="mt-1 text-xs text-text-muted">Capital inicial total</div>
+          <div className="mt-1 text-xs text-text-muted">Deudas vigentes con saldo</div>
         </div>
 
         <div className="rounded-2xl border border-accent-500/20 bg-accent-500/5 p-4">
-          <span className="text-xs font-medium text-accent-400">Total Amortizado</span>
+          <span className="text-xs font-medium text-accent-400">Total Amortizado (Activas)</span>
           <div className="mt-1.5 text-2xl font-bold font-mono tabular-nums text-accent-400">
             {formatCurrency(totalAmortized)}
           </div>
           <div className="mt-1 text-xs text-text-muted">
-            {totalProgress}% del capital cancelado
+            {totalProgress}% amortizado de deudas vigentes
           </div>
         </div>
 
@@ -489,7 +503,7 @@ export default function DebtsManager() {
           <div className="mt-1.5 text-2xl font-bold font-mono tabular-nums text-warning-400">
             {formatCurrency(totalMin)}
           </div>
-          <div className="mt-1 text-xs text-text-muted">Suma cuotas / mínimos al mes</div>
+          <div className="mt-1 text-xs text-text-muted">Cuotas mínimas activas ({activeCount})</div>
         </div>
       </div>
 
@@ -783,7 +797,7 @@ export default function DebtsManager() {
                       {/* Name / Details */}
                       <td className="px-3 py-2.5 border-r border-border-default/40">
                         <div className="flex flex-col gap-0.5">
-                          <span className={`font-semibold ${isPaid ? 'text-emerald-400 line-through' : 'text-text-primary'}`}>
+                          <span className={`font-semibold ${isPaid ? 'text-emerald-400' : 'text-text-primary'}`}>
                             {debt.name}
                           </span>
                           <div className="flex items-center gap-1.5 flex-wrap">
@@ -854,28 +868,46 @@ export default function DebtsManager() {
                       </td>
 
                       {/* Cuota Mínima */}
-                      <td className="px-3 py-2.5 text-right font-mono tabular-nums text-warning-400 font-semibold border-r border-border-default/40 whitespace-nowrap">
-                        {formatCurrency(debt.minimumPayment)}
+                      <td className="px-3 py-2.5 text-right font-mono tabular-nums border-r border-border-default/40 whitespace-nowrap">
+                        {isPaid ? (
+                          <span className="text-emerald-400 font-medium">$0.00</span>
+                        ) : (
+                          <span className="text-warning-400 font-semibold">
+                            {formatCurrency(debt.minimumPayment)}
+                          </span>
+                        )}
                       </td>
 
                       {/* Amortización */}
                       <td className="px-3 py-2.5 border-r border-border-default/40">
-                        <div className="space-y-1">
-                          <div className="flex items-center justify-between text-[11px]">
-                            <span className="font-mono text-accent-400 font-semibold">
-                              {paidPercent}%
-                            </span>
-                            <span className="text-text-muted text-[10px] font-mono tabular-nums">
-                              {formatCurrency(amortized)}
-                            </span>
+                        {isPaid ? (
+                          <div className="space-y-1">
+                            <div className="flex items-center justify-between text-[11px]">
+                              <span className="font-mono text-emerald-400 font-semibold">100%</span>
+                              <span className="text-emerald-400/80 text-[10px] font-mono">Pagada</span>
+                            </div>
+                            <div className="h-1.5 w-full rounded-full bg-emerald-500/20 overflow-hidden">
+                              <div className="h-full bg-emerald-400 rounded-full w-full" />
+                            </div>
                           </div>
-                          <div className="h-1.5 w-full rounded-full bg-surface-200 overflow-hidden">
-                            <div
-                              className="h-full bg-accent-400 rounded-full transition-all duration-300"
-                              style={{ width: `${paidPercent}%` }}
-                            />
+                        ) : (
+                          <div className="space-y-1">
+                            <div className="flex items-center justify-between text-[11px]">
+                              <span className="font-mono text-accent-400 font-semibold">
+                                {paidPercent}%
+                              </span>
+                              <span className="text-text-muted text-[10px] font-mono tabular-nums">
+                                {formatCurrency(amortized)}
+                              </span>
+                            </div>
+                            <div className="h-1.5 w-full rounded-full bg-surface-200 overflow-hidden">
+                              <div
+                                className="h-full bg-accent-400 rounded-full transition-all duration-300"
+                                style={{ width: `${paidPercent}%` }}
+                              />
+                            </div>
                           </div>
-                        </div>
+                        )}
                       </td>
 
                       {/* Estado */}
@@ -947,32 +979,32 @@ export default function DebtsManager() {
                     ∑
                   </td>
                   <td colSpan={3} className="px-3 py-2.5 border-r border-border-default/40 font-bold uppercase tracking-wide">
-                    TOTALES CONSOLIDADOS ({filteredAndSortedDebts.length} filas)
+                    TOTALES ACTIVOS ({activeFiltered.length} con saldo)
                   </td>
                   <td className="px-3 py-2.5 text-center font-mono border-r border-border-default/40 text-text-secondary">
-                    {avgApr.toFixed(1)}%
+                    {footerAvgApr.toFixed(1)}%
                   </td>
                   <td className="px-3 py-2.5 text-right font-mono tabular-nums text-text-primary border-r border-border-default/40">
-                    {formatCurrency(filteredAndSortedDebts.reduce((acc, d) => acc + d.originalBalance, 0))}
+                    {formatCurrency(footerActiveOriginal)}
                   </td>
                   <td className="px-3 py-2.5 text-right font-mono tabular-nums text-danger-400 font-bold border-r border-border-default/40">
-                    {formatCurrency(filteredAndSortedDebts.reduce((acc, d) => acc + d.currentBalance, 0))}
+                    {formatCurrency(footerActiveCurrent)}
                   </td>
                   <td className="px-3 py-2.5 text-right font-mono tabular-nums text-warning-400 font-bold border-r border-border-default/40">
-                    {formatCurrency(filteredAndSortedDebts.reduce((acc, d) => acc + d.minimumPayment, 0))}
+                    {formatCurrency(footerActiveMin)}
                   </td>
                   <td className="px-3 py-2.5 border-r border-border-default/40">
                     <div className="flex items-center justify-between text-[11px] font-mono font-bold">
                       <span className="text-accent-400">
-                        {totalProgress}%
+                        {footerProgress}%
                       </span>
                       <span className="text-text-muted text-[10px]">
-                        {formatCurrency(totalAmortized)}
+                        {formatCurrency(footerAmortized)}
                       </span>
                     </div>
                   </td>
                   <td colSpan={2} className="px-3 py-2.5 text-center text-text-muted text-[11px]">
-                    Planilla al día
+                    Deudas activas
                   </td>
                 </tr>
               </tfoot>
@@ -989,6 +1021,7 @@ export default function DebtsManager() {
                 debt.originalBalance > 0
                   ? Math.min(100, Math.max(0, Math.round((amortized / debt.originalBalance) * 100)))
                   : 0;
+              const isPaid = debt.currentBalance <= 0;
 
               return (
                 <div
@@ -997,7 +1030,9 @@ export default function DebtsManager() {
                 >
                   <div className="space-y-1.5 flex-1">
                     <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-                      <span className="font-semibold text-text-primary text-base">{debt.name}</span>
+                      <span className={`font-semibold text-base ${isPaid ? 'text-emerald-400' : 'text-text-primary'}`}>
+                        {debt.name}
+                      </span>
                       {debt.creditor && (
                         <span className="text-xs bg-surface-200 px-2 py-0.5 rounded text-text-secondary">
                           {debt.creditor}
@@ -1022,18 +1057,25 @@ export default function DebtsManager() {
                       </span>
                       <span>
                         Mínimo requerido:{' '}
-                        <strong className="text-warning-400">{formatCurrency(debt.minimumPayment)}</strong>
+                        <strong className={isPaid ? 'text-emerald-400' : 'text-warning-400'}>
+                          {isPaid ? '$0.00 (Liquidada)' : formatCurrency(debt.minimumPayment)}
+                        </strong>
                       </span>
                       <span>
-                        Progreso pago: <strong>{paidPercent}%</strong> ({formatCurrency(amortized)})
+                        Progreso pago:{' '}
+                        <strong>
+                          {isPaid ? '100% (Liquidada)' : `${paidPercent}% (${formatCurrency(amortized)})`}
+                        </strong>
                       </span>
                     </div>
 
                     {/* Progress bar */}
                     <div className="w-full bg-surface-200 h-1.5 rounded-full overflow-hidden mt-2">
                       <div
-                        className="bg-accent-400 h-full rounded-full transition-all duration-500"
-                        style={{ width: `${paidPercent}%` }}
+                        className={`h-full rounded-full transition-all duration-500 ${
+                          isPaid ? 'bg-emerald-400' : 'bg-accent-400'
+                        }`}
+                        style={{ width: isPaid ? '100%' : `${paidPercent}%` }}
                       />
                     </div>
                   </div>
