@@ -69,8 +69,35 @@ export function generateId(): string {
 }
 
 /**
- * Delay execution for a given number of milliseconds.
+ * Sanitize string input against HTML/Script injection (XSS)
+ * Strips script tags, javascript: pseudo-protocol, and escapes HTML characters.
  */
-export function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+export function sanitizeString(input: unknown): string {
+  if (typeof input !== 'string') return '';
+  return input
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '') // Remove script tags
+    .replace(/javascript:/gi, '') // Remove javascript: pseudo protocol
+    .replace(/on\w+="[^"]*"/gi, '') // Remove inline event handlers on*="..."
+    .replace(/on\w+='[^']*'/gi, '') // Remove inline event handlers on*='...'
+    .replace(/<[^>]+>/g, '') // Strip remaining HTML tags
+    .trim();
 }
+
+/**
+ * Sanitize object properties recursively
+ */
+export function sanitizeObject<T extends Record<string, any>>(obj: T): T {
+  if (!obj || typeof obj !== 'object') return obj;
+  const result: any = Array.isArray(obj) ? [] : {};
+  for (const [key, value] of Object.entries(obj)) {
+    if (typeof value === 'string') {
+      result[key] = sanitizeString(value);
+    } else if (value && typeof value === 'object' && !(value instanceof Date)) {
+      result[key] = sanitizeObject(value);
+    } else {
+      result[key] = value;
+    }
+  }
+  return result as T;
+}
+

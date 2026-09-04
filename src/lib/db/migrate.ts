@@ -338,10 +338,18 @@ async function migrateAll() {
     console.log('✅ Índice debts_user_balance_idx creado');
   } catch {}
 
-  try {
-    await db.execute(sql`CREATE INDEX \`expenses_user_timing_idx\` ON \`expenses\` (\`userId\`, \`paymentTiming\`);`);
-    console.log('✅ Índice expenses_user_timing_idx creado');
-  } catch {}
+  // 15. Login Attempts (Protección contra fuerza bruta: 3-4 intentos)
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS \`login_attempts\` (
+      \`id\` VARCHAR(36) PRIMARY KEY,
+      \`identifier\` VARCHAR(255) NOT NULL UNIQUE,
+      \`attempts\` INT NOT NULL DEFAULT 0,
+      \`lockedUntil\` TIMESTAMP NULL,
+      \`createdAt\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      \`updatedAt\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    );
+  `);
+  console.log('✅ Tabla login_attempts lista');
 
   console.log('🎉 Todas las tablas e índices fueron migrados y verificados.');
 }

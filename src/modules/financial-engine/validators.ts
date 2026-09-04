@@ -7,6 +7,28 @@
  */
 
 import { z } from 'zod';
+import { sanitizeString } from '@/lib/utils';
+
+/**
+ * Reusable sanitized string schema that strips HTML/Script tags and malicious injections
+ */
+export const cleanString = (min = 1, max = 255, requiredMsg = 'Este campo es requerido') =>
+  z
+    .string()
+    .transform((val) => sanitizeString(val))
+    .pipe(
+      z
+        .string()
+        .min(min, requiredMsg)
+        .max(max, `No puede exceder ${max} caracteres`)
+    );
+
+export const optionalCleanString = (max = 255) =>
+  z
+    .string()
+    .transform((val) => sanitizeString(val))
+    .pipe(z.string().max(max, `No puede exceder ${max} caracteres`))
+    .optional();
 
 // ─── Enums ───
 
@@ -17,26 +39,19 @@ export const salaryPaymentSchemeSchema = z.enum(['monthly', 'quincena_fin_mes'])
 // Tipos y categorías son catálogos administrables desde el panel de admin
 // (tabla catalog_options), por eso aceptan cualquier clave razonable en vez
 // de un enum cerrado.
-export const debtTypeSchema = z
-  .string()
-  .min(1, 'El tipo de deuda es requerido')
-  .max(50, 'El tipo de deuda no puede exceder 50 caracteres');
+export const debtTypeSchema = cleanString(1, 50, 'El tipo de deuda es requerido');
 
-export const expenseCategorySchema = z
-  .string()
-  .min(1, 'La categoría es requerida')
-  .max(100, 'La categoría no puede exceder 100 caracteres');
+export const expenseCategorySchema = cleanString(1, 100, 'La categoría es requerida');
 
 export const strategySchema = z.enum(['avalanche', 'snowball', 'liquidity', 'custom']);
 export const currencySchema = z.enum(['USD', 'EUR']);
 
 // ─── Income & Ecuadorian Salary ───
 
+// ─── Income & Ecuadorian Salary ───
+
 export const incomeSchema = z.object({
-  name: z
-    .string()
-    .min(1, 'El nombre o concepto es requerido')
-    .max(255, 'El nombre no puede exceder 255 caracteres'),
+  name: cleanString(1, 255, 'El nombre o concepto es requerido'),
   amount: z
     .number()
     .positive('El monto debe ser mayor a 0')
@@ -67,18 +82,15 @@ export const incomeSchema = z.object({
     .min(0, 'Las utilidades no pueden ser negativas')
     .max(999999999.99, 'El monto excede el límite')
     .default(0),
-  workStartDate: z.string().nullable().optional(),
-  date: z.string().optional(),
-  category: z.string().optional(),
+  workStartDate: optionalCleanString(50).nullable(),
+  date: optionalCleanString(50),
+  category: optionalCleanString(50),
 });
 
 // ─── Expense ───
 
 export const expenseSchema = z.object({
-  name: z
-    .string()
-    .min(1, 'El nombre o descripción del gasto es requerido')
-    .max(255, 'El nombre no puede exceder 255 caracteres'),
+  name: cleanString(1, 255, 'El nombre o descripción del gasto es requerido'),
   amount: z
     .number()
     .positive('El monto debe ser mayor a 0')
@@ -87,23 +99,17 @@ export const expenseSchema = z.object({
   isEssential: z.boolean().default(true),
   frequency: frequencySchema.default('monthly'),
   paymentTiming: z.enum(['quincena', 'fin_de_mes', 'ambas']).default('ambas'),
-  activeFrom: z.string().nullable().optional(),
-  activeUntil: z.string().nullable().optional(),
-  date: z.string().optional(),
-  description: z.string().max(255).optional(),
+  activeFrom: optionalCleanString(50).nullable(),
+  activeUntil: optionalCleanString(50).nullable(),
+  date: optionalCleanString(50),
+  description: optionalCleanString(255),
 });
 
 // ─── Debt ───
 
 export const debtSchema = z.object({
-  name: z
-    .string()
-    .min(1, 'El nombre de la deuda o tarjeta es requerido')
-    .max(255, 'El nombre no puede exceder 255 caracteres'),
-  creditor: z
-    .string()
-    .max(255, 'El banco o acreedor no puede exceder 255 caracteres')
-    .optional(),
+  name: cleanString(1, 255, 'El nombre de la deuda o tarjeta es requerido'),
+  creditor: optionalCleanString(255),
   currentBalance: z
     .number()
     .min(0, 'El saldo no puede ser negativo')
@@ -143,29 +149,23 @@ export const debtSchema = z.object({
 // ─── Payment ───
 
 export const paymentSchema = z.object({
-  debtId: z.string().min(1, 'ID de deuda requerido'),
+  debtId: cleanString(1, 64, 'ID de deuda requerido'),
   amount: z
     .number()
     .positive('El monto del abono debe ser mayor a 0')
     .max(999999999.99, 'El monto excede el límite'),
   type: z.enum(['minimum', 'extra', 'full']).default('minimum'),
-  paidAt: z.string().min(1, 'Fecha de pago requerida'),
-  notes: z.string().max(500, 'Las notas no pueden exceder 500 caracteres').optional(),
+  paidAt: cleanString(1, 50, 'Fecha de pago requerida'),
+  notes: optionalCleanString(500),
 });
 
 // ─── Savings Goal ───
 
 // Catálogo administrable desde el panel de admin (igual que gastos y deudas)
-export const savingsGoalCategorySchema = z
-  .string()
-  .min(1, 'La categoría es requerida')
-  .max(50, 'La categoría no puede exceder 50 caracteres');
+export const savingsGoalCategorySchema = cleanString(1, 50, 'La categoría es requerida');
 
 export const savingsGoalSchema = z.object({
-  name: z
-    .string()
-    .min(1, 'El nombre de la meta es requerido')
-    .max(255, 'El nombre no puede exceder 255 caracteres'),
+  name: cleanString(1, 255, 'El nombre de la meta es requerido'),
   targetAmount: z
     .number()
     .positive('El monto objetivo debe ser mayor a 0')
@@ -176,16 +176,14 @@ export const savingsGoalSchema = z.object({
     .min(0, 'La contribución mensual no puede ser negativa')
     .max(999999999.99, 'El monto excede el límite')
     .default(0),
-  startDate: z.string().min(1, 'Fecha de inicio requerida'),
-  targetDate: z.string().nullable().optional(),
+  startDate: cleanString(1, 50, 'Fecha de inicio requerida'),
+  targetDate: optionalCleanString(50).nullable(),
   category: savingsGoalCategorySchema.default('other'),
-  icon: z.string().max(10).default('🎯'),
+  icon: optionalCleanString(10).default('🎯'),
   priority: z.number().int().min(1).max(10).default(1),
   status: z.enum(['active', 'completed', 'paused']).default('active'),
-  // Vínculo con un gasto: la meta acumula automáticamente el monto del gasto
-  // cada mes desde linkedSince (null = sin vínculo)
-  linkedExpenseId: z.string().max(36).nullable().optional(),
-  linkedSince: z.string().nullable().optional(),
+  linkedExpenseId: optionalCleanString(36).nullable(),
+  linkedSince: optionalCleanString(50).nullable(),
 });
 
 // ─── Auth ───
@@ -193,8 +191,13 @@ export const savingsGoalSchema = z.object({
 export const loginSchema = z.object({
   email: z
     .string()
-    .email('Correo electrónico inválido')
-    .max(255, 'El correo no puede exceder 255 caracteres'),
+    .transform((val) => sanitizeString(val).toLowerCase())
+    .pipe(
+      z
+        .string()
+        .email('Correo electrónico inválido')
+        .max(255, 'El correo no puede exceder 255 caracteres')
+    ),
   password: z
     .string()
     .min(8, 'La contraseña debe tener al menos 8 caracteres')
@@ -202,15 +205,17 @@ export const loginSchema = z.object({
 });
 
 export const registerSchema = z.object({
-  name: z
-    .string()
-    .min(2, 'El nombre debe tener al menos 2 caracteres')
-    .max(255, 'El nombre no puede exceder 255 caracteres'),
+  name: cleanString(2, 255, 'El nombre debe tener al menos 2 caracteres'),
   email: z
     .string()
-    .email('Correo electrónico inválido')
-    .max(255, 'El correo no puede exceder 255 caracteres'),
-  birthDate: z.string().optional(),
+    .transform((val) => sanitizeString(val).toLowerCase())
+    .pipe(
+      z
+        .string()
+        .email('Correo electrónico inválido')
+        .max(255, 'El correo no puede exceder 255 caracteres')
+    ),
+  birthDate: optionalCleanString(50),
   password: z
     .string()
     .min(8, 'La contraseña debe tener al menos 8 caracteres')

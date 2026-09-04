@@ -360,3 +360,17 @@ export const budgets = mysqlTable(
     index('budgets_user_cat_idx').on(table.userId, table.category),
   ]
 );
+
+// ═══════════════════════════════════════════
+// Control de Intentos de Inicio de Sesión (Brute Force Protection)
+// ═══════════════════════════════════════════
+
+export const loginAttempts = mysqlTable('login_attempts', {
+  id: varchar('id', { length: 36 }).primaryKey(),
+  identifier: varchar('identifier', { length: 255 }).notNull().unique(), // email or ip
+  attempts: int('attempts').notNull().default(0),
+  lockedUntil: timestamp('lockedUntil'),
+  createdAt: timestamp('createdAt').notNull().defaultNow(),
+  updatedAt: timestamp('updatedAt').notNull().defaultNow().onUpdateNow(),
+});
+
