@@ -13,8 +13,8 @@ class ApiClient {
     dio = Dio(
       BaseOptions(
         baseUrl: defaultBaseUrl,
-        connectTimeout: const Duration(seconds: 15),
-        receiveTimeout: const Duration(seconds: 15),
+        connectTimeout: const Duration(seconds: 10),
+        receiveTimeout: const Duration(seconds: 10),
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
@@ -125,6 +125,16 @@ class ApiClient {
   }
 
   // ─── Módulo Financiero ───
+
+  // Schedule: Cronograma de pagos (próximos cortes)
+  Future<Map<String, dynamic>> getSchedule({int months = 3}) async {
+    try {
+      final response = await dio.get('/api/schedule', queryParameters: {'months': months});
+      return Map<String, dynamic>.from(response.data['data'] as Map);
+    } on DioException catch (e) {
+      throw Exception(e.response?.data?['error'] ?? 'Error al cargar cronograma');
+    }
+  }
 
   // Dashboard: Resumen financiero completo
   Future<Map<String, dynamic>> getDashboard() async {

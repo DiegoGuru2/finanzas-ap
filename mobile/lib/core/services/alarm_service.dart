@@ -3,6 +3,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:timezone/timezone.dart' as tz;
 import '../../models/activity_model.dart';
 
 class AlarmService {
@@ -48,7 +49,7 @@ class AlarmService {
       },
     );
 
-    // Crear canal de notificación de alta prioridad para Android (Full Screen Intent)
+    // Crear canal de notificación de alta prioridad para actividades/medicamentos
     const androidChannel = AndroidNotificationChannel(
       'urgent_activity_alarms',
       'Alarmas de Medicamentos y Actividades',
@@ -61,21 +62,37 @@ class AlarmService {
     await _notificationsPlugin
         .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
         ?.createNotificationChannel(androidChannel);
+
+    // Crear canal separado para notificaciones financieras
+    const financialChannel = AndroidNotificationChannel(
+      'financial_reminders',
+      'Recordatorios Financieros',
+      description: 'Alertas de pagos de deudas, gastos y cortes quincenales',
+      importance: Importance.high,
+      playSound: true,
+      enableVibration: true,
+    );
+
+    await _notificationsPlugin
+        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+        ?.createNotificationChannel(financialChannel);
   }
 
-  /// Programar una alarma de actividad o toma de medicina
+  /// Programar una alarma de actividad o toma de medicina usando zonedSchedule
+  /// para que suene a la hora exacta incluso con la app cerrada
   Future<void> scheduleActivityAlarm(ActivityModel activity) async {
     final int notificationId = activity.id.hashCode.abs() % 100000;
     final now = DateTime.now();
 
-    // Si ya pasó la hora programada, no programar a menos que esté en el futuro
+    // Si ya pasó la hora programada, no programar
     if (activity.scheduledAt.isBefore(now)) return;
 
-    final delay = activity.scheduledAt.difference(now);
+    debugPrint('[AlarmService] Programando alarma para: ${activity.title} a las ${activity.scheduledAt}');
 
-    debugPrint('[AlarmService] Programando alarma para: ${activity.title} en $delay');
+    // Cancelar notificación anterior con el mismo ID para evitar duplicados
+    await _notificationsPlugin.cancel(notificationId);
 
-    // Usar AndroidAlarmManager para ejecutar el disparo exacto
+    // Usar AndroidAlarmManager para ejecutar el disparo exacto (backup)
     try {
       await AndroidAlarmManager.oneShotAt(
         activity.scheduledAt,
@@ -113,15 +130,37 @@ class AlarmService {
       autoCancel: !isFullScreen,
     );
 
-    await _notificationsPlugin.show(
-      notificationId,
-      '⏰ ${activity.category.displayName.toUpperCase()}: ${activity.title}',
-      activity.description.isNotEmpty
-          ? activity.description
-          : 'Toca para confirmar o posponer la actividad.',
-      NotificationDetails(android: androidDetails),
-      payload: activity.id,
-    );
+    // Usar zonedSchedule para que la notificación se dispare a la hora exacta
+    // incluso con la app cerrada - esto es el fix del bug principal
+    final scheduledTZ = tz.TZDateTime.from(activity.scheduledAt, tz.local);
+
+    try {
+      await _notificationsPlugin.zonedSchedule(
+        notificationId,
+        '⏰ ${activity.category.displayName.toUpperCase()}: ${activity.title}',
+        activity.description.isNotEmpty
+            ? activity.description
+            : 'Toca para confirmar o posponer la actividad.',
+        scheduledTZ,
+        NotificationDetails(android: androidDetails),
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
+        payload: activity.id,
+      );
+      debugPrint('[AlarmService] ✅ zonedSchedule programado para: $scheduledTZ');
+    } catch (e) {
+      debugPrint('[AlarmService] zonedSchedule error: $e, usando show() como fallback');
+      // Fallback: si zonedSchedule falla (ej: hora muy cercana), mostrar de inmediato
+      await _notificationsPlugin.show(
+        notificationId,
+        '⏰ ${activity.category.displayName.toUpperCase()}: ${activity.title}',
+        activity.description.isNotEmpty
+            ? activity.description
+            : 'Toca para confirmar o posponer la actividad.',
+        NotificationDetails(android: androidDetails),
+        payload: activity.id,
+      );
+    }
   }
 
   /// Cancelar una alarma existente
@@ -132,6 +171,11 @@ class AlarmService {
       await AndroidAlarmManager.cancel(notificationId);
     } catch (_) {}
     stopAlarmSound();
+  }
+
+  /// Cancelar todas las alarmas de actividades (para evitar duplicados al reprogramar)
+  Future<void> cancelAllActivityAlarms() async {
+    await _notificationsPlugin.cancelAll();
   }
 
   /// Iniciar sonido repetitivo de alarma fuerte

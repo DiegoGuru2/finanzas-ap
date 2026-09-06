@@ -22,14 +22,8 @@ class DashboardView extends StatefulWidget {
 class _DashboardViewState extends State<DashboardView> {
   final currencyFormat = NumberFormat.currency(symbol: '\$', decimalDigits: 2);
 
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<FinancesProvider>().fetchAll();
-      context.read<ActivitiesProvider>().fetchActivities();
-    });
-  }
+  // No se hace fetchAll() aquí porque MainShellView ya lo hace en su initState.
+  // Evita la doble carga de API que causaba lentitud.
 
   void _openAddExpense() {
     showModalBottomSheet(

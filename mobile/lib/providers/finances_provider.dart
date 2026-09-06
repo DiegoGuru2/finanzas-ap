@@ -78,13 +78,24 @@ class FinancesProvider extends ChangeNotifier {
     return list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
   }
 
-  /// Cargar todo el resumen con rescates resilientes
-  Future<void> fetchAll() async {
+  DateTime? _lastFetchTime;
+
+  /// Cargar todo el resumen con rescates resilientes (paralelo + throttle)
+  Future<void> fetchAll({bool force = false}) async {
+    // Throttle: no re-cargar si se hizo hace menos de 2 segundos
+    final now = DateTime.now();
+    if (!force && _lastFetchTime != null && now.difference(_lastFetchTime!).inSeconds < 2) {
+      return;
+    }
+    if (_isLoading) return; // Evitar llamadas concurrentes
+
     _isLoading = true;
     _errorMessage = null;
+    _lastFetchTime = now;
     notifyListeners();
 
     try {
+      // Ejecutar Dashboard primero (es el más importante)
       try {
         _dashboardData = await _apiClient.getDashboard();
       } catch (e) {
@@ -92,29 +103,30 @@ class FinancesProvider extends ChangeNotifier {
         _errorMessage = e.toString().replaceAll('Exception: ', '');
       }
 
-      try {
-        _debts = await _apiClient.getDebts();
-      } catch (e) {
-        debugPrint('[FinancesProvider] getDebts error: $e');
-      }
+      // Ejecutar el resto en paralelo para velocidad
+      final results = await Future.wait([
+        _apiClient.getDebts().catchError((e) {
+          debugPrint('[FinancesProvider] getDebts error: $e');
+          return <Map<String, dynamic>>[];
+        }),
+        _apiClient.getExpenses().catchError((e) {
+          debugPrint('[FinancesProvider] getExpenses error: $e');
+          return <Map<String, dynamic>>[];
+        }),
+        _apiClient.getIncomes().catchError((e) {
+          debugPrint('[FinancesProvider] getIncomes error: $e');
+          return <Map<String, dynamic>>[];
+        }),
+        _apiClient.getSavings().catchError((e) {
+          debugPrint('[FinancesProvider] getSavings error: $e');
+          return <Map<String, dynamic>>[];
+        }),
+      ]);
 
-      try {
-        _expenses = await _apiClient.getExpenses();
-      } catch (e) {
-        debugPrint('[FinancesProvider] getExpenses error: $e');
-      }
-
-      try {
-        _incomes = await _apiClient.getIncomes();
-      } catch (e) {
-        debugPrint('[FinancesProvider] getIncomes error: $e');
-      }
-
-      try {
-        _savingsGoals = await _apiClient.getSavings();
-      } catch (e) {
-        debugPrint('[FinancesProvider] getSavings error: $e');
-      }
+      if (results[0].isNotEmpty || _debts.isEmpty) _debts = results[0];
+      if (results[1].isNotEmpty || _expenses.isEmpty) _expenses = results[1];
+      if (results[2].isNotEmpty || _incomes.isEmpty) _incomes = results[2];
+      if (results[3].isNotEmpty || _savingsGoals.isEmpty) _savingsGoals = results[3];
     } finally {
       _isLoading = false;
       notifyListeners();

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:timezone/data/latest_all.dart' as tz;
+import 'package:timezone/timezone.dart' as tzdb;
 import 'core/theme/app_theme.dart';
 import 'core/services/alarm_service.dart';
 import 'providers/auth_provider.dart';
@@ -14,12 +16,21 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Inicializar servicio de alarmas y notificaciones
+  // Inicializar zonas horarias (requerido por zonedSchedule)
+  tz.initializeTimeZones();
+  tzdb.setLocalLocation(tzdb.getLocation('America/Guayaquil'));
+
+  // Inicializar servicio de alarmas y notificaciones en paralelo (no bloquea UI)
   final alarmService = AlarmService();
-  await alarmService.initialize(
+  alarmService.initialize(
     onAlarmClick: (activityId) {
       if (activityId != null) {
-        // Al tocar la notificación, abrir pantalla de alarma a pantalla completa
+        // Notificación financiera: abrir el dashboard
+        if (activityId == 'financial_alert') {
+          // No hace nada especial, solo abre la app
+          return;
+        }
+        // Al tocar la notificación de actividad, abrir pantalla de alarma
         final context = navigatorKey.currentContext;
         if (context != null) {
           final provider = context.read<ActivitiesProvider>();
@@ -84,4 +95,3 @@ class RootGateView extends StatelessWidget {
     return const LoginView();
   }
 }
-

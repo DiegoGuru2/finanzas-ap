@@ -6,7 +6,7 @@ plugins {
 
 android {
     namespace "com.proyecahorro.mobile"
-    compileSdkVersion 35
+    compileSdkVersion 36
     ndkVersion flutter.ndkVersion
 
     compileOptions {

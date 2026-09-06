@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/services/financial_notification_service.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/finances_provider.dart';
 import '../../../providers/activities_provider.dart';
@@ -22,12 +23,25 @@ class MainShellView extends StatefulWidget {
 class _MainShellViewState extends State<MainShellView> {
   int _currentIndex = 0;
 
+  // Cache de páginas ya visitadas para evitar reconstrucciones,
+  // pero sin mantener todas en memoria desde el inicio (no IndexedStack)
+  final Map<int, Widget> _pageCache = {};
+
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<FinancesProvider>().fetchAll();
-      context.read<ActivitiesProvider>().fetchActivities();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final finances = context.read<FinancesProvider>();
+      final activities = context.read<ActivitiesProvider>();
+
+      // Cargar datos en paralelo
+      await Future.wait([
+        finances.fetchAll(),
+        activities.fetchActivities(),
+      ]);
+
+      // Programar notificaciones financieras con los datos frescos
+      FinancialNotificationService().scheduleFinancialNotifications();
     });
   }
 
@@ -35,19 +49,31 @@ class _MainShellViewState extends State<MainShellView> {
     setState(() => _currentIndex = index);
   }
 
+  Widget _buildPage(int index) {
+    // Cachear la página una vez construida
+    return _pageCache.putIfAbsent(index, () {
+      switch (index) {
+        case 0:
+          return DashboardView(onNavigateTab: _onSelectTab);
+        case 1:
+          return const DebtsView();
+        case 2:
+          return const ExpensesView();
+        case 3:
+          return const IncomesView();
+        case 4:
+          return const ActivitiesListView();
+        default:
+          return DashboardView(onNavigateTab: _onSelectTab);
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
     final act = context.watch<ActivitiesProvider>();
     final pendingMedsCount = act.medications.where((m) => !m.isCompleted).length;
-
-    final pages = [
-      DashboardView(onNavigateTab: _onSelectTab),
-      const DebtsView(),
-      const ExpensesView(),
-      const IncomesView(),
-      const ActivitiesListView(),
-    ];
 
     return Scaffold(
       appBar: AppBar(
@@ -234,9 +260,15 @@ class _MainShellViewState extends State<MainShellView> {
           ),
         ),
       ),
-      body: IndexedStack(
-        index: _currentIndex,
-        children: pages,
+      // Lazy loading: solo construye la página activa (cachea las visitadas)
+      body: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 200),
+        switchInCurve: Curves.easeOut,
+        switchOutCurve: Curves.easeIn,
+        child: KeyedSubtree(
+          key: ValueKey(_currentIndex),
+          child: _buildPage(_currentIndex),
+        ),
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,

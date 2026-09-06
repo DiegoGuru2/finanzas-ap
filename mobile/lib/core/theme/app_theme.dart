@@ -82,6 +82,13 @@ class AppTheme {
           ),
         ),
       ),
+      // Transiciones de página fluidas y nativas
+      pageTransitionsTheme: const PageTransitionsTheme(
+        builders: {
+          TargetPlatform.android: CupertinoPageTransitionsBuilder(),
+          TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+        },
+      ),
     );
   }
 }

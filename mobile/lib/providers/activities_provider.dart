@@ -35,20 +35,37 @@ class ActivitiesProvider extends ChangeNotifier {
     }).toList();
   }
 
+  DateTime? _lastFetchTime;
+
   /// Cargar actividades desde el servidor y reprogramar alarmas locales
-  Future<void> fetchActivities() async {
+  Future<void> fetchActivities({bool force = false}) async {
+    // Throttle: no re-cargar si se hizo hace menos de 2 segundos
+    final now = DateTime.now();
+    if (!force && _lastFetchTime != null && now.difference(_lastFetchTime!).inSeconds < 2) {
+      return;
+    }
+    if (_isLoading) return;
+
     _isLoading = true;
     _errorMessage = null;
+    _lastFetchTime = now;
     notifyListeners();
 
     try {
       final data = await _apiClient.getActivities();
       _activities = data.map((json) => ActivityModel.fromJson(json)).toList();
 
+      // Cancelar alarmas anteriores para evitar duplicados al reprogramar
+      // (solo cancela notificaciones, no las del canal financiero)
+      final pendingFuture = _activities
+          .where((act) => !act.isCompleted)
+          .map((act) => _alarmService.cancelActivityAlarm(act.id));
+      await Future.wait(pendingFuture);
+
       // Programar alarmas para las actividades pendientes futuras
-      final now = DateTime.now();
+      final currentTime = DateTime.now();
       for (final act in _activities) {
-        if (!act.isCompleted && act.scheduledAt.isAfter(now)) {
+        if (!act.isCompleted && act.scheduledAt.isAfter(currentTime)) {
           await _alarmService.scheduleActivityAlarm(act);
         }
       }
