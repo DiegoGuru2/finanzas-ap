@@ -54,26 +54,41 @@ class _MainShellViewState extends State<MainShellView> {
         title: Row(
           children: [
             Container(
-              width: 32,
-              height: 32,
+              width: 34,
+              height: 34,
+              padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [AppTheme.primary, AppTheme.secondary],
-                ),
-                borderRadius: BorderRadius.circular(8),
+                color: AppTheme.surfaceElevated,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: AppTheme.border),
               ),
-              child: const Icon(Icons.shield_rounded, size: 18, color: Colors.white),
+              child: Image.asset(
+                'assets/images/logo-icon.png',
+                fit: BoxFit.contain,
+              ),
             ),
             const SizedBox(width: 10),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('ProyecAhorro', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900)),
-                Text(
-                  auth.userEmail ?? 'Usuario',
-                  style: const TextStyle(fontSize: 10, color: AppTheme.textMuted),
-                ),
-              ],
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  RichText(
+                    text: const TextSpan(
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: Colors.white),
+                      children: [
+                        TextSpan(text: 'Proyec'),
+                        TextSpan(text: 'Ahorro', style: TextStyle(color: AppTheme.secondary)),
+                      ],
+                    ),
+                  ),
+                  Text(
+                    auth.userEmail ?? 'Usuario',
+                    style: const TextStyle(fontSize: 10, color: AppTheme.textMuted),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -112,9 +127,19 @@ class _MainShellViewState extends State<MainShellView> {
                   style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
                 ),
                 accountEmail: Text(auth.userEmail ?? ''),
-                currentAccountPicture: CircleAvatar(
-                  backgroundColor: AppTheme.primary.withValues(alpha: 0.3),
-                  child: const Icon(Icons.person, color: Colors.white, size: 36),
+                currentAccountPicture: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: AppTheme.surfaceElevated,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: AppTheme.secondary.withValues(alpha: 0.5), width: 2),
+                  ),
+                  child: ClipOval(
+                    child: Image.asset(
+                      'assets/images/logo-icon.png',
+                      fit: BoxFit.contain,
+                    ),
+                  ),
                 ),
               ),
               ListTile(
@@ -193,7 +218,18 @@ class _MainShellViewState extends State<MainShellView> {
                   auth.logout();
                 },
               ),
-              const SizedBox(height: 12),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Image.asset('assets/images/logo-icon.png', width: 14, height: 14),
+                    const SizedBox(width: 6),
+                    const Text('ProyecAhorro · Por DG design', style: TextStyle(fontSize: 10, color: AppTheme.textMuted)),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
             ],
           ),
         ),

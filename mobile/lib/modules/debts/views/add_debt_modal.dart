@@ -194,15 +194,16 @@ class _AddDebtModalState extends State<AddDebtModal> {
               const SizedBox(height: 16),
 
               DropdownButtonFormField<String>(
+                isExpanded: true,
                 initialValue: _selectedType,
                 dropdownColor: AppTheme.surfaceElevated,
                 decoration: const InputDecoration(labelText: 'Tipo de Deuda'),
                 items: const [
-                  DropdownMenuItem(value: 'credit_card', child: Text('Tarjeta de Crédito')),
-                  DropdownMenuItem(value: 'personal_loan', child: Text('Préstamo Personal')),
-                  DropdownMenuItem(value: 'mortgage', child: Text('Hipotecario')),
-                  DropdownMenuItem(value: 'car_loan', child: Text('Vehicular')),
-                  DropdownMenuItem(value: 'informal', child: Text('Informal / Familiar')),
+                  DropdownMenuItem(value: 'credit_card', child: Text('Tarjeta de Crédito', overflow: TextOverflow.ellipsis)),
+                  DropdownMenuItem(value: 'personal_loan', child: Text('Préstamo Personal', overflow: TextOverflow.ellipsis)),
+                  DropdownMenuItem(value: 'mortgage', child: Text('Hipotecario', overflow: TextOverflow.ellipsis)),
+                  DropdownMenuItem(value: 'car_loan', child: Text('Vehicular', overflow: TextOverflow.ellipsis)),
+                  DropdownMenuItem(value: 'informal', child: Text('Informal / Familiar', overflow: TextOverflow.ellipsis)),
                 ],
                 onChanged: (val) => setState(() => _selectedType = val ?? 'credit_card'),
               ),

@@ -81,49 +81,52 @@ class _LoginViewState extends State<LoginView> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // Logo
+                  // Logo Oficial ProyecAhorro de la Web
                   Container(
-                    width: 72,
-                    height: 72,
+                    width: 76,
+                    height: 76,
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [AppTheme.primary, AppTheme.secondary],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(20),
+                      color: AppTheme.surfaceElevated,
+                      borderRadius: BorderRadius.circular(22),
+                      border: Border.all(color: AppTheme.border),
                       boxShadow: [
                         BoxShadow(
-                          color: AppTheme.primary.withValues(alpha: 0.35),
+                          color: AppTheme.primary.withValues(alpha: 0.25),
                           blurRadius: 20,
-                          offset: const Offset(0, 8),
+                          offset: const Offset(0, 6),
                         ),
                       ],
                     ),
-                    child: const Icon(
-                      Icons.shield_outlined,
-                      color: Colors.white,
-                      size: 38,
+                    padding: const EdgeInsets.all(10),
+                    child: Image.asset(
+                      'assets/images/logo-icon.png',
+                      fit: BoxFit.contain,
                     ),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 18),
 
-                  const Text(
-                    'ProyecAhorro',
-                    style: TextStyle(
-                      fontSize: 26,
-                      fontWeight: FontWeight.w900,
-                      color: Colors.white,
-                      letterSpacing: -0.5,
+                  RichText(
+                    text: const TextSpan(
+                      style: TextStyle(
+                        fontSize: 26,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.white,
+                        letterSpacing: -0.5,
+                      ),
+                      children: [
+                        TextSpan(text: 'Proyec'),
+                        TextSpan(text: 'Ahorro', style: TextStyle(color: AppTheme.secondary)),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 4),
                   const Text(
-                    'Tu asistente financiero y agenda protegida',
+                    'Gestiona hoy, proyecta tu mañana',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      fontSize: 13,
+                      fontSize: 12,
                       color: AppTheme.textMuted,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                   const SizedBox(height: 32),

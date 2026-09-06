@@ -127,17 +127,18 @@ class _AddExpenseModalState extends State<AddExpenseModal> {
               const SizedBox(height: 16),
 
               DropdownButtonFormField<String>(
+                isExpanded: true,
                 initialValue: _category,
                 dropdownColor: AppTheme.surfaceElevated,
                 decoration: const InputDecoration(labelText: 'Categoría'),
                 items: const [
-                  DropdownMenuItem(value: 'food', child: Text('Alimentación / Supermercado')),
-                  DropdownMenuItem(value: 'housing', child: Text('Vivienda / Arriendo')),
-                  DropdownMenuItem(value: 'transport', child: Text('Transporte / Combustible')),
-                  DropdownMenuItem(value: 'utilities', child: Text('Servicios Básicos (Luz, Agua, Net)')),
-                  DropdownMenuItem(value: 'health', child: Text('Salud y Farmacia')),
-                  DropdownMenuItem(value: 'entertainment', child: Text('Ocio y Salidas')),
-                  DropdownMenuItem(value: 'other', child: Text('Otro / Varios')),
+                  DropdownMenuItem(value: 'food', child: Text('Alimentación / Supermercado', overflow: TextOverflow.ellipsis)),
+                  DropdownMenuItem(value: 'housing', child: Text('Vivienda / Arriendo', overflow: TextOverflow.ellipsis)),
+                  DropdownMenuItem(value: 'transport', child: Text('Transporte / Combustible', overflow: TextOverflow.ellipsis)),
+                  DropdownMenuItem(value: 'utilities', child: Text('Servicios Básicos (Luz, Agua, Net)', overflow: TextOverflow.ellipsis)),
+                  DropdownMenuItem(value: 'health', child: Text('Salud y Farmacia', overflow: TextOverflow.ellipsis)),
+                  DropdownMenuItem(value: 'entertainment', child: Text('Ocio y Salidas', overflow: TextOverflow.ellipsis)),
+                  DropdownMenuItem(value: 'other', child: Text('Otro / Varios', overflow: TextOverflow.ellipsis)),
                 ],
                 onChanged: (val) => setState(() => _category = val ?? 'food'),
               ),
@@ -147,13 +148,14 @@ class _AddExpenseModalState extends State<AddExpenseModal> {
                 children: [
                   Expanded(
                     child: DropdownButtonFormField<String>(
+                      isExpanded: true,
                       initialValue: _frequency,
                       dropdownColor: AppTheme.surfaceElevated,
                       decoration: const InputDecoration(labelText: 'Frecuencia'),
                       items: const [
-                        DropdownMenuItem(value: 'monthly', child: Text('Mensual')),
-                        DropdownMenuItem(value: 'weekly', child: Text('Semanal')),
-                        DropdownMenuItem(value: 'once', child: Text('Único / Ocasional')),
+                        DropdownMenuItem(value: 'monthly', child: Text('Mensual', overflow: TextOverflow.ellipsis)),
+                        DropdownMenuItem(value: 'weekly', child: Text('Semanal', overflow: TextOverflow.ellipsis)),
+                        DropdownMenuItem(value: 'once', child: Text('Único / Ocasional', overflow: TextOverflow.ellipsis)),
                       ],
                       onChanged: (val) => setState(() => _frequency = val ?? 'monthly'),
                     ),
@@ -161,13 +163,14 @@ class _AddExpenseModalState extends State<AddExpenseModal> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: DropdownButtonFormField<String>(
+                      isExpanded: true,
                       initialValue: _paymentTiming,
                       dropdownColor: AppTheme.surfaceElevated,
                       decoration: const InputDecoration(labelText: 'Momento de Pago'),
                       items: const [
-                        DropdownMenuItem(value: 'ambas', child: Text('Ambas')),
-                        DropdownMenuItem(value: 'quincena', child: Text('Quincena')),
-                        DropdownMenuItem(value: 'fin_de_mes', child: Text('Fin de Mes')),
+                        DropdownMenuItem(value: 'ambas', child: Text('Ambas', overflow: TextOverflow.ellipsis)),
+                        DropdownMenuItem(value: 'quincena', child: Text('Quincena', overflow: TextOverflow.ellipsis)),
+                        DropdownMenuItem(value: 'fin_de_mes', child: Text('Fin de Mes', overflow: TextOverflow.ellipsis)),
                       ],
                       onChanged: (val) => setState(() => _paymentTiming = val ?? 'ambas'),
                     ),

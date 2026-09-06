@@ -272,16 +272,17 @@ class _AddActivityModalState extends State<AddActivityModal> {
               ),
               const SizedBox(height: 8),
               DropdownButtonFormField<String>(
+                isExpanded: true,
                 initialValue: _recurrenceType,
                 dropdownColor: AppTheme.surfaceElevated,
                 decoration: const InputDecoration(
                   contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                 ),
                 items: const [
-                  DropdownMenuItem(value: 'none', child: Text('Una sola vez')),
-                  DropdownMenuItem(value: 'interval_hours', child: Text('Cada X horas (Medicamentos)')),
-                  DropdownMenuItem(value: 'daily', child: Text('Todos los días')),
-                  DropdownMenuItem(value: 'weekly', child: Text('Semanal')),
+                  DropdownMenuItem(value: 'none', child: Text('Una sola vez', overflow: TextOverflow.ellipsis)),
+                  DropdownMenuItem(value: 'interval_hours', child: Text('Cada X horas (Medicamentos)', overflow: TextOverflow.ellipsis)),
+                  DropdownMenuItem(value: 'daily', child: Text('Todos los días', overflow: TextOverflow.ellipsis)),
+                  DropdownMenuItem(value: 'weekly', child: Text('Semanal', overflow: TextOverflow.ellipsis)),
                 ],
                 onChanged: (val) => setState(() => _recurrenceType = val ?? 'none'),
               ),

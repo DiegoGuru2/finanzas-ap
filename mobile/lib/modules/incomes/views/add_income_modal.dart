@@ -136,12 +136,13 @@ class _AddIncomeModalState extends State<AddIncomeModal> {
               const SizedBox(height: 14),
 
               DropdownButtonFormField<String>(
+                isExpanded: true,
                 initialValue: _paymentScheme,
                 dropdownColor: AppTheme.surfaceElevated,
                 decoration: const InputDecoration(labelText: 'Modalidad de Cobro'),
                 items: const [
-                  DropdownMenuItem(value: 'quincena_fin_mes', child: Text('Quincena + Fin de Mes (50/50)')),
-                  DropdownMenuItem(value: 'monthly', child: Text('Fin de Mes Completo (100%)')),
+                  DropdownMenuItem(value: 'quincena_fin_mes', child: Text('Quincena + Fin de Mes (50/50)', overflow: TextOverflow.ellipsis)),
+                  DropdownMenuItem(value: 'monthly', child: Text('Fin de Mes Completo (100%)', overflow: TextOverflow.ellipsis)),
                 ],
                 onChanged: (val) => setState(() => _paymentScheme = val ?? 'quincena_fin_mes'),
               ),

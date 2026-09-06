@@ -348,13 +348,14 @@ class _SettingsViewState extends State<SettingsView> {
                     if (_deductIess) ...[
                       const SizedBox(height: 10),
                       DropdownButtonFormField<double>(
+                        isExpanded: true,
                         value: _iessPercentage,
                         decoration: const InputDecoration(labelText: 'Régimen de Afiliación'),
                         items: const [
-                          DropdownMenuItem(value: 9.45, child: Text('9.45% (Bajo dependencia / Privado)')),
-                          DropdownMenuItem(value: 11.45, child: Text('11.45% (Sector Público)')),
-                          DropdownMenuItem(value: 17.60, child: Text('17.60% (Afiliación Voluntaria)')),
-                          DropdownMenuItem(value: 20.60, child: Text('20.60% (Sin relación)')),
+                          DropdownMenuItem(value: 9.45, child: Text('9.45% (Bajo dependencia / Privado)', overflow: TextOverflow.ellipsis)),
+                          DropdownMenuItem(value: 11.45, child: Text('11.45% (Sector Público)', overflow: TextOverflow.ellipsis)),
+                          DropdownMenuItem(value: 17.60, child: Text('17.60% (Afiliación Voluntaria)', overflow: TextOverflow.ellipsis)),
+                          DropdownMenuItem(value: 20.60, child: Text('20.60% (Sin relación)', overflow: TextOverflow.ellipsis)),
                         ],
                         onChanged: (val) {
                           if (val != null) {
@@ -615,11 +616,12 @@ class _SettingsViewState extends State<SettingsView> {
                       children: [
                         Expanded(
                           child: DropdownButtonFormField<String>(
+                            isExpanded: true,
                             value: _region,
                             decoration: const InputDecoration(labelText: 'Región'),
                             items: const [
-                              DropdownMenuItem(value: 'costa', child: Text('Costa (Marzo)')),
-                              DropdownMenuItem(value: 'sierra', child: Text('Sierra (Agosto)')),
+                              DropdownMenuItem(value: 'costa', child: Text('Costa (Marzo)', overflow: TextOverflow.ellipsis)),
+                              DropdownMenuItem(value: 'sierra', child: Text('Sierra (Agosto)', overflow: TextOverflow.ellipsis)),
                             ],
                             onChanged: (val) {
                               if (val != null) setState(() => _region = val);
