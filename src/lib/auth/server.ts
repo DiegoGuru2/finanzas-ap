@@ -1,10 +1,12 @@
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
+import { bearer } from 'better-auth/plugins';
 import { db } from '../db';
 import * as schema from '../db/schema';
 import { sendPasswordResetEmail } from '../email';
 
 export const auth = betterAuth({
+  plugins: [bearer()],
   database: drizzleAdapter(db, {
     provider: 'mysql',
     schema: {
