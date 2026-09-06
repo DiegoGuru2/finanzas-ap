@@ -31,3 +31,8 @@ pnpm-debug.log*
 
 # personal data files
 *.xlsx
+
+# android build outputs
+*.apk
+mobile/build/
+

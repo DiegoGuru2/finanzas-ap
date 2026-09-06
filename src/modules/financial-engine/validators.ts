@@ -236,3 +236,45 @@ export type SavingsGoalInput = z.infer<typeof savingsGoalSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type RegisterInput = z.infer<typeof registerSchema>;
 
+// ─── Activities, Reminders & Medications ───
+
+export const activityCategorySchema = z.enum([
+  'salud',
+  'medicamento',
+  'rutina',
+  'trabajo',
+  'finanzas',
+  'personal',
+]);
+
+export const recurrenceTypeSchema = z.enum([
+  'none',
+  'interval_hours',
+  'daily',
+  'weekly',
+  'monthly',
+]);
+
+export const activitySchema = z.object({
+  title: cleanString(1, 255, 'El título es requerido'),
+  description: optionalCleanString(1000),
+  category: activityCategorySchema.default('salud'),
+  scheduledAt: z.string().min(1, 'Fecha y hora requerida'),
+  recurrenceType: recurrenceTypeSchema.default('none'),
+  intervalHours: z.number().int().positive().max(168).optional().nullable(),
+  isCritical: z.boolean().default(true),
+  requiresLock: z.boolean().default(true),
+  sound: cleanString(1, 50).default('alarm_default'),
+});
+
+export const activityUpdateSchema = activitySchema.partial().extend({
+  id: z.string().min(1, 'El ID de la actividad es requerido'),
+  isCompleted: z.boolean().optional(),
+  completedAt: z.string().optional().nullable(),
+  snoozedUntil: z.string().optional().nullable(),
+});
+
+export type ActivityInput = z.infer<typeof activitySchema>;
+export type ActivityUpdateInput = z.infer<typeof activityUpdateSchema>;
+
+

@@ -374,3 +374,36 @@ export const loginAttempts = mysqlTable('login_attempts', {
   updatedAt: timestamp('updatedAt').notNull().defaultNow().onUpdateNow(),
 });
 
+// ═══════════════════════════════════════════
+// Actividades, Recordatorios y Medicamentos
+// ═══════════════════════════════════════════
+
+export const activities = mysqlTable(
+  'activities',
+  {
+    id: varchar('id', { length: 36 }).primaryKey(),
+    userId: varchar('userId', { length: 36 })
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    title: varchar('title', { length: 255 }).notNull(),
+    description: text('description'),
+    category: varchar('category', { length: 50 }).notNull().default('salud'),
+    scheduledAt: timestamp('scheduledAt').notNull(),
+    recurrenceType: varchar('recurrenceType', { length: 30 }).default('none'),
+    intervalHours: int('intervalHours'),
+    isCritical: boolean('isCritical').default(true),
+    requiresLock: boolean('requiresLock').default(true),
+    sound: varchar('sound', { length: 50 }).default('alarm_default'),
+    isCompleted: boolean('isCompleted').default(false),
+    completedAt: timestamp('completedAt'),
+    snoozedUntil: timestamp('snoozedUntil'),
+    createdAt: timestamp('createdAt').notNull().defaultNow(),
+    updatedAt: timestamp('updatedAt').notNull().defaultNow().onUpdateNow(),
+  },
+  (table) => [
+    index('activities_user_idx').on(table.userId),
+    index('activities_user_sched_idx').on(table.userId, table.scheduledAt),
+  ]
+);
+
+
