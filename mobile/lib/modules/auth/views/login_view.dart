@@ -15,6 +15,18 @@ class _LoginViewState extends State<LoginView> {
   final _emailController = TextEditingController(text: 'diego@finanzas.app');
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
+  bool _enableBiometrics = true;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final auth = context.read<AuthProvider>();
+      if (auth.isBiometricEnabled) {
+        auth.loginWithBiometrics();
+      }
+    });
+  }
 
   @override
   void dispose() {
@@ -29,6 +41,7 @@ class _LoginViewState extends State<LoginView> {
     final success = await auth.login(
       _emailController.text.trim(),
       _passwordController.text,
+      enableBiometrics: _enableBiometrics,
     );
 
     if (!success && mounted) {
@@ -36,6 +49,19 @@ class _LoginViewState extends State<LoginView> {
         SnackBar(
           backgroundColor: AppTheme.danger,
           content: Text(auth.errorMessage ?? 'Error de autenticación'),
+        ),
+      );
+    }
+  }
+
+  void _loginBiometric() async {
+    final auth = context.read<AuthProvider>();
+    final success = await auth.loginWithBiometrics();
+    if (!success && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          backgroundColor: AppTheme.danger,
+          content: Text('No se pudo autenticar con huella dactilar. Ingresa con tu contraseña.'),
         ),
       );
     }
@@ -93,14 +119,48 @@ class _LoginViewState extends State<LoginView> {
                   ),
                   const SizedBox(height: 6),
                   const Text(
-                    'Tu asistente financiero y agenda de alarmas',
+                    'Tu asistente financiero y agenda protegida',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 13,
                       color: AppTheme.textMuted,
                     ),
                   ),
-                  const SizedBox(height: 36),
+                  const SizedBox(height: 32),
+
+                  // Botón Biométrico si ya está configurado
+                  if (auth.isBiometricEnabled) ...[
+                    SizedBox(
+                      width: double.infinity,
+                      height: 52,
+                      child: OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppTheme.secondary,
+                          side: const BorderSide(color: AppTheme.secondary, width: 1.5),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          backgroundColor: AppTheme.secondary.withValues(alpha: 0.08),
+                        ),
+                        onPressed: auth.isLoading ? null : _loginBiometric,
+                        icon: const Icon(Icons.fingerprint_rounded, size: 26),
+                        label: const Text(
+                          'Desbloquear con Huella Dactilar',
+                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    const Row(
+                      children: [
+                        Expanded(child: Divider(color: Colors.white12)),
+                        Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 12),
+                          child: Text('o ingresa con tu clave', style: TextStyle(color: AppTheme.textMuted, fontSize: 11)),
+                        ),
+                        Expanded(child: Divider(color: Colors.white12)),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                  ],
 
                   // Email
                   TextFormField(
@@ -134,7 +194,23 @@ class _LoginViewState extends State<LoginView> {
                     validator: (val) =>
                         val == null || val.length < 4 ? 'Ingresa tu contraseña' : null,
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 12),
+
+                  // Opción de Huella Dactilar
+                  if (auth.isBiometricAvailable) ...[
+                    CheckboxListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text(
+                        'Activar acceso rápido con Huella Dactilar',
+                        style: TextStyle(fontSize: 12, color: AppTheme.textSecondary, fontWeight: FontWeight.w600),
+                      ),
+                      value: _enableBiometrics,
+                      activeColor: AppTheme.secondary,
+                      controlAffinity: ListTileControlAffinity.leading,
+                      onChanged: (v) => setState(() => _enableBiometrics = v ?? true),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
 
                   // Botón Iniciar Sesión
                   SizedBox(

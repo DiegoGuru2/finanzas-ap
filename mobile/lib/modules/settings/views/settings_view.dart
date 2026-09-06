@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../../providers/finances_provider.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../permissions/views/permissions_view.dart';
 
 class SettingsView extends StatefulWidget {
   const SettingsView({super.key});
@@ -266,7 +267,31 @@ class _SettingsViewState extends State<SettingsView> {
                 ],
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
+
+            // ─── Acceso Rápido: Huella Dactilar y Pantalla de Bloqueo ───
+            Card(
+              child: ListTile(
+                leading: Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: AppTheme.secondary.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(Icons.security_rounded, color: AppTheme.secondary, size: 20),
+                ),
+                title: const Text('Huella Dactilar & Pantalla de Bloqueo', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                subtitle: const Text('Seguridad, modo de alarmas y permisos', style: TextStyle(fontSize: 11, color: AppTheme.textMuted)),
+                trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppTheme.textMuted),
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const PermissionsView()),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 20),
 
             // ─── Bloque 1: Sueldo Principal ───
             _buildSectionHeader(Icons.payments_rounded, 'Sueldo e Ingreso Base', AppTheme.primary),

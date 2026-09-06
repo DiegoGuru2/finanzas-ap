@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../models/activity_model.dart';
 
 class AlarmService {
@@ -89,19 +90,27 @@ class AlarmService {
       debugPrint('[AlarmService] AndroidAlarmManager error: $e');
     }
 
-    // También registrar la notificación de pantalla completa programada
+    // Obtener preferencia del usuario (Notificación en bloqueo vs Pantalla completa)
+    const storage = FlutterSecureStorage();
+    final mode = await storage.read(key: 'alarm_display_mode') ?? 'notification';
+    final bool isFullScreen = mode == 'fullscreen';
+
     final androidDetails = AndroidNotificationDetails(
       'urgent_activity_alarms',
       'Alarmas de Medicamentos y Actividades',
-      channelDescription: 'Enciende la pantalla y muestra la actividad a pantalla completa',
+      channelDescription: 'Recordatorios con sonido y notificación en pantalla de bloqueo',
       importance: Importance.max,
       priority: Priority.high,
-      fullScreenIntent: true,
+      fullScreenIntent: isFullScreen,
       category: AndroidNotificationCategory.alarm,
       audioAttributesUsage: AudioAttributesUsage.alarm,
       visibility: NotificationVisibility.public,
-      ongoing: true,
-      autoCancel: false,
+      actions: const [
+        AndroidNotificationAction('complete_act', 'Tomada / Hecho', showsUserInterface: true),
+        AndroidNotificationAction('snooze_act', 'Posponer', showsUserInterface: true),
+      ],
+      ongoing: isFullScreen,
+      autoCancel: !isFullScreen,
     );
 
     await _notificationsPlugin.show(

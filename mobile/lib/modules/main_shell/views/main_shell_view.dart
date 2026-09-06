@@ -10,6 +10,7 @@ import '../../expenses/views/expenses_view.dart';
 import '../../incomes/views/incomes_view.dart';
 import '../../activities/views/activities_list_view.dart';
 import '../../settings/views/settings_view.dart';
+import '../../permissions/views/permissions_view.dart';
 
 class MainShellView extends StatefulWidget {
   const MainShellView({super.key});
@@ -168,6 +169,17 @@ class _MainShellViewState extends State<MainShellView> {
                   Navigator.pop(context);
                   Navigator.of(context).push(
                     MaterialPageRoute(builder: (_) => const SettingsView()),
+                  );
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.fingerprint_rounded, color: AppTheme.primaryLight),
+                title: const Text('Huella & Permisos de Alarma', style: TextStyle(fontWeight: FontWeight.w700)),
+                subtitle: const Text('Seguridad, huella dactilar y notificaciones', style: TextStyle(fontSize: 11, color: AppTheme.textMuted)),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const PermissionsView()),
                   );
                 },
               ),
