@@ -9,6 +9,7 @@ import '../../debts/views/debts_view.dart';
 import '../../expenses/views/expenses_view.dart';
 import '../../incomes/views/incomes_view.dart';
 import '../../activities/views/activities_list_view.dart';
+import '../../settings/views/settings_view.dart';
 
 class MainShellView extends StatefulWidget {
   const MainShellView({super.key});
@@ -48,43 +49,143 @@ class _MainShellViewState extends State<MainShellView> {
     ];
 
     return Scaffold(
-      appBar: _currentIndex == 0
-          ? AppBar(
-              title: Row(
-                children: [
-                  Container(
-                    width: 32,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [AppTheme.primary, AppTheme.secondary],
-                      ),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Icon(Icons.shield_rounded, size: 18, color: Colors.white),
-                  ),
-                  const SizedBox(width: 10),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('ProyecAhorro', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900)),
-                      Text(
-                        auth.userEmail ?? 'Usuario',
-                        style: const TextStyle(fontSize: 10, color: AppTheme.textMuted),
-                      ),
-                    ],
-                  ),
-                ],
+      appBar: AppBar(
+        title: Row(
+          children: [
+            Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [AppTheme.primary, AppTheme.secondary],
+                ),
+                borderRadius: BorderRadius.circular(8),
               ),
-              actions: [
-                IconButton(
-                  tooltip: 'Cerrar Sesión',
-                  icon: const Icon(Icons.logout_rounded, color: AppTheme.danger, size: 20),
-                  onPressed: () => auth.logout(),
+              child: const Icon(Icons.shield_rounded, size: 18, color: Colors.white),
+            ),
+            const SizedBox(width: 10),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('ProyecAhorro', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900)),
+                Text(
+                  auth.userEmail ?? 'Usuario',
+                  style: const TextStyle(fontSize: 10, color: AppTheme.textMuted),
                 ),
               ],
-            )
-          : null,
+            ),
+          ],
+        ),
+        actions: [
+          IconButton(
+            tooltip: 'Configuración',
+            icon: const Icon(Icons.settings_outlined, color: AppTheme.primaryLight, size: 22),
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const SettingsView()),
+              );
+            },
+          ),
+          IconButton(
+            tooltip: 'Cerrar Sesión',
+            icon: const Icon(Icons.logout_rounded, color: AppTheme.danger, size: 20),
+            onPressed: () => auth.logout(),
+          ),
+        ],
+      ),
+      drawer: Drawer(
+        backgroundColor: AppTheme.surface,
+        child: SafeArea(
+          child: Column(
+            children: [
+              UserAccountsDrawerHeader(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Color(0xFF1E1B4B), Color(0xFF0F172A)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                ),
+                accountName: Text(
+                  auth.userName ?? 'Usuario ProyecAhorro',
+                  style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+                ),
+                accountEmail: Text(auth.userEmail ?? ''),
+                currentAccountPicture: CircleAvatar(
+                  backgroundColor: AppTheme.primary.withValues(alpha: 0.3),
+                  child: const Icon(Icons.person, color: Colors.white, size: 36),
+                ),
+              ),
+              ListTile(
+                leading: const Icon(Icons.dashboard_rounded, color: AppTheme.primaryLight),
+                title: const Text('Dashboard'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _onSelectTab(0);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.credit_card_rounded, color: AppTheme.primaryLight),
+                title: const Text('Deudas & Créditos'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _onSelectTab(1);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.receipt_long_rounded, color: AppTheme.primaryLight),
+                title: const Text('Gastos Mensuales'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _onSelectTab(2);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.account_balance_wallet_rounded, color: AppTheme.primaryLight),
+                title: const Text('Ingresos'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _onSelectTab(3);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.alarm_rounded, color: AppTheme.primaryLight),
+                title: const Text('Agenda & Medicamentos'),
+                trailing: pendingMedsCount > 0
+                    ? Badge(label: Text('$pendingMedsCount'), backgroundColor: AppTheme.danger)
+                    : null,
+                onTap: () {
+                  Navigator.pop(context);
+                  _onSelectTab(4);
+                },
+              ),
+              const Divider(color: Colors.white10),
+              ListTile(
+                leading: const Icon(Icons.tune_rounded, color: AppTheme.secondary),
+                title: const Text('Configuración Financiera', style: TextStyle(fontWeight: FontWeight.w700)),
+                subtitle: const Text('Sueldo, IESS, Décimos y Beneficios', style: TextStyle(fontSize: 11, color: AppTheme.textMuted)),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const SettingsView()),
+                  );
+                },
+              ),
+              const Spacer(),
+              const Divider(color: Colors.white10),
+              ListTile(
+                leading: const Icon(Icons.logout_rounded, color: AppTheme.danger),
+                title: const Text('Cerrar Sesión', style: TextStyle(color: AppTheme.danger)),
+                onTap: () {
+                  Navigator.pop(context);
+                  auth.logout();
+                },
+              ),
+              const SizedBox(height: 12),
+            ],
+          ),
+        ),
+      ),
       body: IndexedStack(
         index: _currentIndex,
         children: pages,

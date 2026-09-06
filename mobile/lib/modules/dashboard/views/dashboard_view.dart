@@ -8,6 +8,7 @@ import '../../expenses/views/add_expense_modal.dart';
 import '../../debts/views/add_debt_modal.dart';
 import '../../activities/views/add_activity_modal.dart';
 import '../../alarm/views/alarm_screen_view.dart';
+import '../../settings/views/settings_view.dart';
 
 class DashboardView extends StatefulWidget {
   final Function(int)? onNavigateTab;
@@ -57,6 +58,12 @@ class _DashboardViewState extends State<DashboardView> {
     );
   }
 
+  void _openSettings() {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const SettingsView()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final fin = context.watch<FinancesProvider>();
@@ -75,9 +82,37 @@ class _DashboardViewState extends State<DashboardView> {
         ]);
       },
       child: ListView(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         children: [
-          // ─── Tarjeta Principal de Balance (Superávit) ───
+          // ─── Banner de Error (si hubo fallo de conexión) ───
+          if (fin.errorMessage != null)
+            Container(
+              margin: const EdgeInsets.only(bottom: 16),
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: AppTheme.danger.withValues(alpha: 0.1),
+                border: Border.all(color: AppTheme.danger.withValues(alpha: 0.3)),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.warning_amber_rounded, color: AppTheme.danger, size: 24),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      fin.errorMessage!,
+                      style: const TextStyle(color: AppTheme.danger, fontSize: 12, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () => fin.fetchAll(),
+                    child: const Text('Reintentar', style: TextStyle(color: AppTheme.primaryLight, fontSize: 12)),
+                  ),
+                ],
+              ),
+            ),
+
+          // ─── Tarjeta 1: Superávit Disponible / Excedente ───
           Container(
             padding: const EdgeInsets.all(22),
             decoration: BoxDecoration(
@@ -123,7 +158,9 @@ class _DashboardViewState extends State<DashboardView> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
-                        fin.surplus >= 0 ? 'Saludable' : 'Déficit',
+                        fin.status == 'healthy'
+                            ? 'Saludable'
+                            : (fin.status == 'tight' ? 'Ajustado' : 'Déficit'),
                         style: TextStyle(
                           color: fin.surplus >= 0 ? AppTheme.success : AppTheme.danger,
                           fontSize: 11,
@@ -145,10 +182,200 @@ class _DashboardViewState extends State<DashboardView> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Ingresos netos: ${currencyFormat.format(fin.netIncome)}',
-                  style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+                  'Ingreso neto: ${currencyFormat.format(fin.netIncome)}  ·  Gastos y cuotas: ${currencyFormat.format(fin.totalExpenses + fin.totalMinimumPayments)}',
+                  style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12),
                 ),
               ],
+            ),
+          ),
+          const SizedBox(height: 14),
+
+          // ─── Tarjeta 2: Sueldo Neto Líquido & Configuración ───
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(18),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.account_balance_wallet_rounded, color: AppTheme.secondary, size: 20),
+                          const SizedBox(width: 8),
+                          const Text(
+                            'Sueldo Neto Líquido',
+                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: Colors.white),
+                          ),
+                        ],
+                      ),
+                      TextButton.icon(
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        onPressed: _openSettings,
+                        icon: const Icon(Icons.settings_outlined, size: 15, color: AppTheme.primaryLight),
+                        label: const Text('Configurar', style: TextStyle(color: AppTheme.primaryLight, fontSize: 12, fontWeight: FontWeight.w700)),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    currencyFormat.format(fin.netIncome),
+                    style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: AppTheme.secondary),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Bruto: ${currencyFormat.format(fin.grossIncome)}  ·  IESS: -${currencyFormat.format(fin.iessDeductions)}${fin.benefitsMonthly > 0 ? '  ·  Beneficios: +${currencyFormat.format(fin.benefitsMonthly)}' : ''}',
+                    style: const TextStyle(color: AppTheme.textMuted, fontSize: 12),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
+
+          // ─── Tarjeta 3: Flujo Quincena vs Fin de Mes ───
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(18),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Flujo Quincena vs Fin de Mes',
+                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: Colors.white),
+                      ),
+                      if (fin.programmedSavings > 0)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: AppTheme.success.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: AppTheme.success.withValues(alpha: 0.3)),
+                          ),
+                          child: Text(
+                            'Ahorro: ${currencyFormat.format(fin.programmedSavings)}',
+                            style: const TextStyle(color: AppTheme.success, fontSize: 10, fontWeight: FontWeight.w800),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: AppTheme.surfaceElevated,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: AppTheme.border),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('Quincena (Día 15)', style: TextStyle(color: AppTheme.textMuted, fontSize: 11)),
+                              const SizedBox(height: 4),
+                              Text(
+                                currencyFormat.format(fin.quincenaAvailable),
+                                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 16),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: AppTheme.surfaceElevated,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: AppTheme.border),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('Fin de Mes (Día 30)', style: TextStyle(color: AppTheme.textMuted, fontSize: 11)),
+                              const SizedBox(height: 4),
+                              Text(
+                                currencyFormat.format(fin.finDeMesAvailable),
+                                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 16),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
+
+          // ─── Tarjeta 4: Deuda Total Activa ───
+          Card(
+            child: InkWell(
+              onTap: () => widget.onNavigateTab?.call(1),
+              borderRadius: BorderRadius.circular(18),
+              child: Padding(
+                padding: const EdgeInsets.all(18),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Deuda Total Activa', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: Colors.white)),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: AppTheme.danger.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            '${fin.activeDebtsCount} activa${fin.activeDebtsCount == 1 ? '' : 's'}',
+                            style: const TextStyle(color: AppTheme.danger, fontSize: 11, fontWeight: FontWeight.w700),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      currencyFormat.format(fin.totalDebt),
+                      style: const TextStyle(color: AppTheme.danger, fontSize: 24, fontWeight: FontWeight.w900),
+                    ),
+                    const SizedBox(height: 8),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(6),
+                      child: LinearProgressIndicator(
+                        value: (fin.totalDebtProgress / 100).clamp(0.0, 1.0),
+                        backgroundColor: Colors.white12,
+                        valueColor: const AlwaysStoppedAnimation(AppTheme.success),
+                        minHeight: 6,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('Mínimo mensual: ${currencyFormat.format(fin.totalMinimumPayments)}',
+                            style: const TextStyle(color: AppTheme.textMuted, fontSize: 11)),
+                        if (fin.totalDebtPaidOff > 0)
+                          Text('Pagado: ${currencyFormat.format(fin.totalDebtPaidOff)} (${fin.totalDebtProgress.toStringAsFixed(0)}%)',
+                              style: const TextStyle(color: AppTheme.success, fontSize: 11, fontWeight: FontWeight.w700)),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
           const SizedBox(height: 20),
@@ -184,7 +411,7 @@ class _DashboardViewState extends State<DashboardView> {
               ),
             ],
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 20),
 
           // ─── Métricas en Cuadrícula ───
           Row(
@@ -196,55 +423,29 @@ class _DashboardViewState extends State<DashboardView> {
                   icon: Icons.receipt_long_rounded,
                   color: AppTheme.danger,
                   subtitle: '${fin.expenses.length} registros',
-                  onTap: () => widget.onNavigateTab?.call(2), // Tab Gastos
+                  onTap: () => widget.onNavigateTab?.call(2),
                 ),
               ),
               const SizedBox(width: 12),
-              Expanded(
-                child: _buildMetricCard(
-                  title: 'Cuotas Deudas',
-                  amount: currencyFormat.format(fin.totalMinimumPayments),
-                  icon: Icons.credit_score_rounded,
-                  color: AppTheme.warning,
-                  subtitle: '${fin.activeDebtsCount} deudas activas',
-                  onTap: () => widget.onNavigateTab?.call(1), // Tab Deudas
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
               Expanded(
                 child: _buildMetricCard(
                   title: 'Total Ahorrado',
                   amount: currencyFormat.format(fin.totalSaved),
                   icon: Icons.savings_rounded,
                   color: AppTheme.success,
-                  subtitle: '${fin.savingsGoals.length} metas activas',
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _buildMetricCard(
-                  title: 'Ingresos Netos',
-                  amount: currencyFormat.format(fin.netIncome),
-                  icon: Icons.account_balance_wallet_rounded,
-                  color: AppTheme.secondary,
-                  subtitle: '${fin.incomes.length} fuentes de ingreso',
-                  onTap: () => widget.onNavigateTab?.call(3), // Tab Ingresos
+                  subtitle: fin.totalSavingsTarget > 0 ? '${fin.savingsProgress.toStringAsFixed(0)}% objetivo' : 'Activo',
                 ),
               ),
             ],
           ),
           const SizedBox(height: 28),
 
-          // ─── Sección: Medicamentos y Alarmas de Hoy ───
+          // ─── Sección: Medicamentos & Alarmas de Hoy ───
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text(
-                '💊 Medicamentos & Tareas de Hoy',
+                '💊 Medicamentos & Agenda de Hoy',
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 16,
@@ -252,7 +453,7 @@ class _DashboardViewState extends State<DashboardView> {
                 ),
               ),
               TextButton(
-                onPressed: () => widget.onNavigateTab?.call(4), // Tab Actividades
+                onPressed: () => widget.onNavigateTab?.call(4),
                 child: const Text('Ver todas', style: TextStyle(color: AppTheme.primaryLight, fontSize: 13)),
               ),
             ],

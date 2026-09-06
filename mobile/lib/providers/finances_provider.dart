@@ -22,40 +22,118 @@ class FinancesProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
 
-  // Métricas rápidas del Dashboard
-  double get netIncome => (_dashboardData?['metrics']?['netMonthlyIncome'] as num?)?.toDouble() ?? 0.0;
-  double get totalExpenses => (_dashboardData?['metrics']?['totalExpenses'] as num?)?.toDouble() ?? 0.0;
-  double get totalMinimumPayments => (_dashboardData?['metrics']?['totalMinimumPayments'] as num?)?.toDouble() ?? 0.0;
-  double get surplus => (_dashboardData?['metrics']?['surplus'] as num?)?.toDouble() ?? 0.0;
-  double get totalSaved => (_dashboardData?['metrics']?['totalSaved'] as num?)?.toDouble() ?? 0.0;
-  int get activeDebtsCount => (_dashboardData?['metrics']?['activeDebtsCount'] as num?)?.toInt() ?? 0;
+  // ─── Métricas calculadas del Dashboard (clave 'summary') ───
+  Map<String, dynamic> get summary =>
+      (_dashboardData?['summary'] as Map<String, dynamic>?) ?? {};
 
-  /// Cargar todo el resumen inicial
+  double get netIncome =>
+      (summary['totalNetIncome'] as num?)?.toDouble() ?? 0.0;
+  double get grossIncome =>
+      (summary['totalGrossIncome'] as num?)?.toDouble() ?? 0.0;
+  double get iessDeductions =>
+      (summary['totalIessDeductions'] as num?)?.toDouble() ?? 0.0;
+  double get benefitsMonthly =>
+      (summary['totalBenefitsMonthly'] as num?)?.toDouble() ?? 0.0;
+
+  double get quincenaAvailable =>
+      (summary['quincenaAvailable'] as num?)?.toDouble() ?? 0.0;
+  double get finDeMesAvailable =>
+      (summary['finDeMesAvailable'] as num?)?.toDouble() ?? 0.0;
+  double get programmedSavings =>
+      (summary['totalProgrammedSavings'] as num?)?.toDouble() ?? 0.0;
+
+  double get totalExpenses =>
+      (summary['totalExpenses'] as num?)?.toDouble() ?? 0.0;
+  double get totalMinimumPayments =>
+      (summary['totalMinimumPayments'] as num?)?.toDouble() ?? 0.0;
+  double get surplus =>
+      (summary['surplus'] as num?)?.toDouble() ?? 0.0;
+  String get status =>
+      (summary['status'] as String?) ?? 'healthy';
+
+  double get totalDebt =>
+      (summary['totalDebt'] as num?)?.toDouble() ?? 0.0;
+  double get totalOriginalDebt =>
+      (summary['totalOriginalDebt'] as num?)?.toDouble() ?? 0.0;
+  double get totalDebtPaidOff =>
+      (summary['totalDebtPaidOff'] as num?)?.toDouble() ?? 0.0;
+  double get totalDebtProgress =>
+      (summary['totalDebtProgress'] as num?)?.toDouble() ?? 0.0;
+  int get activeDebtsCount =>
+      (summary['activeDebtsCount'] as num?)?.toInt() ?? 0;
+  int get paidOffDebtsCount =>
+      (summary['paidOffDebtsCount'] as num?)?.toInt() ?? 0;
+
+  double get totalSaved =>
+      (summary['totalSaved'] as num?)?.toDouble() ?? 0.0;
+  double get totalSavingsTarget =>
+      (summary['totalSavingsTarget'] as num?)?.toDouble() ?? 0.0;
+  double get savingsProgress =>
+      (summary['savingsProgress'] as num?)?.toDouble() ?? 0.0;
+  double get totalMonthlySavingsContribution =>
+      (summary['totalMonthlySavingsContribution'] as num?)?.toDouble() ?? 0.0;
+
+  List<Map<String, dynamic>> get expensesByCategory {
+    final list = _dashboardData?['expensesByCategory'] as List<dynamic>? ?? [];
+    return list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+  }
+
+  /// Cargar todo el resumen con rescates resilientes
   Future<void> fetchAll() async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
-      final results = await Future.wait([
-        _apiClient.getDashboard(),
-        _apiClient.getDebts(),
-        _apiClient.getExpenses(),
-        _apiClient.getIncomes(),
-        _apiClient.getSavings(),
-      ]);
+      try {
+        _dashboardData = await _apiClient.getDashboard();
+      } catch (e) {
+        debugPrint('[FinancesProvider] getDashboard error: $e');
+        _errorMessage = e.toString().replaceAll('Exception: ', '');
+      }
 
-      _dashboardData = results[0] as Map<String, dynamic>;
-      _debts = results[1] as List<Map<String, dynamic>>;
-      _expenses = results[2] as List<Map<String, dynamic>>;
-      _incomes = results[3] as List<Map<String, dynamic>>;
-      _savingsGoals = results[4] as List<Map<String, dynamic>>;
-    } catch (e) {
-      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      try {
+        _debts = await _apiClient.getDebts();
+      } catch (e) {
+        debugPrint('[FinancesProvider] getDebts error: $e');
+      }
+
+      try {
+        _expenses = await _apiClient.getExpenses();
+      } catch (e) {
+        debugPrint('[FinancesProvider] getExpenses error: $e');
+      }
+
+      try {
+        _incomes = await _apiClient.getIncomes();
+      } catch (e) {
+        debugPrint('[FinancesProvider] getIncomes error: $e');
+      }
+
+      try {
+        _savingsGoals = await _apiClient.getSavings();
+      } catch (e) {
+        debugPrint('[FinancesProvider] getSavings error: $e');
+      }
     } finally {
       _isLoading = false;
       notifyListeners();
     }
+  }
+
+  // ─── Sueldo / Configuración Principal ───
+  Future<void> saveSalarySettings(Map<String, dynamic> salaryData) async {
+    final principal = _incomes.firstWhere(
+      (i) => i['isSalary'] == true,
+      orElse: () => {},
+    );
+    if (principal.isNotEmpty && principal['id'] != null) {
+      salaryData['id'] = principal['id'];
+      await _apiClient.updateIncome(salaryData);
+    } else {
+      await _apiClient.createIncome(salaryData);
+    }
+    await fetchAll();
   }
 
   // ─── Operaciones de Deudas ───

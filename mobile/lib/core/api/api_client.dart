@@ -36,11 +36,23 @@ class ApiClient {
           return handler.next(options);
         },
         onResponse: (response, handler) async {
-          // Guardar cookies de sesión si el backend las envía
+          // Extraer cookies limpias para enviar en header 'Cookie' (RFC 6265)
           final setCookie = response.headers['set-cookie'];
           if (setCookie != null && setCookie.isNotEmpty) {
-            final cookieString = setCookie.join('; ');
-            await storage.write(key: 'auth_cookie', value: cookieString);
+            final cleanCookies = <String>[];
+            for (final header in setCookie) {
+              final pair = header.split(';').first.trim();
+              if (pair.isNotEmpty) {
+                cleanCookies.add(pair);
+                if (pair.startsWith('better-auth.session_token=')) {
+                  final sessionToken = pair.substring('better-auth.session_token='.length);
+                  await storage.write(key: 'auth_token', value: sessionToken);
+                }
+              }
+            }
+            if (cleanCookies.isNotEmpty) {
+              await storage.write(key: 'auth_cookie', value: cleanCookies.join('; '));
+            }
           }
           return handler.next(response);
         },
@@ -60,8 +72,11 @@ class ApiClient {
       );
 
       final data = response.data;
-      if (data is Map<String, dynamic> && data['token'] != null) {
-        await storage.write(key: 'auth_token', value: data['token'].toString());
+      if (data is Map<String, dynamic>) {
+        final token = data['token'] ?? data['session']?['token'];
+        if (token != null && token.toString().isNotEmpty) {
+          await storage.write(key: 'auth_token', value: token.toString());
+        }
       }
       return data is Map<String, dynamic> ? data : {'success': true};
     } on DioException catch (e) {
@@ -191,6 +206,14 @@ class ApiClient {
       await dio.post('/api/incomes', data: data);
     } on DioException catch (e) {
       throw Exception(e.response?.data?['error'] ?? 'Error al registrar ingreso');
+    }
+  }
+
+  Future<void> updateIncome(Map<String, dynamic> data) async {
+    try {
+      await dio.put('/api/incomes', data: data);
+    } on DioException catch (e) {
+      throw Exception(e.response?.data?['error'] ?? 'Error al actualizar ingreso');
     }
   }
 
