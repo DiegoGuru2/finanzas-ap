@@ -16,6 +16,10 @@ export const auth = betterAuth({
       verification: schema.verification,
     },
   }),
+  session: {
+    expiresIn: 60 * 60 * 4, // 4 horas de expiración máxima de sesión
+    updateAge: 60 * 15,     // Actualizar expiración cada 15 minutos de actividad
+  },
   emailAndPassword: {
     enabled: true,
     requireEmailVerification: false,

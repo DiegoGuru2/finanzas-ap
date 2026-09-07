@@ -1,6 +1,7 @@
 ---
 import BaseLayout from './BaseLayout.astro';
 import AdminSidebar from '@/components/admin/AdminSidebar.astro';
+import SessionTimeoutWatcher from '@/components/auth/SessionTimeoutWatcher';
 
 interface Props {
   title: string;
@@ -14,6 +15,9 @@ const initial = currentUser?.name ? currentUser.name[0].toUpperCase() : 'A';
 ---
 
 <BaseLayout title={`Admin: ${title}`} description={description}>
+  <!-- Inactivity Auto-Logout Watcher -->
+  <SessionTimeoutWatcher client:load />
+
   <div class="flex min-h-screen">
     <!-- Admin Sidebar Navigation -->
     <AdminSidebar currentPath={currentPath} />

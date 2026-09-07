@@ -2,6 +2,7 @@
 import BaseLayout from './BaseLayout.astro';
 import Sidebar from '@/components/layout/Sidebar.astro';
 import NotificationCenter from '@/components/layout/NotificationCenter';
+import SessionTimeoutWatcher from '@/components/auth/SessionTimeoutWatcher';
 
 interface Props {
   title: string;
@@ -20,6 +21,9 @@ const initial = currentUser?.name ? currentUser.name[0].toUpperCase() : 'D';
 ---
 
 <BaseLayout title={title} description={description}>
+  <!-- Inactivity Auto-Logout Watcher -->
+  <SessionTimeoutWatcher client:load />
+
   <div class="flex min-h-screen">
     <!-- Sidebar Navigation -->
     <Sidebar currentPath={currentPath} />

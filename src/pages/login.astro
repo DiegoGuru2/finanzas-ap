@@ -1,6 +1,9 @@
 ---
 import AuthLayout from '../layouts/AuthLayout.astro';
 import LoginForm from '@/components/auth/LoginForm';
+
+const reason = Astro.url.searchParams.get('reason');
+const isTimeout = reason === 'timeout';
 ---
 
 <AuthLayout title="Iniciar sesión" description="Inicia sesión en tu cuenta de ProyecAhorro">
@@ -54,6 +57,22 @@ import LoginForm from '@/components/auth/LoginForm';
         Ingresa a tu cuenta para continuar
       </p>
     </div>
+
+    {isTimeout && (
+      <div class="mb-6 rounded-xl border border-warning-500/30 bg-warning-500/10 p-3.5 flex items-start gap-3 text-left animate-in fade-in">
+        <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-warning-500/20 text-warning-400">
+          <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+        </div>
+        <div class="flex-1">
+          <p class="text-xs font-bold text-warning-400">Sesión cerrada por inactividad</p>
+          <p class="mt-0.5 text-[11px] text-text-secondary leading-relaxed">
+            Tu sesión finalizó automáticamente por seguridad debido a inactividad. Por favor, ingresa tus credenciales para continuar.
+          </p>
+        </div>
+      </div>
+    )}
 
     <!-- Login Form Island -->
     <LoginForm client:load />
