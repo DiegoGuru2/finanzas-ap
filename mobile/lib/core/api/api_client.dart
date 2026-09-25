@@ -56,6 +56,13 @@ class ApiClient {
           }
           return handler.next(response);
         },
+        onError: (DioException error, handler) async {
+          if (error.response?.statusCode == 401) {
+            await storage.delete(key: 'auth_cookie');
+            await storage.delete(key: 'auth_token');
+          }
+          return handler.next(error);
+        },
       ),
     );
   }
