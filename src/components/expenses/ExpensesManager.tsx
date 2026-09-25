@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { formatCurrency } from '@/lib/utils';
 import { catalogTint, DEFAULT_CATALOGS, fetchCatalog, type CatalogOption } from '@/lib/catalogs';
 import { CategoryIcon } from '@/components/ui/CategoryIcon';
+import { notifyFinancialSync } from '@/stores/sync';
 
 interface ExpenseItem {
   id: string;
@@ -87,6 +88,11 @@ export default function ExpensesManager() {
 
   useEffect(() => {
     fetchExpenses();
+    const handleSync = () => {
+      fetchExpenses();
+    };
+    window.addEventListener('finanzas:sync', handleSync);
+    return () => window.removeEventListener('finanzas:sync', handleSync);
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -122,6 +128,7 @@ export default function ExpensesManager() {
       setShowModal(false);
       setEditingId(null);
       await fetchExpenses();
+      notifyFinancialSync();
     } catch (err: any) {
       setErrorMessage(err.message || 'Error al registrar');
     } finally {
@@ -134,6 +141,7 @@ export default function ExpensesManager() {
     try {
       await fetch(`/api/expenses?id=${id}`, { method: 'DELETE' });
       await fetchExpenses();
+      notifyFinancialSync();
     } catch (err) {
       console.error(err);
     }

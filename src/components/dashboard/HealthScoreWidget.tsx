@@ -44,10 +44,6 @@ export default function HealthScoreWidget() {
   const [loading, setLoading] = useState(true);
   const [showDetail, setShowDetail] = useState(false);
 
-  useEffect(() => {
-    fetchScore();
-  }, []);
-
   const fetchScore = async () => {
     try {
       const res = await fetch('/api/dashboard/health-score');
@@ -59,6 +55,15 @@ export default function HealthScoreWidget() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchScore();
+    const handleSync = () => {
+      fetchScore();
+    };
+    window.addEventListener('finanzas:sync', handleSync);
+    return () => window.removeEventListener('finanzas:sync', handleSync);
+  }, []);
 
   if (loading) {
     return (

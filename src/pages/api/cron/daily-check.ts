@@ -143,11 +143,25 @@ export const ALL: APIRoute = async (ctx) => {
         const debtRows = schedule.rows.filter((r) => r.kind === 'debt');
         const expenseRows = schedule.rows.filter((r) => r.kind === 'expense');
 
-        const pendingDebts = debtRows.filter(
-          (r) => (r.cells[nextPeriod.key] || 0) > 0 && paid[r.id]?.[nextPeriod.key] === undefined
+        const pendingDebts = debtRows.filter((r) => {
+          const scheduledAmount = r.cells[nextPeriod.key] || 0;
+          if (scheduledAmount <= 0) return false;
+          const paidAmount = paid[r.id]?.[nextPeriod.key] || 0;
+          return paidAmount < scheduledAmount;
+        });
+
+        // Filtrar gastos no cubiertos en este corte
+        const paidExpenseIds = new Set<string>();
+        for (const ep of userExpensePayments) {
+          if (ep.periodKey === nextPeriod.key) {
+            paidExpenseIds.add(ep.expenseId);
+          }
+        }
+        const pendingExpenses = expenseRows.filter(
+          (r) => (r.cells[nextPeriod.key] || 0) > 0 && !paidExpenseIds.has(r.id)
         );
 
-        if (pendingDebts.length > 0) {
+        if (pendingDebts.length > 0 || pendingExpenses.length > 0) {
           // Verificar si ya se envió alerta en las últimas 24 horas para este corte
           const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
           const existingAlerts = await db
@@ -163,8 +177,12 @@ export const ALL: APIRoute = async (ctx) => {
 
           if (existingAlerts.length === 0) {
             const cutName = `${nextPeriod.day} de ${MONTH_NAMES[nextPeriod.month]}`;
-            const totalDebtsAmount = pendingDebts.reduce((sum, d) => sum + (d.cells[nextPeriod.key] || 0), 0);
-            const totalExpensesAmount = expenseRows.reduce((sum, e) => sum + (e.cells[nextPeriod.key] || 0), 0);
+            const totalDebtsAmount = pendingDebts.reduce((sum, d) => {
+              const scheduled = d.cells[nextPeriod.key] || 0;
+              const alreadyPaid = paid[d.id]?.[nextPeriod.key] || 0;
+              return sum + Math.max(0, scheduled - alreadyPaid);
+            }, 0);
+            const totalExpensesAmount = pendingExpenses.reduce((sum, e) => sum + (e.cells[nextPeriod.key] || 0), 0);
             const remainingIncome = schedule.remaining[nextPeriod.key] || 0;
 
             const urgency =
@@ -174,13 +192,13 @@ export const ALL: APIRoute = async (ctx) => {
                   ? 'Mañana es tu corte de pago'
                   : `Corte en 2 días (${cutName})`;
 
-            // 1. Guardar en tabla alerts
+            // 1. Guardar en tabla alerts (título limpio sin emojis)
             await db.insert(alerts).values({
               id: generateId(),
               userId: u.id,
               type: 'due_reminder',
-              title: `⏰ ${urgency}`,
-              message: `Tienes ${pendingDebts.length} cuotas de deuda pendientes por $${totalDebtsAmount.toFixed(2)}. Saldo restante proyectado: $${remainingIncome.toFixed(2)}.`,
+              title: urgency,
+              message: `Tienes ${pendingDebts.length} cuotas de deuda y ${pendingExpenses.length} gastos pendientes por un total de $${(totalDebtsAmount + totalExpensesAmount).toFixed(2)}. Saldo restante proyectado: $${remainingIncome.toFixed(2)}.`,
               isRead: false,
             });
             alertsCreated++;
@@ -195,7 +213,7 @@ export const ALL: APIRoute = async (ctx) => {
                 cutMonthName: MONTH_NAMES[nextPeriod.month],
                 pendingDebtsCount: pendingDebts.length,
                 totalDebtsAmount,
-                pendingExpensesCount: expenseRows.length,
+                pendingExpensesCount: pendingExpenses.length,
                 totalExpensesAmount,
                 remainingIncome,
               }).catch((e) => console.error('Error enviando correo de recordatorio en cron:', e));

@@ -643,39 +643,90 @@ export default function NotificationCenter() {
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    {systemAlerts.map((al) => (
-                      <div
-                        key={al.id}
-                        className={`relative flex flex-col gap-1 rounded-xl border p-3 text-xs transition-colors ${
-                          al.isRead
-                            ? 'border-border-default bg-surface-100/40 opacity-75'
-                            : 'border-brand-500/30 bg-brand-500/5 shadow-sm'
-                        }`}
-                      >
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="font-semibold text-text-primary flex items-center gap-1.5">
-                            {!al.isRead && (
-                              <span className="h-2 w-2 rounded-full bg-brand-400 shrink-0 animate-pulse" />
-                            )}
-                            <span>{al.title}</span>
+                    {systemAlerts.map((al) => {
+                      const getAlertIcon = (type: string) => {
+                        switch (type) {
+                          case 'debt_cleared':
+                            return (
+                              <span className="p-1 rounded-lg bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shrink-0">
+                                <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                              </span>
+                            );
+                          case 'payment':
+                          case 'expense_paid':
+                            return (
+                              <span className="p-1 rounded-lg bg-accent-500/15 text-accent-400 border border-accent-500/30 shrink-0">
+                                <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                              </span>
+                            );
+                          case 'due_reminder':
+                            return (
+                              <span className="p-1 rounded-lg bg-warning-500/15 text-warning-400 border border-warning-500/30 shrink-0">
+                                <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                  <circle cx="12" cy="12" r="10" strokeWidth="2" />
+                                  <polyline points="12 6 12 12 16 14" strokeWidth="2" strokeLinecap="round" />
+                                </svg>
+                              </span>
+                            );
+                          case 'payment_reversed':
+                          case 'expense_unpaid':
+                            return (
+                              <span className="p-1 rounded-lg bg-danger-500/15 text-danger-400 border border-danger-500/30 shrink-0">
+                                <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                </svg>
+                              </span>
+                            );
+                          default:
+                            return (
+                              <span className="p-1 rounded-lg bg-brand-500/15 text-brand-400 border border-brand-500/30 shrink-0">
+                                <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                                </svg>
+                              </span>
+                            );
+                        }
+                      };
+
+                      return (
+                        <div
+                          key={al.id}
+                          className={`relative flex flex-col gap-1 rounded-xl border p-3 text-xs transition-colors ${
+                            al.isRead
+                              ? 'border-border-default bg-surface-100/40 opacity-75'
+                              : 'border-brand-500/30 bg-brand-500/5 shadow-sm'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="font-semibold text-text-primary flex items-center gap-2">
+                              {getAlertIcon(al.type)}
+                              {!al.isRead && (
+                                <span className="h-2 w-2 rounded-full bg-brand-400 shrink-0 animate-pulse" />
+                              )}
+                              <span>{al.title}</span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteAlert(al.id)}
+                              className="text-text-muted hover:text-danger-400 p-0.5 rounded cursor-pointer transition-colors"
+                              title="Eliminar alerta"
+                            >
+                              <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </button>
                           </div>
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteAlert(al.id)}
-                            className="text-text-muted hover:text-danger-400 p-0.5 rounded cursor-pointer transition-colors"
-                            title="Eliminar alerta"
-                          >
-                            <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                          </button>
+                          <p className="text-text-secondary leading-snug pl-7">{al.message}</p>
+                          <div className="text-[10px] text-text-muted pt-1 pl-7">
+                            {new Date(al.createdAt).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' })}
+                          </div>
                         </div>
-                        <p className="text-text-secondary leading-snug">{al.message}</p>
-                        <div className="text-[10px] text-text-muted pt-1">
-                          {new Date(al.createdAt).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' })}
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>

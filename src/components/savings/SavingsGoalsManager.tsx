@@ -5,6 +5,7 @@ import { normalizeToMonthly } from '@/modules/financial-engine/cashflow';
 import { catalogTint, DEFAULT_CATALOGS, fetchCatalog, type CatalogOption } from '@/lib/catalogs';
 import { CategoryIcon } from '@/components/ui/CategoryIcon';
 import { Zap, Link2 } from 'lucide-react';
+import { notifyFinancialSync } from '@/stores/sync';
 
 // ─── Category config ───
 // Las categorías vienen del catálogo administrable (/admin/catalogs);
@@ -238,6 +239,7 @@ export default function SavingsGoalsManager() {
       setShowModal(false);
       resetForm();
       await fetchGoals();
+      notifyFinancialSync();
     } catch (err: any) {
       setFormError(err.message);
     } finally {
@@ -250,6 +252,7 @@ export default function SavingsGoalsManager() {
     try {
       await fetch(`/api/savings?id=${id}`, { method: 'DELETE' });
       await fetchGoals();
+      notifyFinancialSync();
     } catch (err) {
       console.error(err);
     }
@@ -291,6 +294,7 @@ export default function SavingsGoalsManager() {
       setDepositGoalId(null);
       setDepositAmount('');
       await fetchGoals();
+      notifyFinancialSync();
     } catch (err) {
       console.error(err);
     }

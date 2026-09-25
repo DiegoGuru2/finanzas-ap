@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { formatCurrency } from '@/lib/utils';
 import { calculateSalaryDetails } from '@/modules/financial-engine/cashflow';
 import { checkFondosReservaEligibility } from '@/modules/financial-engine/benefits';
+import { notifyFinancialSync } from '@/stores/sync';
 
 interface IncomeItem {
   id: string;
@@ -77,6 +78,11 @@ export default function IncomesManager() {
 
   useEffect(() => {
     fetchIncomes();
+    const handleSync = () => {
+      fetchIncomes();
+    };
+    window.addEventListener('finanzas:sync', handleSync);
+    return () => window.removeEventListener('finanzas:sync', handleSync);
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -127,6 +133,7 @@ export default function IncomesManager() {
 
       setShowModal(false);
       await fetchIncomes();
+      notifyFinancialSync();
     } catch (err: any) {
       setErrorMessage(err.message || 'Error al registrar');
     } finally {
@@ -139,6 +146,7 @@ export default function IncomesManager() {
     try {
       await fetch(`/api/incomes?id=${id}`, { method: 'DELETE' });
       await fetchIncomes();
+      notifyFinancialSync();
     } catch (err) {
       console.error(err);
     }

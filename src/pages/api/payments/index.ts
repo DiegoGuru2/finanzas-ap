@@ -109,7 +109,7 @@ export const POST: APIRoute = async (ctx) => {
         userId: user.id,
         type: isPaidOff ? 'debt_cleared' : 'payment',
         title: isPaidOff
-          ? `🎉 ¡Deuda liquidada: ${targetDebt.name}!`
+          ? `¡Deuda liquidada: ${targetDebt.name}!`
           : `Abono de $${amount.toFixed(2)} registrado`,
         message: isPaidOff
           ? `¡Felicidades! Has liquidado por completo "${targetDebt.name}" con un abono de $${amount.toFixed(2)}.`

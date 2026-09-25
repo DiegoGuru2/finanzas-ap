@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { formatCurrency } from '@/lib/utils';
 import { DEFAULT_CATALOGS, fetchCatalog, type CatalogOption } from '@/lib/catalogs';
 import { CategoryIcon } from '@/components/ui/CategoryIcon';
+import { notifyFinancialSync } from '@/stores/sync';
 
 interface BudgetItem {
   id: string;
@@ -33,6 +34,11 @@ export default function BudgetsManager() {
   useEffect(() => {
     fetchCatalog('expense_category').then(setCategories);
     fetchBudgets();
+    const handleSync = () => {
+      fetchBudgets();
+    };
+    window.addEventListener('finanzas:sync', handleSync);
+    return () => window.removeEventListener('finanzas:sync', handleSync);
   }, []);
 
   const fetchBudgets = async () => {
@@ -67,6 +73,7 @@ export default function BudgetsManager() {
       setModalCategory('');
       setModalLimit('');
       await fetchBudgets();
+      notifyFinancialSync();
     } catch (err) {
       console.error('Error saving budget:', err);
     } finally {
@@ -79,6 +86,7 @@ export default function BudgetsManager() {
     try {
       await fetch(`/api/budgets?id=${id}`, { method: 'DELETE' });
       await fetchBudgets();
+      notifyFinancialSync();
     } catch (err) {
       console.error('Error deleting budget:', err);
     }
