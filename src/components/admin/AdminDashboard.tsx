@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { formatCurrency } from '@/lib/utils';
+import { Zap, Users, Landmark, Settings, FileText } from 'lucide-react';
 
 interface Metrics {
   users: { total: number; admins: number; standard: number };
@@ -127,14 +128,15 @@ export default function AdminDashboard() {
         {/* Acciones directas de administración */}
         <div className="rounded-2xl border border-border-default bg-surface-50 p-5 space-y-4">
           <h3 className="text-sm font-bold text-text-primary flex items-center gap-2">
-            <span>⚡</span> Accesos Administrativos Rápidos
+            <Zap className="h-4 w-4 text-brand-400" />
+            <span>Accesos Administrativos Rápidos</span>
           </h3>
           <div className="grid grid-cols-2 gap-2.5">
             <a
               href="/admin/users"
               className="flex flex-col p-3 rounded-xl bg-surface-100/60 border border-border-default/60 hover:border-brand-500/40 hover:bg-surface-100 transition-all"
             >
-              <span className="text-base mb-1">👥</span>
+              <Users className="h-4 w-4 text-brand-400 mb-1" />
               <strong className="text-xs text-text-primary">Gestionar Usuarios</strong>
               <span className="text-[10px] text-text-muted mt-0.5">Asignar roles admin/user</span>
             </a>
@@ -143,7 +145,7 @@ export default function AdminDashboard() {
               href="/admin/institutions"
               className="flex flex-col p-3 rounded-xl bg-surface-100/60 border border-border-default/60 hover:border-brand-500/40 hover:bg-surface-100 transition-all"
             >
-              <span className="text-base mb-1">🏦</span>
+              <Landmark className="h-4 w-4 text-brand-400 mb-1" />
               <strong className="text-xs text-text-primary">Bancos & Financieras</strong>
               <span className="text-[10px] text-text-muted mt-0.5">Tasas referenciales</span>
             </a>
@@ -152,7 +154,7 @@ export default function AdminDashboard() {
               href="/admin/settings"
               className="flex flex-col p-3 rounded-xl bg-surface-100/60 border border-border-default/60 hover:border-brand-500/40 hover:bg-surface-100 transition-all"
             >
-              <span className="text-base mb-1">⚙️</span>
+              <Settings className="h-4 w-4 text-brand-400 mb-1" />
               <strong className="text-xs text-text-primary">Parámetros Globales</strong>
               <span className="text-[10px] text-text-muted mt-0.5">SBU y aportes IESS</span>
             </a>
@@ -161,7 +163,7 @@ export default function AdminDashboard() {
               href="/admin/audit"
               className="flex flex-col p-3 rounded-xl bg-surface-100/60 border border-border-default/60 hover:border-brand-500/40 hover:bg-surface-100 transition-all"
             >
-              <span className="text-base mb-1">📜</span>
+              <FileText className="h-4 w-4 text-brand-400 mb-1" />
               <strong className="text-xs text-text-primary">Auditoría & DB</strong>
               <span className="text-[10px] text-text-muted mt-0.5">Tablas y estado del sistema</span>
             </a>

@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { formatCurrency } from '@/lib/utils';
 import { DEFAULT_CATALOGS, fetchCatalog, type CatalogOption } from '@/lib/catalogs';
 import { notifyFinancialSync } from '@/stores/sync';
+import { CategoryIcon } from '@/components/ui/CategoryIcon';
+import { Coins } from 'lucide-react';
 
 interface DebtItem {
   id: string;
@@ -810,8 +812,9 @@ export default function DebtsManager() {
                             {debt.name}
                           </span>
                           <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="text-[10px] uppercase font-mono px-1.5 py-0.2 rounded bg-surface-200 text-text-muted">
-                              {debt.type || 'crédito'}
+                            <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-surface-200 text-text-muted inline-flex items-center gap-1">
+                              <CategoryIcon category={debt.type} className="h-3 w-3 shrink-0" />
+                              <span>{debt.type || 'crédito'}</span>
                             </span>
                             {debt.hasInstallmentPlan && debt.termMonths && (
                               <span className="text-[10px] px-1.5 py-0.2 rounded bg-accent-500/10 text-accent-400 border border-accent-500/20 font-medium">
@@ -1041,9 +1044,14 @@ export default function DebtsManager() {
                 >
                   <div className="space-y-1.5 flex-1">
                     <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-                      <span className={`font-semibold text-base ${isPaid ? 'text-emerald-400 line-through' : 'text-text-primary'}`}>
-                        {debt.name}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-surface-200 text-text-secondary shrink-0">
+                          <CategoryIcon category={debt.type} className="h-4 w-4" />
+                        </div>
+                        <span className={`font-semibold text-base ${isPaid ? 'text-emerald-400 line-through' : 'text-text-primary'}`}>
+                          {debt.name}
+                        </span>
+                      </div>
                       {debt.creditor && (
                         <span className="text-xs bg-surface-200 px-2 py-0.5 rounded text-text-secondary">
                           {debt.creditor}
@@ -1217,15 +1225,18 @@ export default function DebtsManager() {
                 </div>
 
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-text-secondary">Tipo de Obligación</label>
+                  <label className="mb-1 flex items-center gap-1.5 text-xs font-medium text-text-secondary">
+                    <CategoryIcon category={type} className="h-3.5 w-3.5 text-brand-400 shrink-0" />
+                    <span>Tipo de Obligación</span>
+                  </label>
                   <select
                     value={type}
                     onChange={(e) => setType(e.target.value)}
-                    className="w-full rounded-xl border border-border-default bg-surface-100 px-3 py-2 text-xs text-text-primary focus:border-brand-500 focus:outline-none"
+                    className="w-full rounded-xl border border-border-default bg-surface-100 px-3 py-2 text-xs text-text-primary focus:border-brand-500 focus:outline-none cursor-pointer"
                   >
                     {debtTypes.map((t) => (
                       <option key={t.value} value={t.value}>
-                        {t.icon ? `${t.icon} ` : ''}{t.label}
+                        {t.label}
                       </option>
                     ))}
                   </select>
@@ -1364,8 +1375,9 @@ export default function DebtsManager() {
                     }}
                     className="h-4 w-4 rounded border-accent-500 text-accent-500 focus:ring-accent-500 cursor-pointer"
                   />
-                  <label htmlFor="payFullBalance" className="text-xs font-bold text-accent-400 cursor-pointer">
-                    💰 Pagar el valor total de esta deuda (un solo pago)
+                  <label htmlFor="payFullBalance" className="text-xs font-bold text-accent-400 cursor-pointer flex items-center gap-1.5">
+                    <Coins className="h-4 w-4 text-accent-400 shrink-0" />
+                    <span>Pagar el valor total de esta deuda (un solo pago)</span>
                   </label>
                 </div>
                 {payFullBalance && (parseFloat(currentBalance) || 0) > 0 && (

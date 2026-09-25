@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { formatCurrency } from '@/lib/utils';
 import { notifyFinancialSync } from '@/stores/sync';
+import { Calendar, Bell, AlertTriangle, AlertCircle, Clock, Sparkles } from 'lucide-react';
 
 interface SchedulePeriod {
   key: string;
@@ -353,7 +354,8 @@ export default function NotificationCenter() {
                     : 'text-text-muted hover:text-text-primary'
                 }`}
               >
-                <span>📅 Próximo Corte</span>
+                <Calendar className="h-3.5 w-3.5" />
+                <span>Próximo Corte</span>
                 {pendingCount > 0 && (
                   <span className="rounded-full bg-brand-500/20 px-1.5 py-0.2 text-[10px] font-bold text-brand-400">
                     {pendingCount}
@@ -370,7 +372,8 @@ export default function NotificationCenter() {
                     : 'text-text-muted hover:text-text-primary'
                 }`}
               >
-                <span>🔔 Alertas del Sistema</span>
+                <Bell className="h-3.5 w-3.5" />
+                <span>Alertas del Sistema</span>
                 {unreadAlertsCount > 0 && (
                   <span className="rounded-full bg-danger-500/20 px-1.5 py-0.2 text-[10px] font-bold text-danger-400">
                     {unreadAlertsCount}
@@ -398,7 +401,7 @@ export default function NotificationCenter() {
                   >
                     <div className="flex items-center justify-between">
                       <span
-                        className={`text-xs font-bold uppercase tracking-wider ${
+                        className={`text-xs font-bold uppercase tracking-wider inline-flex items-center gap-1.5 ${
                           daysDiff === 0
                             ? 'text-danger-400'
                             : daysDiff <= 3
@@ -406,11 +409,22 @@ export default function NotificationCenter() {
                               : 'text-brand-400'
                         }`}
                       >
-                        {daysDiff === 0
-                          ? '🚨 ¡Hoy es el corte de pago!'
-                          : daysDiff === 1
-                            ? '⏰ El corte es mañana'
-                            : `📅 Corte en ${daysDiff} días`}
+                        {daysDiff === 0 ? (
+                          <>
+                            <AlertCircle className="h-4 w-4" />
+                            <span>¡Hoy es el corte de pago!</span>
+                          </>
+                        ) : daysDiff === 1 ? (
+                          <>
+                            <Clock className="h-4 w-4" />
+                            <span>El corte es mañana</span>
+                          </>
+                        ) : (
+                          <>
+                            <Calendar className="h-4 w-4" />
+                            <span>Corte en {daysDiff} días</span>
+                          </>
+                        )}
                       </span>
                       <span className="text-[11px] font-semibold text-text-secondary">
                         {nextPeriod.day} de {MONTH_NAMES[nextPeriod.month]}
@@ -442,13 +456,15 @@ export default function NotificationCenter() {
                     {/* Frase explicativa del saldo */}
                     <p className="text-xs text-text-secondary leading-snug">
                       {remainingInCut >= 0 ? (
-                        <>
-                          🎉 Te quedarán <strong className="text-accent-400 font-bold">{formatCurrency(remainingInCut)}</strong> libres en tu cuenta tras cumplir los compromisos de esta quincena.
-                        </>
+                        <span className="inline-flex items-center gap-1">
+                          <Sparkles className="h-3.5 w-3.5 text-accent-400 shrink-0" />
+                          <span>Te quedarán <strong className="text-accent-400 font-bold">{formatCurrency(remainingInCut)}</strong> libres en tu cuenta tras cumplir los compromisos de esta quincena.</span>
+                        </span>
                       ) : (
-                        <>
-                          ⚠️ <strong className="text-danger-400 font-bold">Atención:</strong> Faltan {formatCurrency(Math.abs(remainingInCut))} para cubrir todos los pagos de este corte.
-                        </>
+                        <span className="inline-flex items-center gap-1">
+                          <AlertTriangle className="h-3.5 w-3.5 text-danger-400 shrink-0" />
+                          <span><strong className="text-danger-400 font-bold">Atención:</strong> Faltan {formatCurrency(Math.abs(remainingInCut))} para cubrir todos los pagos de este corte.</span>
+                        </span>
                       )}
                     </p>
                   </div>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { formatCurrency } from '@/lib/utils';
+import { CategoryIcon } from '@/components/ui/CategoryIcon';
 
 interface Breakdown {
   score: number;
@@ -201,8 +202,8 @@ export default function HealthScoreWidget() {
                   key={badge.id}
                   className="flex items-center gap-3 rounded-xl border border-accent-500/30 bg-accent-500/5 p-3 transition-all hover:scale-[1.02]"
                 >
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent-500/20 text-xl flex-shrink-0">
-                    {badge.icon}
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent-500/20 text-accent-400 flex-shrink-0">
+                    <CategoryIcon category={badge.id} className="h-5 w-5" />
                   </div>
                   <div className="min-w-0">
                     <div className="text-xs font-bold text-text-primary truncate">{badge.name}</div>
@@ -228,8 +229,8 @@ export default function HealthScoreWidget() {
                   key={badge.id}
                   className="flex items-center gap-3 rounded-xl border border-border-default bg-surface-100/50 p-3 opacity-60"
                 >
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-surface-200 text-xl flex-shrink-0 grayscale">
-                    {badge.icon}
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-surface-200 text-text-muted flex-shrink-0">
+                    <CategoryIcon category={badge.id} className="h-5 w-5" />
                   </div>
                   <div className="min-w-0">
                     <div className="text-xs font-bold text-text-muted truncate">{badge.name}</div>

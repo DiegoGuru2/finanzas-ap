@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Landmark, ShieldCheck } from 'lucide-react';
 
 interface GlobalParams {
   sbuAmount: number;
@@ -85,7 +86,8 @@ export default function AdminSettingsManager() {
         {/* Nómina Ecuador */}
         <div className="rounded-2xl border border-border-default bg-surface-50 p-5 space-y-4">
           <h3 className="text-sm font-bold text-text-primary flex items-center gap-2">
-            <span>🇪🇨</span> Parámetros de Ley — Ecuador
+            <Landmark className="h-4 w-4 text-brand-400" />
+            <span>Parámetros de Ley — Ecuador</span>
           </h3>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -130,7 +132,8 @@ export default function AdminSettingsManager() {
         {/* Políticas de Salud Financiera */}
         <div className="rounded-2xl border border-border-default bg-surface-50 p-5 space-y-4">
           <h3 className="text-sm font-bold text-text-primary flex items-center gap-2">
-            <span>🛡️</span> Reglas de Salud Financiera y Alertas
+            <ShieldCheck className="h-4 w-4 text-brand-400" />
+            <span>Reglas de Salud Financiera y Alertas</span>
           </h3>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { formatCurrency } from '@/lib/utils';
 import { catalogTint, DEFAULT_CATALOGS, fetchCatalog, type CatalogOption } from '@/lib/catalogs';
+import { CategoryIcon } from '@/components/ui/CategoryIcon';
 
 interface ExpenseItem {
   id: string;
@@ -160,7 +161,7 @@ export default function ExpensesManager() {
 
   // Etiquetas desde el catálogo administrable
   const categoryLabels: Record<string, string> = Object.fromEntries(
-    categories.map((c) => [c.value, `${c.icon ? c.icon + ' ' : ''}${c.label}`])
+    categories.map((c) => [c.value, c.label])
   );
 
   const filteredAndSortedExpenses = React.useMemo(() => {
@@ -629,12 +630,13 @@ export default function ExpensesManager() {
                       {/* Categoría */}
                       <td className="px-3 py-2.5 border-r border-border-default/40 whitespace-nowrap">
                         <span
-                          className={`inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-lg text-text-secondary border ${
+                          className={`inline-flex items-center gap-1.5 text-[11px] px-2 py-0.5 rounded-lg text-text-secondary border ${
                             color ? 'cat-tint' : 'bg-surface-200 border-border-default/60'
                           }`}
                           style={catalogTint(color)}
                         >
-                          {categoryLabels[exp.category] || exp.category}
+                          <CategoryIcon category={exp.category} className="h-3 w-3 shrink-0" />
+                          <span>{categoryLabels[exp.category] || exp.category}</span>
                         </span>
                       </td>
 
@@ -760,7 +762,12 @@ export default function ExpensesManager() {
               >
                 <div>
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-                    <span className="font-semibold text-text-primary text-sm sm:text-base">{exp.name}</span>
+                    <div className="flex items-center gap-2">
+                      <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-surface-200 text-text-secondary shrink-0">
+                        <CategoryIcon category={exp.category} className="h-4 w-4" />
+                      </div>
+                      <span className="font-semibold text-text-primary text-sm sm:text-base">{exp.name}</span>
+                    </div>
                     {(() => {
                       const color = categories.find((c) => c.value === exp.category)?.color;
                       return (
@@ -901,15 +908,18 @@ export default function ExpensesManager() {
                 </div>
 
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-text-secondary">Categoría</label>
+                  <label className="mb-1 flex items-center gap-1.5 text-xs font-medium text-text-secondary">
+                    <CategoryIcon category={category} className="h-3.5 w-3.5 text-brand-400 shrink-0" />
+                    <span>Categoría</span>
+                  </label>
                   <select
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
-                    className="w-full rounded-xl border border-border-default bg-surface-100 px-3 py-2 text-xs text-text-primary focus:border-brand-500 focus:outline-none"
+                    className="w-full rounded-xl border border-border-default bg-surface-100 px-3 py-2 text-xs text-text-primary focus:border-brand-500 focus:outline-none cursor-pointer"
                   >
                     {categories.map((c) => (
                       <option key={c.value} value={c.value}>
-                        {c.icon ? `${c.icon} ` : ''}{c.label}
+                        {c.label}
                       </option>
                     ))}
                   </select>

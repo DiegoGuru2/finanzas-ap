@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { formatCurrency } from '@/lib/utils';
 import { DEFAULT_CATALOGS, fetchCatalog, type CatalogOption } from '@/lib/catalogs';
+import { CategoryIcon } from '@/components/ui/CategoryIcon';
 
 interface BudgetItem {
   id: string;
@@ -49,7 +50,7 @@ export default function BudgetsManager() {
   };
 
   const getCategoryInfo = (value: string) => {
-    return categories.find((c) => c.value === value) || { value, label: value, icon: '📦', color: '#C9CDD6' };
+    return categories.find((c) => c.value === value) || { value, label: value, icon: 'other', color: '#C9CDD6' };
   };
 
   const handleSave = async (e: React.FormEvent) => {
@@ -205,8 +206,10 @@ export default function BudgetsManager() {
                 }`}
               >
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="text-lg">{cat.icon}</span>
+                  <div className="flex items-center gap-2.5">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-surface-200 text-text-secondary shrink-0">
+                      <CategoryIcon category={b.category} className="h-4 w-4" />
+                    </div>
                     <span className="text-sm font-bold text-text-primary">{cat.label}</span>
                   </div>
                   <button
@@ -307,7 +310,7 @@ export default function BudgetsManager() {
                   <option value="">Seleccionar categoría...</option>
                   {unassignedCategories.map((c) => (
                     <option key={c.value} value={c.value}>
-                      {c.icon} {c.label}
+                      {c.label}
                     </option>
                   ))}
                   {/* También mostrar las ya asignadas para actualizar */}
@@ -315,7 +318,7 @@ export default function BudgetsManager() {
                     const cat = getCategoryInfo(b.category);
                     return (
                       <option key={b.category} value={b.category}>
-                        {cat.icon} {cat.label} (actualizar: {formatCurrency(b.monthlyLimit)})
+                        {cat.label} (actualizar: {formatCurrency(b.monthlyLimit)})
                       </option>
                     );
                   })}

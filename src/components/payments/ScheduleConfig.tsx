@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { formatCurrency } from '@/lib/utils';
 import { catalogTint, fetchCatalog, type CatalogOption } from '@/lib/catalogs';
+import { CategoryIcon } from '@/components/ui/CategoryIcon';
 
 interface DebtRow {
   id: string;
@@ -303,8 +304,12 @@ export default function ScheduleConfig({ onClose, onSaved }: Props) {
                           {catOpt?.color && <span className="cat-dot h-2.5 w-2.5 rounded-full shrink-0" />}
                           {e.name}
                         </div>
-                        <div className="text-xs text-text-muted">
-                          Categoría: <span className="text-text-secondary">{catOpt ? `${catOpt.icon ? catOpt.icon + ' ' : ''}${catOpt.label}` : e.category}</span>
+                        <div className="text-xs text-text-muted flex items-center gap-1">
+                          <span>Categoría:</span>
+                          <span className="text-text-secondary inline-flex items-center gap-1 font-medium">
+                            <CategoryIcon category={e.category} className="h-3 w-3" />
+                            <span>{catOpt ? catOpt.label : e.category}</span>
+                          </span>
                         </div>
                       </div>
 

@@ -1,7 +1,8 @@
 import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { formatCurrency } from '@/lib/utils';
-import { calculateSalaryDetails } from '@/modules/financial-engine/cashflow';
 import { DEFAULT_CATALOGS } from '@/lib/catalogs';
+import { CategoryIcon } from '@/components/ui/CategoryIcon';
+import { AlertTriangle, Sparkles } from 'lucide-react';
 import HealthScoreWidget from './HealthScoreWidget';
 
 // Lazy-load recharts para reducir el bundle inicial (~500KB)
@@ -119,38 +120,6 @@ export default function DashboardView() {
     return () => observer.disconnect();
   }, []);
 
-  // Onboarding Form State
-  const [onboardingSalaryName, setOnboardingSalaryName] = useState('Sueldo Principal');
-  const [onboardingAmount, setOnboardingAmount] = useState<number>(1000);
-  const [onboardingScheme, setOnboardingScheme] = useState<'quincena_fin_mes' | 'monthly'>('quincena_fin_mes');
-  const [onboardingQuincena, setOnboardingQuincena] = useState<number>(452.75);
-  const [onboardingFinDeMes, setOnboardingFinDeMes] = useState<number>(452.75);
-  const [deductIess, setDeductIess] = useState(true);
-  const [iessPercentage, setIessPercentage] = useState(9.45);
-  const [onboardingWorkStartDate, setOnboardingWorkStartDate] = useState('');
-  const [savingOnboarding, setSavingOnboarding] = useState(false);
-  const [onboardingError, setOnboardingError] = useState<string | null>(null);
-
-  // Vista previa con la misma fórmula del motor financiero (nada duplicado)
-  const onboardingPreview = calculateSalaryDetails({
-    id: '',
-    name: '',
-    amount: onboardingAmount || 0,
-    frequency: 'monthly',
-    isSalary: true,
-    paymentScheme: onboardingScheme,
-    quincenaAmount: 0,
-    finDeMesAmount: 0,
-    deductIess,
-    iessPercentage,
-  });
-
-  // Live calculation of IESS and Quincena/Fin de mes for Onboarding
-  useEffect(() => {
-    setOnboardingQuincena(onboardingPreview.quincenaAmount);
-    setOnboardingFinDeMes(onboardingPreview.finDeMesAmount);
-  }, [onboardingAmount, deductIess, iessPercentage, onboardingScheme]);
-
   const [fetchError, setFetchError] = useState<string | null>(null);
 
   const fetchDashboard = async () => {
@@ -165,10 +134,6 @@ export default function DashboardView() {
       const json = await res.json();
       if (json.data) {
         setData(json.data);
-        // If user has NO incomes recorded yet, automatically trigger Onboarding Wizard
-        if (!json.data.incomes || json.data.incomes.length === 0) {
-          setShowOnboarding(true);
-        }
       } else {
         throw new Error(json.error || 'Respuesta de datos vacía');
       }
@@ -190,43 +155,7 @@ export default function DashboardView() {
     return () => window.removeEventListener('finanzas:sync', handleSync);
   }, [strategy]);
 
-  const handleSaveOnboarding = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSavingOnboarding(true);
-    setOnboardingError(null);
 
-    try {
-      const res = await fetch('/api/incomes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: onboardingSalaryName,
-          amount: Number(onboardingAmount),
-          frequency: 'monthly',
-          isSalary: true,
-          paymentScheme: onboardingScheme,
-          quincenaAmount: Number(onboardingQuincena),
-          finDeMesAmount: Number(onboardingFinDeMes),
-          deductIess,
-          iessPercentage: Number(iessPercentage),
-          workStartDate: onboardingWorkStartDate || null,
-          category: 'Sueldo',
-        }),
-      });
-
-      const json = await res.json();
-      if (!res.ok) {
-        throw new Error(json.error || 'Error al guardar sueldo inicial');
-      }
-
-      setShowOnboarding(false);
-      await fetchDashboard();
-    } catch (err: any) {
-      setOnboardingError(err.message || 'Error al registrar configuración inicial');
-    } finally {
-      setSavingOnboarding(false);
-    }
-  };
 
   if (loading) {
     return (
@@ -243,7 +172,7 @@ export default function DashboardView() {
     return (
       <div className="flex h-96 items-center justify-center">
         <div className="text-center space-y-4 max-w-md p-6 rounded-2xl border border-danger-500/20 bg-danger-500/5">
-          <div className="text-3xl">⚠️</div>
+          <AlertTriangle className="h-10 w-10 text-warning-400 mx-auto" />
           <h3 className="text-lg font-bold text-text-primary">Error al cargar el Dashboard</h3>
           <p className="text-xs text-danger-400">{fetchError}</p>
           <button
@@ -281,7 +210,7 @@ export default function DashboardView() {
     return {
       name: item.name,
       amount: item.amount,
-      label: found ? `${found.icon} ${found.label}` : item.name,
+      label: found ? found.label : item.name,
     };
   });
 
@@ -299,16 +228,6 @@ export default function DashboardView() {
         </div>
 
         <div className="flex items-center gap-3">
-          <button
-            onClick={() => setShowOnboarding(true)}
-            className="flex items-center gap-2 rounded-xl bg-surface-100 hover:bg-surface-200 border border-border-default px-4 py-2 text-xs font-semibold text-text-primary transition-all cursor-pointer"
-          >
-            <svg className="h-4 w-4 text-text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <circle cx="12" cy="12" r="3.5" strokeWidth="1.8" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M12 2.5a2 2 0 0 1 1.7 1 2 2 0 0 0 1.7 1 2 2 0 0 1 1.9 1.1 2 2 0 0 0 1.4 1.4 2 2 0 0 1 1.1 1.9 2 2 0 0 0 1 1.7 2 2 0 0 1 0 2.8 2 2 0 0 0-1 1.7 2 2 0 0 1-1.1 1.9 2 2 0 0 0-1.4 1.4 2 2 0 0 1-1.9 1.1 2 2 0 0 0-1.7 1 2 2 0 0 1-2.8 0 2 2 0 0 0-1.7-1 2 2 0 0 1-1.9-1.1 2 2 0 0 0-1.4-1.4 2 2 0 0 1-1.1-1.9 2 2 0 0 0-1-1.7 2 2 0 0 1 0-2.8 2 2 0 0 0 1-1.7 2 2 0 0 1 1.1-1.9 2 2 0 0 0 1.4-1.4 2 2 0 0 1 1.9-1.1 2 2 0 0 0 1.7-1 2 2 0 0 1 1.7-1z" />
-            </svg>
-            <span>Ajustar Sueldo e IESS</span>
-          </button>
           <a
             href="/app/debts"
             className="flex items-center gap-1.5 rounded-xl bg-brand-500 hover:bg-brand-400 px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-brand-500/25 transition-all"
@@ -485,10 +404,15 @@ export default function DashboardView() {
 
           <div className="text-left md:text-right bg-surface-100/90 p-3.5 rounded-xl border border-border-default shadow-sm">
             <div className="text-xs font-semibold text-text-muted">Fecha estimada libre de deuda</div>
-            <div className="text-lg font-extrabold text-accent-400">
-              {debts.length === 0
-                ? '¡Sin deudas activas! 🎉'
-                : (optimization.projectedDebtFreeDate || 'Calculando...')}
+            <div className="text-lg font-extrabold text-accent-400 inline-flex items-center gap-1.5">
+              {debts.length === 0 ? (
+                <>
+                  <Sparkles className="h-5 w-5 text-accent-400" />
+                  <span>¡Sin deudas activas!</span>
+                </>
+              ) : (
+                optimization.projectedDebtFreeDate || 'Calculando...'
+              )}
             </div>
           </div>
         </div>
@@ -848,7 +772,7 @@ export default function DashboardView() {
                   >
                     <div className="flex items-center justify-between">
                       <div className="min-w-0 flex items-center gap-2">
-                        <span className="text-base">{g.icon || '🎯'}</span>
+                        <CategoryIcon category={g.category} className="h-4 w-4 text-emerald-400 shrink-0" />
                         <div className="truncate">
                           <span className="font-bold text-xs text-text-primary truncate block">
                             {g.name}
@@ -871,8 +795,15 @@ export default function DashboardView() {
                     {/* Barra de progreso de ahorro */}
                     <div className="space-y-1">
                       <div className="flex items-center justify-between text-[10px]">
-                        <span className="text-text-muted font-medium">
-                          {isCompleted ? '¡Meta alcanzada! 🎉' : `Faltan ${formatCurrency(Math.max(0, g.targetAmount - g.currentAmount))}`}
+                        <span className="text-text-muted font-medium inline-flex items-center gap-1">
+                          {isCompleted ? (
+                            <>
+                              <Sparkles className="h-3 w-3 text-emerald-400" />
+                              <span className="text-emerald-400 font-bold">¡Meta alcanzada!</span>
+                            </>
+                          ) : (
+                            `Faltan ${formatCurrency(Math.max(0, g.targetAmount - g.currentAmount))}`
+                          )}
                         </span>
                         <span className="font-bold text-emerald-400">{g.percent}%</span>
                       </div>
@@ -902,207 +833,6 @@ export default function DashboardView() {
 
       {/* 🏆 Score de Salud Financiera y Gamificación */}
       <HealthScoreWidget />
-
-      {/* 🚀 ONBOARDING WIZARD MODAL FOR NEW REGISTERED USERS */}
-      {showOnboarding && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-300">
-          <div className="relative w-full max-w-xl max-h-[92vh] overflow-y-auto rounded-3xl border border-brand-500/30 bg-surface-50 p-6 sm:p-8 shadow-2xl space-y-6">
-            {/* Close button X */}
-            <button
-              type="button"
-              onClick={() => setShowOnboarding(false)}
-              className="absolute top-5 right-5 flex h-8 w-8 items-center justify-center rounded-xl bg-surface-100 border border-border-default text-text-muted hover:text-text-primary hover:bg-surface-200 transition-colors cursor-pointer"
-              title="Cerrar modal"
-            >
-              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-
-            <div className="text-center space-y-2">
-              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-500/20 text-brand-400 border border-brand-500/30 shadow-lg shadow-brand-500/20 text-2xl">
-                🇪🇨
-              </div>
-              <h3 className="text-xl sm:text-2xl font-bold text-text-primary">
-                ¡Bienvenido a ProyecAhorro, <span className="gradient-text">{userName}</span>!
-              </h3>
-              <p className="text-xs sm:text-sm text-text-secondary max-w-md mx-auto">
-                Para calcular tu flujo real y plan de optimización de deudas, configuremos tu sueldo y esquema de cobro en Ecuador.
-              </p>
-            </div>
-
-            <form onSubmit={handleSaveOnboarding} className="space-y-4">
-              {/* Paso 1: Sueldo Bruto */}
-              <div>
-                <label className="block text-xs font-semibold text-text-secondary mb-1.5">
-                  1. ¿Cuánto es tu sueldo bruto mensual? ($ USD)
-                </label>
-                <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted text-base font-bold">$</span>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="1"
-                    value={onboardingAmount}
-                    onChange={(e) => setOnboardingAmount(parseFloat(e.target.value) || 0)}
-                    required
-                    className="w-full rounded-xl border border-border-default bg-surface-100 pl-9 pr-4 py-3 text-base font-bold text-text-primary focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
-                    placeholder="1000.00"
-                  />
-                </div>
-              </div>
-
-              {/* Fecha de inicio de labores */}
-              <div>
-                <label className="block text-xs font-semibold text-text-secondary mb-1.5">
-                  Fecha de inicio de labores <span className="text-[10px] text-text-muted font-normal">(Para Fondos de Reserva)</span>
-                </label>
-                <input
-                  type="date"
-                  value={onboardingWorkStartDate}
-                  onChange={(e) => setOnboardingWorkStartDate(e.target.value)}
-                  className="w-full rounded-xl border border-border-default bg-surface-100 px-3.5 py-2.5 text-xs text-text-primary focus:border-brand-500 focus:outline-none"
-                />
-              </div>
-
-              {/* Paso 2: Aporte IESS */}
-              <div className="rounded-2xl border border-border-default bg-surface-100/70 p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2.5">
-                    <input
-                      type="checkbox"
-                      id="onboardingDeductIess"
-                      checked={deductIess}
-                      onChange={(e) => setDeductIess(e.target.checked)}
-                      className="h-4 w-4 rounded border-border-default text-brand-500 focus:ring-brand-500 cursor-pointer"
-                    />
-                    <label htmlFor="onboardingDeductIess" className="text-xs font-semibold text-text-primary cursor-pointer">
-                      Descontar automáticamente el Aporte al IESS (Ecuador)
-                    </label>
-                  </div>
-                  {deductIess && (
-                    <span className="text-xs font-bold text-warning-400 bg-warning-500/10 px-2 py-0.5 rounded border border-warning-500/20">
-                      9.45% de ley
-                    </span>
-                  )}
-                </div>
-
-                {deductIess && (
-                  <div className="flex justify-between items-center text-xs pt-2 border-t border-border-default text-text-muted">
-                    <span>Descuento IESS retenido:</span>
-                    <strong className="text-warning-400 text-sm">-${onboardingPreview.iessDeduction.toFixed(2)}</strong>
-                  </div>
-                )}
-              </div>
-
-              {/* Paso 3: Esquema de cobro */}
-              <div className="space-y-2">
-                <label className="block text-xs font-semibold text-text-secondary">
-                  2. ¿Cómo recibes tus pagos en el mes?
-                </label>
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setOnboardingScheme('quincena_fin_mes')}
-                    className={`rounded-2xl border p-4 text-left transition-all cursor-pointer ${
-                      onboardingScheme === 'quincena_fin_mes'
-                        ? 'border-brand-500 bg-brand-500/15 text-brand-400 shadow-md shadow-brand-500/10 ring-1 ring-brand-500'
-                        : 'border-border-default bg-surface-100 text-text-muted hover:border-border-hover'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2 text-xs font-bold">
-                      <svg className="h-4 w-4 text-brand-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                      <span>Quincena y Fin de Mes</span>
-                    </div>
-                    <div className="mt-1 text-[11px] opacity-80">Cobro el 15 y el 30</div>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setOnboardingScheme('monthly')}
-                    className={`rounded-2xl border p-4 text-left transition-all cursor-pointer ${
-                      onboardingScheme === 'monthly'
-                        ? 'border-brand-500 bg-brand-500/15 text-brand-400 shadow-md shadow-brand-500/10 ring-1 ring-brand-500'
-                        : 'border-border-default bg-surface-100 text-text-muted hover:border-border-hover'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2 text-xs font-bold">
-                      <svg className="h-4 w-4 text-brand-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-                      </svg>
-                      <span>Un Solo Pago</span>
-                    </div>
-                    <div className="mt-1 text-[11px] opacity-80">100% a fin de mes</div>
-                  </button>
-                </div>
-              </div>
-
-              {/* Detalle Quincena / Fin de mes */}
-              {onboardingScheme === 'quincena_fin_mes' && (
-                <div className="grid grid-cols-2 gap-3 rounded-2xl border border-border-default bg-surface-100 p-4">
-                  <div>
-                    <label className="block text-[11px] font-medium text-text-secondary">Anticipo Quincena (15)</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={onboardingQuincena}
-                      onChange={(e) => {
-                        const q = parseFloat(e.target.value) || 0;
-                        setOnboardingQuincena(q);
-                        setOnboardingFinDeMes(Math.round(Math.max(0, onboardingPreview.netMonthly - q) * 100) / 100);
-                      }}
-                      className="mt-1 w-full rounded-xl border border-border-default bg-surface-50 px-3 py-2 text-xs font-bold text-text-primary focus:border-brand-500 focus:outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-medium text-text-secondary">Saldo Fin de Mes (30)</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={onboardingFinDeMes}
-                      onChange={(e) => setOnboardingFinDeMes(parseFloat(e.target.value) || 0)}
-                      className="mt-1 w-full rounded-xl border border-border-default bg-surface-50 px-3 py-2 text-xs font-bold text-text-primary focus:border-brand-500 focus:outline-none"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* Preview Total Líquido en mano */}
-              <div className="rounded-2xl bg-accent-500/10 border border-accent-500/30 p-4 flex justify-between items-center">
-                <div>
-                  <span className="text-xs font-medium text-text-secondary block">Sueldo Neto Líquido Disponible:</span>
-                  <span className="text-[11px] text-text-muted">Dinero real que ingresa a tu cuenta bancaria</span>
-                </div>
-                <div className="text-xl font-extrabold text-accent-400">
-                  {formatCurrency(Math.max(0, onboardingAmount - (deductIess ? (onboardingAmount * iessPercentage) / 100 : 0)))}
-                </div>
-              </div>
-
-              {onboardingError && (
-                <div className="rounded-xl bg-danger-500/10 border border-danger-500/20 px-4 py-2.5 text-xs text-danger-400">
-                  {onboardingError}
-                </div>
-              )}
-
-              <button
-                type="submit"
-                disabled={savingOnboarding}
-                className="w-full flex items-center justify-center gap-2 rounded-2xl bg-brand-500 py-3.5 text-sm font-bold text-white shadow-lg shadow-brand-500/25 hover:bg-brand-400 hover:shadow-brand-400/30 transition-all disabled:opacity-50 cursor-pointer"
-              >
-                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-                <span>{savingOnboarding ? 'Guardando configuración...' : 'Comenzar a optimizar mis finanzas'}</span>
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

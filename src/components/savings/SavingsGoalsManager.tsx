@@ -3,6 +3,8 @@ import { formatCurrency } from '@/lib/utils';
 import { calculateMonthlyNeeded, calculateCompletionDate } from '@/modules/financial-engine/savings';
 import { normalizeToMonthly } from '@/modules/financial-engine/cashflow';
 import { catalogTint, DEFAULT_CATALOGS, fetchCatalog, type CatalogOption } from '@/lib/catalogs';
+import { CategoryIcon } from '@/components/ui/CategoryIcon';
+import { Zap, Link2 } from 'lucide-react';
 
 // ─── Category config ───
 // Las categorías vienen del catálogo administrable (/admin/catalogs);
@@ -16,12 +18,12 @@ const buildCategoryMap = (options: CatalogOption[]): CategoryMap => {
   options.forEach((opt, i) => {
     map[opt.value] = {
       label: opt.label,
-      icon: opt.icon || '🎯',
+      icon: opt.icon || 'target',
       color: COLOR_CYCLE[i % COLOR_CYCLE.length],
       hex: opt.color || null,
     };
   });
-  if (!map.other) map.other = { label: 'Otro', icon: '🎯', color: 'text-text-secondary', hex: null };
+  if (!map.other) map.other = { label: 'Otro', icon: 'target', color: 'text-text-secondary', hex: null };
   return map;
 };
 
@@ -111,7 +113,7 @@ export default function SavingsGoalsManager() {
   const [startDate, setStartDate] = useState(new Date().toISOString().slice(0, 10));
   const [targetDate, setTargetDate] = useState('');
   const [category, setCategory] = useState('other');
-  const [icon, setIcon] = useState('🎯');
+  const [icon, setIcon] = useState('target');
   const [linkedExpenseId, setLinkedExpenseId] = useState('');
   const [linkedSince, setLinkedSince] = useState(new Date().toISOString().slice(0, 10));
 
@@ -175,7 +177,7 @@ export default function SavingsGoalsManager() {
     setStartDate(new Date().toISOString().slice(0, 10));
     setTargetDate('');
     setCategory('other');
-    setIcon('🎯');
+    setIcon('target');
     setLinkedExpenseId('');
     setLinkedSince(new Date().toISOString().slice(0, 10));
     setEditingId(null);
@@ -415,12 +417,12 @@ export default function SavingsGoalsManager() {
                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                   <div className="flex items-start gap-3">
                     <div
-                      className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-xl border ${
+                      className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border ${
                         cat.hex ? 'cat-tint' : 'bg-accent-500/15 border-transparent'
                       }`}
                       style={catalogTint(cat.hex)}
                     >
-                      {cat.icon}
+                      <CategoryIcon category={goal.category} className="h-5 w-5" />
                     </div>
                     <div>
                       <h3 className="text-sm font-bold text-text-primary">{goal.name}</h3>
@@ -576,7 +578,9 @@ export default function SavingsGoalsManager() {
               return (
                 <div key={goal.id} className="flex items-center justify-between rounded-xl border border-accent-500/20 bg-accent-500/5 p-3">
                   <div className="flex items-center gap-2.5">
-                    <span className="text-lg">{cat.icon}</span>
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-surface-200 text-accent-400 shrink-0">
+                      <CategoryIcon category={goal.category} className="h-4 w-4" />
+                    </div>
                     <div>
                       <span className="text-xs font-bold text-text-primary">{goal.name}</span>
                       <span className="text-[10px] text-accent-400 ml-2">✓ {formatCurrency(goal.targetAmount)}</span>
@@ -662,7 +666,7 @@ export default function SavingsGoalsManager() {
                       }`}
                       style={category === key ? catalogTint(val.hex) : undefined}
                     >
-                      <span className="text-lg">{val.icon}</span>
+                      <CategoryIcon category={key} className="h-5 w-5" />
                       <span className="text-[9px] font-medium text-text-secondary leading-tight">{val.label}</span>
                     </button>
                   ))}
@@ -732,8 +736,9 @@ export default function SavingsGoalsManager() {
 
               {/* ─── Vincular con un gasto (ahorro programado) ─── */}
               <div className="rounded-xl border border-brand-500/20 bg-brand-500/5 p-3 space-y-2">
-                <label className="block text-xs font-bold text-text-primary">
-                  🔗 Vincular con un gasto (opcional)
+                <label className="text-xs font-bold text-text-primary inline-flex items-center gap-1.5">
+                  <Link2 className="h-3.5 w-3.5 text-brand-400" />
+                  <span>Vincular con un gasto (opcional)</span>
                 </label>
                 <p className="text-[10px] text-text-muted leading-relaxed">
                   Si registras el ahorro como un gasto (ej. "Ahorro mensual"), vincúlalo aquí:
@@ -775,8 +780,9 @@ export default function SavingsGoalsManager() {
                   Contribución Mensual ($)
                   {linkedExpenseId && <span className="ml-2 text-brand-400">(definida por el gasto vinculado)</span>}
                   {!linkedExpenseId && targetDate && (
-                    <button type="button" onClick={autoCalcMonthly} className="ml-2 text-brand-400 font-semibold cursor-pointer hover:underline">
-                      ⚡ Auto-calcular
+                    <button type="button" onClick={autoCalcMonthly} className="ml-2 inline-flex items-center gap-1 text-brand-400 font-semibold cursor-pointer hover:underline">
+                      <Zap className="h-3 w-3" />
+                      <span>Auto-calcular</span>
                     </button>
                   )}
                 </label>

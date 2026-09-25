@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { CATALOG_KEYS, CATALOG_META, PASTEL_PALETTE, type CatalogKey } from '@/lib/catalogs';
+import { CategoryIcon } from '@/components/ui/CategoryIcon';
+import { FolderTree, Pencil, Trash2 } from 'lucide-react';
 
 interface CatalogRow {
   id: string;
@@ -127,7 +129,10 @@ export default function AdminCatalogsManager() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl sm:text-2xl font-bold text-text-primary">🗂️ Catálogos de la Aplicación</h2>
+        <h2 className="text-xl sm:text-2xl font-bold text-text-primary flex items-center gap-2">
+          <FolderTree className="h-6 w-6 text-brand-400" />
+          <span>Catálogos de la Aplicación</span>
+        </h2>
         <p className="text-xs sm:text-sm text-text-secondary mt-1">
           Administra las opciones que ven los usuarios en los selects de Gastos, Deudas y Ahorro.
           Los cambios aplican de inmediato para todos.
@@ -185,7 +190,9 @@ export default function AdminCatalogsManager() {
                       style={{ background: r.color || 'transparent' }}
                       title={r.color || 'Sin color'}
                     />
-                    <span className="text-base mr-2 align-middle">{r.icon || '·'}</span>
+                    <span className="inline-flex items-center mr-2 align-middle text-text-secondary">
+                      <CategoryIcon category={r.value || r.icon} className="h-4 w-4" />
+                    </span>
                     <span className="font-semibold text-text-primary align-middle">{r.label}</span>
                   </td>
                   <td className="px-3 py-2.5 font-mono text-[11px] text-text-muted">{r.value}</td>
@@ -204,8 +211,8 @@ export default function AdminCatalogsManager() {
                     </button>
                   </td>
                   <td className="px-5 py-2.5 text-right space-x-1.5">
-                    <button onClick={() => openEdit(r)} className="rounded-lg border border-border-default px-2.5 py-1 text-[11px] text-text-secondary hover:text-text-primary hover:bg-surface-100 cursor-pointer">✏️</button>
-                    <button onClick={() => handleDelete(r)} className="rounded-lg border border-danger-500/30 px-2.5 py-1 text-[11px] text-danger-400 hover:bg-danger-500/10 cursor-pointer">🗑️</button>
+                    <button onClick={() => openEdit(r)} className="rounded-lg border border-border-default px-2.5 py-1 text-[11px] text-text-secondary hover:text-text-primary hover:bg-surface-100 cursor-pointer inline-flex items-center" title="Editar"><Pencil className="h-3 w-3" /></button>
+                    <button onClick={() => handleDelete(r)} className="rounded-lg border border-danger-500/30 px-2.5 py-1 text-[11px] text-danger-400 hover:bg-danger-500/10 cursor-pointer inline-flex items-center" title="Eliminar"><Trash2 className="h-3 w-3" /></button>
                   </td>
                 </tr>
               ))}

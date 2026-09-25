@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Pencil, Trash2, Key } from 'lucide-react';
 
 interface UserRecord {
   id: string;
@@ -191,17 +192,18 @@ export default function AdminUsersManager() {
                       <div className="flex items-center justify-end gap-2">
                         <button
                           onClick={() => openEditModal(u)}
-                          className="rounded-lg bg-surface-100 border border-border-default px-2.5 py-1 text-[11px] font-semibold text-brand-400 hover:bg-brand-500/10 hover:border-brand-500/30 transition-colors cursor-pointer"
+                          className="rounded-lg bg-surface-100 border border-border-default px-2.5 py-1 text-[11px] font-semibold text-brand-400 hover:bg-brand-500/10 hover:border-brand-500/30 transition-colors cursor-pointer inline-flex items-center gap-1.5"
                           title="Editar datos y contraseña"
                         >
-                          ✏️ Modificar
+                          <Pencil className="h-3 w-3" />
+                          <span>Modificar</span>
                         </button>
                         <button
                           onClick={() => handleDeleteUser(u.id, u.email)}
-                          className="rounded-lg border border-danger-500/30 px-2.5 py-1 text-[11px] font-semibold text-danger-400 hover:bg-danger-500/10 transition-colors cursor-pointer"
+                          className="rounded-lg border border-danger-500/30 px-2.5 py-1 text-[11px] font-semibold text-danger-400 hover:bg-danger-500/10 transition-colors cursor-pointer inline-flex items-center justify-center"
                           title="Eliminar usuario"
                         >
-                          🗑️
+                          <Trash2 className="h-3 w-3" />
                         </button>
                       </div>
                     </td>
@@ -298,8 +300,10 @@ export default function AdminUsersManager() {
 
               {/* Cambiar Contraseña */}
               <div className="rounded-xl border border-border-default bg-surface-100/60 p-3.5 space-y-2">
-                <label className="block text-xs font-bold text-text-primary">
-                  🔑 Cambiar Contraseña del Usuario <span className="text-[10px] text-text-muted font-normal">(Opcional)</span>
+                <label className="text-xs font-bold text-text-primary inline-flex items-center gap-1.5">
+                  <Key className="h-3.5 w-3.5 text-brand-400" />
+                  <span>Cambiar Contraseña del Usuario</span>
+                  <span className="text-[10px] text-text-muted font-normal">(Opcional)</span>
                 </label>
                 <input
                   type="text"

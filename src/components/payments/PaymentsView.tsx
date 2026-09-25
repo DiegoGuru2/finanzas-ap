@@ -4,6 +4,7 @@ import { catalogTint, fetchCatalog, type CatalogOption } from '@/lib/catalogs';
 import ScheduleConfig from './ScheduleConfig';
 import { exportScheduleToExcel } from '@/lib/excel-export';
 import { notifyFinancialSync } from '@/stores/sync';
+import { Zap, CreditCard, Gift, Sparkles, Info } from 'lucide-react';
 
 interface SchedulePeriod {
   key: string;
@@ -966,7 +967,8 @@ export default function PaymentsView() {
                   onClick={scrollToNextCut}
                   className="self-start sm:self-auto inline-flex items-center gap-1.5 rounded-lg border border-brand-500/30 bg-brand-500/10 px-3 py-1.5 text-xs font-semibold text-brand-400 hover:bg-brand-500/20 transition-all cursor-pointer"
                 >
-                  <span>⚡ Ir al corte próximo</span>
+                  <Zap className="h-3.5 w-3.5" />
+                  <span>Ir al corte próximo</span>
                 </button>
               )}
             </div>
@@ -987,13 +989,14 @@ export default function PaymentsView() {
 
               <button
                 onClick={() => setMatrixMonthFilter('next')}
-                className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-all shrink-0 cursor-pointer ${
+                className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium transition-all shrink-0 cursor-pointer ${
                   matrixMonthFilter === 'next'
                     ? 'bg-brand-500 text-white shadow-sm font-semibold'
                     : 'border border-brand-500/30 bg-brand-500/10 text-brand-400 hover:bg-brand-500/20'
                 }`}
               >
-                ⚡ Mes actual
+                <Zap className="h-3.5 w-3.5" />
+                <span>Mes actual</span>
               </button>
 
               {uniqueMonths.map((m) => (
@@ -1087,7 +1090,10 @@ export default function PaymentsView() {
                       colSpan={filteredMatrixPeriods.length + 1}
                       className="sticky left-0 z-10 bg-surface-100/90 px-3 sm:px-4 py-1.5 text-xs font-bold uppercase tracking-wide text-danger-400 border-b border-border-default/80"
                     >
-                      💳 Deudas a Pagar
+                      <span className="inline-flex items-center gap-1.5">
+                        <CreditCard className="h-3.5 w-3.5" />
+                        <span>Deudas a Pagar</span>
+                      </span>
                     </td>
                   </tr>
                 )}
@@ -1244,10 +1250,11 @@ export default function PaymentsView() {
                         {payouts.map((b) => (
                           <div
                             key={b.label}
-                            className="mt-0.5 text-[9px] font-bold text-accent-400 truncate"
+                            className="mt-0.5 text-[9px] font-bold text-accent-400 truncate inline-flex items-center justify-center gap-1"
                             title={`${b.label}: ${formatCurrency(b.amount)}`}
                           >
-                            🎁 {b.label}
+                            <Gift className="h-2.5 w-2.5 shrink-0" />
+                            <span>{b.label}</span>
                           </div>
                         ))}
                       </td>
@@ -1291,11 +1298,14 @@ export default function PaymentsView() {
                 <span>Próximo corte activo</span>
               </span>
               <span className="inline-flex items-center gap-1">
-                <span>🎉</span>
+                <Sparkles className="h-3 w-3 text-accent-400" />
                 <span>Última cuota programada</span>
               </span>
             </div>
-            <span>💡 Haz clic sobre cualquier valor de deuda para abonar.</span>
+            <span className="inline-flex items-center gap-1">
+              <Info className="h-3 w-3 text-brand-400" />
+              <span>Haz clic sobre cualquier valor de deuda para abonar.</span>
+            </span>
           </div>
         </div>
       )}
