@@ -4,15 +4,10 @@ import { incomes, expenses, debts, payments, expensePayments } from '@/lib/db/sc
 import { eq, desc } from 'drizzle-orm';
 import { buildPaymentSchedule } from '@/modules/financial-engine/schedule';
 import type { Debt, Expense, Income } from '@/modules/financial-engine/types';
+import { parseLocalDateParts } from '@/lib/utils';
 
 const toIsoDate = (v: unknown): string | null => {
-  if (!v) return null;
-  const d = new Date(v as any);
-  if (Number.isNaN(d.getTime())) return null;
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
+  return parseLocalDateParts(v)?.dateStr || null;
 };
 
 export const GET: APIRoute = async (ctx) => {
@@ -119,15 +114,16 @@ export const GET: APIRoute = async (ctx) => {
 
     // Cruce con pagos registrados: marca las celdas del cronograma ya cubiertas.
     // Un pago del día 1-15 cae en el corte de quincena; del 16 en adelante, en fin de mes.
+    // Usamos parseLocalDateParts para evitar desfasajes de zona horaria (UTC vs local).
     const paid: Record<string, Record<string, number>> = {};
     for (const p of userPayments) {
-      const paidDate = new Date(p.paidAt as any);
-      if (Number.isNaN(paidDate.getTime())) continue;
-      const timing = paidDate.getDate() <= 15 ? 'quincena' : 'fin_de_mes';
+      const parts = parseLocalDateParts(p.paidAt);
+      if (!parts) continue;
+      const timing = parts.day <= 15 ? 'quincena' : 'fin_de_mes';
       const period = schedule.periods.find(
         (per) =>
-          per.year === paidDate.getFullYear() &&
-          per.month === paidDate.getMonth() &&
+          per.year === parts.year &&
+          per.month === parts.month &&
           per.timing === timing
       );
       if (!period) continue;
@@ -146,6 +142,7 @@ export const GET: APIRoute = async (ctx) => {
     const history = userPayments.map((p) => ({
       ...p,
       amount: parseFloat(p.amount as string),
+      paidAt: toIsoDate(p.paidAt) || String(p.paidAt),
     }));
 
     return new Response(

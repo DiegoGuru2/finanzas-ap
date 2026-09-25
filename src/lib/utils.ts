@@ -101,3 +101,45 @@ export function sanitizeObject<T extends Record<string, any>>(obj: T): T {
   return result as T;
 }
 
+/**
+ * Safely parse a date string (YYYY-MM-DD) or Date object into local date parts
+ * { year, month (0-indexed), day, dateStr } without UTC timezone shifts.
+ */
+export function parseLocalDateParts(input: unknown): { year: number; month: number; month1Based: number; day: number; dateStr: string } | null {
+  if (!input) return null;
+  let str = '';
+  if (typeof input === 'string') {
+    str = input.slice(0, 10);
+  } else if (input instanceof Date && !Number.isNaN(input.getTime())) {
+    const y = input.getFullYear();
+    const m = String(input.getMonth() + 1).padStart(2, '0');
+    const d = String(input.getDate()).padStart(2, '0');
+    str = `${y}-${m}-${d}`;
+  } else {
+    str = String(input).slice(0, 10);
+  }
+
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(str);
+  if (!match) return null;
+
+  const year = parseInt(match[1], 10);
+  const month1Based = parseInt(match[2], 10);
+  const month = month1Based - 1; // 0-indexed for consistency with Date.getMonth() & SchedulePeriod
+  const day = parseInt(match[3], 10);
+
+  return { year, month, month1Based, day, dateStr: `${match[1]}-${match[2]}-${match[3]}` };
+}
+
+/**
+ * Format a Date or date string to strict YYYY-MM-DD
+ */
+export function toLocalDateString(input: unknown): string {
+  const parts = parseLocalDateParts(input);
+  if (parts) return parts.dateStr;
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const d = String(now.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+

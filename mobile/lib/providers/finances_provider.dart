@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../core/api/api_client.dart';
+import '../core/services/alarm_service.dart';
 
 class FinancesProvider extends ChangeNotifier {
   final ApiClient _apiClient = ApiClient();
@@ -127,9 +128,38 @@ class FinancesProvider extends ChangeNotifier {
       if (results[1].isNotEmpty || _expenses.isEmpty) _expenses = results[1];
       if (results[2].isNotEmpty || _incomes.isEmpty) _incomes = results[2];
       if (results[3].isNotEmpty || _savingsGoals.isEmpty) _savingsGoals = results[3];
+
+      _updateCutReminderSchedule();
     } finally {
       _isLoading = false;
       notifyListeners();
+    }
+  }
+
+  void _updateCutReminderSchedule() {
+    try {
+      final now = DateTime.now();
+      final currentDay = now.day;
+      final DateTime nextCut = currentDay <= 15
+          ? DateTime(now.year, now.month, 15)
+          : DateTime(now.year, now.month + 1, 0);
+
+      final pendingDebts = _debts.where((d) =>
+        d['status'] != 'paid_off' && d['status'] != 'liquidated'
+      ).toList();
+
+      final totalDue = pendingDebts.fold<double>(
+        0.0,
+        (sum, d) => sum + ((d['minimumPayment'] as num?)?.toDouble() ?? 0.0),
+      );
+
+      AlarmService().scheduleFinancialReminder(
+        cutDate: nextCut,
+        totalDue: totalDue,
+        pendingCount: pendingDebts.length,
+      );
+    } catch (e) {
+      debugPrint('[FinancesProvider] Error scheduling cut reminder: $e');
     }
   }
 
@@ -158,6 +188,41 @@ class FinancesProvider extends ChangeNotifier {
     await _apiClient.deleteDebt(id);
     _debts.removeWhere((d) => d['id'] == id);
     notifyListeners();
+  }
+
+  // ─── Operaciones de Abonos / Pagos ───
+  Future<void> recordPayment({
+    required String debtId,
+    required double amount,
+    required String paidAt,
+    String type = 'minimum',
+    String? notes,
+  }) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      await _apiClient.createPayment({
+        'debtId': debtId,
+        'amount': amount,
+        'paidAt': paidAt,
+        'type': type,
+        'notes': notes ?? '',
+      });
+      await fetchAll(force: true);
+
+      // Despachar confirmación visual inmediata
+      AlarmService().showPaymentNotification(
+        title: '✅ Abono Registrado',
+        body: 'Se ha registrado un abono de \$${amount.toStringAsFixed(2)} exitosamente.',
+      );
+    } catch (e) {
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      _isLoading = false;
+      notifyListeners();
+      rethrow;
+    }
   }
 
   // ─── Operaciones de Gastos ───

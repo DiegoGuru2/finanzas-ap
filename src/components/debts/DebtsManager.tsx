@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { formatCurrency } from '@/lib/utils';
 import { DEFAULT_CATALOGS, fetchCatalog, type CatalogOption } from '@/lib/catalogs';
+import { notifyFinancialSync } from '@/stores/sync';
 
 interface DebtItem {
   id: string;
@@ -71,6 +72,11 @@ export default function DebtsManager() {
 
   useEffect(() => {
     fetchDebts();
+    const handleSync = () => {
+      fetchDebts();
+    };
+    window.addEventListener('finanzas:sync', handleSync);
+    return () => window.removeEventListener('finanzas:sync', handleSync);
   }, []);
 
   const handleOpenCreateModal = () => {
@@ -169,6 +175,7 @@ export default function DebtsManager() {
       setEditingDebtId(null);
       setName('');
       await fetchDebts();
+      notifyFinancialSync();
     } catch (err: any) {
       setErrorMessage(err.message || 'Error al procesar');
     } finally {
@@ -202,6 +209,7 @@ export default function DebtsManager() {
       setShowPaymentModal(false);
       setSelectedDebt(null);
       await fetchDebts();
+      notifyFinancialSync();
     } catch (err: any) {
       alert(err.message || 'Error al procesar pago');
     } finally {
@@ -221,6 +229,7 @@ export default function DebtsManager() {
         return;
       }
       await fetchDebts();
+      notifyFinancialSync();
     } catch (err) {
       console.error(err);
     }

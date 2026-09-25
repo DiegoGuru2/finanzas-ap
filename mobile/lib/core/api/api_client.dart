@@ -173,6 +173,25 @@ class ApiClient {
     }
   }
 
+  // Pagos y Abonos
+  Future<void> createPayment(Map<String, dynamic> data) async {
+    try {
+      await dio.post('/api/payments', data: data);
+    } on DioException catch (e) {
+      throw Exception(e.response?.data?['error'] ?? 'Error al registrar abono');
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getPayments() async {
+    try {
+      final response = await dio.get('/api/payments');
+      final list = response.data['data'] as List<dynamic>? ?? [];
+      return list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+    } on DioException catch (e) {
+      throw Exception(e.response?.data?['error'] ?? 'Error al cargar pagos');
+    }
+  }
+
   // Gastos
   Future<List<Map<String, dynamic>>> getExpenses() async {
     try {

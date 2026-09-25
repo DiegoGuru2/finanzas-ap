@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { formatCurrency } from '@/lib/utils';
+import { notifyFinancialSync } from '@/stores/sync';
 
 interface SchedulePeriod {
   key: string;
@@ -36,6 +37,15 @@ interface ScheduleData {
   benefitPayouts?: Record<string, { label: string; amount: number }[]>;
 }
 
+interface SystemAlert {
+  id: string;
+  type: string;
+  title: string;
+  message: string;
+  isRead: boolean;
+  createdAt: string;
+}
+
 const MONTH_NAMES = [
   'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
   'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
@@ -55,9 +65,12 @@ const localIso = (d: Date) => {
 
 export default function NotificationCenter() {
   const [isOpen, setIsOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<'cut' | 'alerts'>('cut');
   const [schedule, setSchedule] = useState<ScheduleData | null>(null);
   const [paid, setPaid] = useState<Record<string, Record<string, number>>>({});
   const [paidExpenses, setPaidExpenses] = useState<Record<string, Record<string, number>>>({});
+  const [systemAlerts, setSystemAlerts] = useState<SystemAlert[]>([]);
+  const [unreadAlertsCount, setUnreadAlertsCount] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [permissionStatus, setPermissionStatus] = useState<NotificationPermission>('default');
   const containerRef = useRef<HTMLDivElement>(null);
@@ -86,11 +99,57 @@ export default function NotificationCenter() {
     }
   };
 
+  const fetchAlerts = async () => {
+    try {
+      const res = await fetch('/api/alerts');
+      const json = await res.json();
+      if (res.ok && json.data) {
+        setSystemAlerts(json.data);
+        setUnreadAlertsCount(json.unreadCount || 0);
+      }
+    } catch (e) {
+      console.error('Error fetching alerts:', e);
+    }
+  };
+
+  const handleMarkAllAlertsRead = async () => {
+    try {
+      await fetch('/api/alerts', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ all: true }),
+      });
+      fetchAlerts();
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleDeleteAlert = async (id: string) => {
+    try {
+      await fetch(`/api/alerts?id=${id}`, { method: 'DELETE' });
+      fetchAlerts();
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   useEffect(() => {
     fetchSchedule();
+    fetchAlerts();
+
     if (typeof window !== 'undefined' && 'Notification' in window) {
       setPermissionStatus(Notification.permission);
     }
+
+    // Escuchar el bus de sincronización reactivo entre islas
+    const handleSync = () => {
+      fetchSchedule();
+      fetchAlerts();
+    };
+
+    window.addEventListener('finanzas:sync', handleSync);
+    return () => window.removeEventListener('finanzas:sync', handleSync);
   }, []);
 
   // Cerrar dropdown al hacer clic afuera
@@ -134,8 +193,9 @@ export default function NotificationCenter() {
   const incomeInCut = nextPeriod?.incomeAvailable ?? 0;
   const remainingInCut = schedule?.remaining[nextKey] ?? 0;
 
-  // Conteo de notificaciones / alertas
+  // Conteo total de notificaciones pendientes
   const pendingCount = pendingDebtsInCut.length;
+  const totalBadgeCount = pendingCount + unreadAlertsCount;
   const hasUrgentAlert = daysDiff <= 3 && pendingCount > 0;
 
   const requestNotificationPermission = async () => {
@@ -184,7 +244,9 @@ export default function NotificationCenter() {
       });
       if (res.ok) {
         setQuickPayDebt(null);
-        fetchSchedule();
+        await Promise.all([fetchSchedule(), fetchAlerts()]);
+        // Emitir sincronización a las demás islas (DebtsManager, PaymentsView, Dashboard)
+        notifyFinancialSync();
       }
     } catch (e) {
       console.error(e);
@@ -222,7 +284,8 @@ export default function NotificationCenter() {
           toggle: true,
         }),
       });
-      fetchSchedule();
+      await fetchSchedule();
+      notifyFinancialSync();
     } catch (e) {
       console.error(e);
     }
@@ -247,261 +310,360 @@ export default function NotificationCenter() {
         </svg>
 
         {/* Badge contador de alertas pendientes */}
-        {pendingCount > 0 && (
+        {totalBadgeCount > 0 && (
           <span
             className={`absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-bold text-white shadow-sm ${
               hasUrgentAlert ? 'bg-danger-500 animate-pulse' : 'bg-brand-500'
             }`}
           >
-            {pendingCount}
+            {totalBadgeCount > 9 ? '9+' : totalBadgeCount}
           </span>
         )}
       </button>
 
       {/* Menú Desplegable / Modal de Notificaciones */}
       {isOpen && (
-        <div className="fixed sm:absolute right-2 sm:right-0 top-16 sm:top-full z-[100] mt-1 w-[calc(100vw-1rem)] sm:w-[410px] max-w-sm rounded-2xl border border-border-default bg-surface-50 shadow-2xl overflow-hidden animate-fade-up">
-          {/* Header del panel */}
-          <div className="flex items-center justify-between border-b border-border-default px-4 py-3 bg-surface-100/50">
-            <div className="flex items-center gap-2">
-              <span className="flex h-2 w-2 rounded-full bg-brand-500"></span>
-              <h3 className="font-bold text-sm text-text-primary">Alertas y Recordatorios</h3>
+        <div className="fixed sm:absolute right-2 sm:right-0 top-16 sm:top-full z-[100] mt-1 w-[calc(100vw-1rem)] sm:w-[420px] max-w-sm rounded-2xl border border-border-default bg-surface-50 shadow-2xl overflow-hidden animate-fade-up">
+          {/* Header del panel con Selector de Tabs */}
+          <div className="border-b border-border-default bg-surface-100/50">
+            <div className="flex items-center justify-between px-4 py-2.5">
+              <div className="flex items-center gap-2">
+                <span className="flex h-2 w-2 rounded-full bg-brand-500 animate-ping"></span>
+                <h3 className="font-bold text-sm text-text-primary">Notificaciones y Alertas</h3>
+              </div>
+              <button
+                onClick={() => setIsOpen(false)}
+                className="text-text-muted hover:text-text-primary p-1 rounded-lg hover:bg-surface-200 transition-colors cursor-pointer"
+                title="Cerrar notificaciones"
+              >
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
             </div>
-            <button
-              onClick={() => setIsOpen(false)}
-              className="text-text-muted hover:text-text-primary p-1 rounded-lg hover:bg-surface-200 transition-colors cursor-pointer"
-              title="Cerrar notificaciones"
-            >
-              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
+
+            {/* Pestañas / Tabs */}
+            <div className="flex border-t border-border-default/60 px-2 pt-1 gap-1">
+              <button
+                type="button"
+                onClick={() => setActiveTab('cut')}
+                className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 text-xs font-semibold rounded-t-lg transition-colors cursor-pointer ${
+                  activeTab === 'cut'
+                    ? 'bg-surface-50 text-brand-400 border-t-2 border-brand-500'
+                    : 'text-text-muted hover:text-text-primary'
+                }`}
+              >
+                <span>📅 Próximo Corte</span>
+                {pendingCount > 0 && (
+                  <span className="rounded-full bg-brand-500/20 px-1.5 py-0.2 text-[10px] font-bold text-brand-400">
+                    {pendingCount}
+                  </span>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab('alerts')}
+                className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 text-xs font-semibold rounded-t-lg transition-colors cursor-pointer ${
+                  activeTab === 'alerts'
+                    ? 'bg-surface-50 text-brand-400 border-t-2 border-brand-500'
+                    : 'text-text-muted hover:text-text-primary'
+                }`}
+              >
+                <span>🔔 Alertas del Sistema</span>
+                {unreadAlertsCount > 0 && (
+                  <span className="rounded-full bg-danger-500/20 px-1.5 py-0.2 text-[10px] font-bold text-danger-400">
+                    {unreadAlertsCount}
+                  </span>
+                )}
+              </button>
+            </div>
           </div>
 
           <div className="max-h-[75vh] overflow-y-auto p-4 space-y-4">
-            {loading ? (
-              <div className="py-6 text-center text-xs text-text-muted">Cargando alertas...</div>
-            ) : nextPeriod ? (
-              <>
-                {/* Banner de Estado del Próximo Corte */}
-                <div
-                  className={`rounded-xl border p-3.5 space-y-2.5 ${
-                    daysDiff === 0
-                      ? 'border-danger-500/30 bg-danger-500/10'
-                      : daysDiff <= 3
-                        ? 'border-warning-500/30 bg-warning-500/10'
-                        : 'border-brand-500/30 bg-brand-500/10'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <span
-                      className={`text-xs font-bold uppercase tracking-wider ${
-                        daysDiff === 0
-                          ? 'text-danger-400'
-                          : daysDiff <= 3
-                            ? 'text-warning-400'
-                            : 'text-brand-400'
-                      }`}
-                    >
-                      {daysDiff === 0
-                        ? '🚨 ¡Hoy es el corte de pago!'
-                        : daysDiff === 1
-                          ? '⏰ El corte es mañana'
-                          : `📅 Corte en ${daysDiff} días`}
-                    </span>
-                    <span className="text-[11px] font-semibold text-text-secondary">
-                      {nextPeriod.day} de {MONTH_NAMES[nextPeriod.month]}
-                    </span>
-                  </div>
-
-                  {/* Resumen monetario del corte */}
-                  <div className="grid grid-cols-3 gap-1 rounded-lg bg-surface-50/80 p-2 text-center text-[11px] border border-border-default/60">
-                    <div>
-                      <span className="text-text-muted block text-[10px]">Ingreso</span>
-                      <span className="font-bold text-text-primary block">{formatCurrency(incomeInCut)}</span>
-                    </div>
-                    <div>
-                      <span className="text-warning-400 block text-[10px]">Total a pagar</span>
-                      <span className="font-bold text-warning-400 block">{formatCurrency(totalToPayInCut)}</span>
-                    </div>
-                    <div>
-                      <span className="text-text-muted block text-[10px]">Te sobra</span>
+            {activeTab === 'cut' ? (
+              loading ? (
+                <div className="py-6 text-center text-xs text-text-muted">Cargando compromisos del corte...</div>
+              ) : nextPeriod ? (
+                <>
+                  {/* Banner de Estado del Próximo Corte */}
+                  <div
+                    className={`rounded-xl border p-3.5 space-y-2.5 ${
+                      daysDiff === 0
+                        ? 'border-danger-500/30 bg-danger-500/10'
+                        : daysDiff <= 3
+                          ? 'border-warning-500/30 bg-warning-500/10'
+                          : 'border-brand-500/30 bg-brand-500/10'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
                       <span
-                        className={`font-bold block ${
-                          remainingInCut < 0 ? 'text-danger-400' : 'text-accent-400'
+                        className={`text-xs font-bold uppercase tracking-wider ${
+                          daysDiff === 0
+                            ? 'text-danger-400'
+                            : daysDiff <= 3
+                              ? 'text-warning-400'
+                              : 'text-brand-400'
                         }`}
                       >
-                        {formatCurrency(remainingInCut)}
+                        {daysDiff === 0
+                          ? '🚨 ¡Hoy es el corte de pago!'
+                          : daysDiff === 1
+                            ? '⏰ El corte es mañana'
+                            : `📅 Corte en ${daysDiff} días`}
+                      </span>
+                      <span className="text-[11px] font-semibold text-text-secondary">
+                        {nextPeriod.day} de {MONTH_NAMES[nextPeriod.month]}
                       </span>
                     </div>
-                  </div>
 
-                  {/* Frase explicativa del saldo */}
-                  <p className="text-xs text-text-secondary leading-snug">
-                    {remainingInCut >= 0 ? (
-                      <>
-                        🎉 Te quedarán <strong className="text-accent-400 font-bold">{formatCurrency(remainingInCut)}</strong> libres en tu cuenta tras cumplir los compromisos de esta quincena.
-                      </>
-                    ) : (
-                      <>
-                        ⚠️ <strong className="text-danger-400 font-bold">Atención:</strong> Faltan {formatCurrency(Math.abs(remainingInCut))} para cubrir todos los pagos de este corte.
-                      </>
-                    )}
-                  </p>
-                </div>
-
-                {/* Deudas del Corte */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-semibold text-text-primary">
-                      Deudas a pagar ({pendingDebtsInCut.length} pendientes)
-                    </span>
-                    <span className="text-[10px] text-text-muted">
-                      {paidDebtsInCut.length}/{activeDebtsInCut.length} listos
-                    </span>
-                  </div>
-
-                  {activeDebtsInCut.length === 0 ? (
-                    <div className="rounded-xl border border-dashed border-border-default p-3 text-center text-xs text-text-muted">
-                      No tienes deudas programadas en este corte.
+                    {/* Resumen monetario del corte */}
+                    <div className="grid grid-cols-3 gap-1 rounded-lg bg-surface-50/80 p-2 text-center text-[11px] border border-border-default/60">
+                      <div>
+                        <span className="text-text-muted block text-[10px]">Ingreso</span>
+                        <span className="font-bold text-text-primary block">{formatCurrency(incomeInCut)}</span>
+                      </div>
+                      <div>
+                        <span className="text-warning-400 block text-[10px]">Total a pagar</span>
+                        <span className="font-bold text-warning-400 block">{formatCurrency(totalToPayInCut)}</span>
+                      </div>
+                      <div>
+                        <span className="text-text-muted block text-[10px]">Te sobra</span>
+                        <span
+                          className={`font-bold block ${
+                            remainingInCut < 0 ? 'text-danger-400' : 'text-accent-400'
+                          }`}
+                        >
+                          {formatCurrency(remainingInCut)}
+                        </span>
+                      </div>
                     </div>
-                  ) : (
-                    <div className="space-y-2">
-                      {activeDebtsInCut.map((debt) => {
-                        const amount = debt.cells[nextKey] || 0;
-                        const paidAmount = paid[debt.id]?.[nextKey];
-                        const isPaid = paidAmount !== undefined;
-                        const isPartial = isPaid && amount > 0 && paidAmount < amount;
 
-                        return (
-                          <div
-                            key={debt.id}
-                            className={`flex flex-col rounded-xl border p-2.5 text-xs transition-colors gap-1.5 ${
-                              isPaid
-                                ? 'border-accent-500/30 bg-accent-500/5'
-                                : 'border-border-default bg-surface-100/60'
-                            }`}
-                          >
-                            <div className="flex items-center justify-between">
-                              <div className="min-w-0 pr-2">
-                                <div className="font-semibold text-text-primary truncate">{debt.name}</div>
-                                <div className="text-[10px] text-text-muted">
-                                  {amount > 0 ? `Cuota programada: ${formatCurrency(amount)}` : 'Sin cuota fija requerida'}
+                    {/* Frase explicativa del saldo */}
+                    <p className="text-xs text-text-secondary leading-snug">
+                      {remainingInCut >= 0 ? (
+                        <>
+                          🎉 Te quedarán <strong className="text-accent-400 font-bold">{formatCurrency(remainingInCut)}</strong> libres en tu cuenta tras cumplir los compromisos de esta quincena.
+                        </>
+                      ) : (
+                        <>
+                          ⚠️ <strong className="text-danger-400 font-bold">Atención:</strong> Faltan {formatCurrency(Math.abs(remainingInCut))} para cubrir todos los pagos de este corte.
+                        </>
+                      )}
+                    </p>
+                  </div>
+
+                  {/* Deudas del Corte */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-semibold text-text-primary">
+                        Deudas a pagar ({pendingDebtsInCut.length} pendientes)
+                      </span>
+                      <span className="text-[10px] text-text-muted">
+                        {paidDebtsInCut.length}/{activeDebtsInCut.length} listos
+                      </span>
+                    </div>
+
+                    {activeDebtsInCut.length === 0 ? (
+                      <div className="rounded-xl border border-dashed border-border-default p-3 text-center text-xs text-text-muted">
+                        No tienes deudas programadas en este corte.
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {activeDebtsInCut.map((debt) => {
+                          const amount = debt.cells[nextKey] || 0;
+                          const paidAmount = paid[debt.id]?.[nextKey];
+                          const isPaid = paidAmount !== undefined;
+                          const isPartial = isPaid && amount > 0 && paidAmount < amount;
+
+                          return (
+                            <div
+                              key={debt.id}
+                              className={`flex flex-col rounded-xl border p-2.5 text-xs transition-colors gap-1.5 ${
+                                isPaid
+                                  ? 'border-accent-500/30 bg-accent-500/5'
+                                  : 'border-border-default bg-surface-100/60'
+                              }`}
+                            >
+                              <div className="flex items-center justify-between">
+                                <div className="min-w-0 pr-2">
+                                  <div className="font-semibold text-text-primary truncate">{debt.name}</div>
+                                  <div className="text-[10px] text-text-muted">
+                                    {amount > 0 ? `Cuota programada: ${formatCurrency(amount)}` : 'Sin cuota fija requerida'}
+                                  </div>
+                                </div>
+
+                                <div className="shrink-0">
+                                  {isPaid ? (
+                                    <span className="inline-flex items-center gap-1 rounded-md bg-accent-500/15 border border-accent-500/30 px-2 py-0.5 text-[10px] font-bold text-accent-400">
+                                      {isPartial ? `✓ Abono: ${formatCurrency(paidAmount)}` : `✓ Pagado (${formatCurrency(paidAmount)})`}
+                                    </span>
+                                  ) : (
+                                    <button
+                                      onClick={() => openQuickPay(debt)}
+                                      className="rounded-lg bg-brand-500 px-2.5 py-1 text-[11px] font-bold text-white hover:bg-brand-400 transition-colors cursor-pointer"
+                                    >
+                                      Abonar
+                                    </button>
+                                  )}
                                 </div>
                               </div>
 
-                              <div className="shrink-0">
-                                {isPaid ? (
-                                  <span className="inline-flex items-center gap-1 rounded-md bg-accent-500/15 border border-accent-500/30 px-2 py-0.5 text-[10px] font-bold text-accent-400">
-                                    {isPartial ? `✓ Abono: ${formatCurrency(paidAmount)}` : `✓ Pagado (${formatCurrency(paidAmount)})`}
-                                  </span>
-                                ) : (
-                                  <button
-                                    onClick={() => openQuickPay(debt)}
-                                    className="rounded-lg bg-brand-500 px-2.5 py-1 text-[11px] font-bold text-white hover:bg-brand-400 transition-colors cursor-pointer"
-                                  >
-                                    Abonar
-                                  </button>
-                                )}
-                              </div>
+                              {/* Información detallada de abono y saldo restante */}
+                              {isPaid && isPartial && (
+                                <div className="flex items-center justify-between text-[10px] bg-warning-500/10 border border-warning-500/20 rounded-lg px-2 py-1 text-warning-400 font-medium">
+                                  <span>Resta por cubrir en corte:</span>
+                                  <strong>{formatCurrency(amount - paidAmount)}</strong>
+                                </div>
+                              )}
+
+                              {debt.currentBalance !== undefined && (
+                                <div className="text-[10px] text-text-muted flex items-center justify-between border-t border-border-default/40 pt-1">
+                                  <span>Saldo pendiente total deuda:</span>
+                                  <span className="font-semibold text-text-secondary">{formatCurrency(debt.currentBalance)}</span>
+                                </div>
+                              )}
                             </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
 
-                            {/* Información detallada de abono y saldo restante */}
-                            {isPaid && isPartial && (
-                              <div className="flex items-center justify-between text-[10px] bg-warning-500/10 border border-warning-500/20 rounded-lg px-2 py-1 text-warning-400 font-medium">
-                                <span>Resta por cubrir en corte:</span>
-                                <strong>{formatCurrency(amount - paidAmount)}</strong>
-                              </div>
-                            )}
+                  {/* Gastos Recurrentes del Corte */}
+                  {activeExpensesInCut.length > 0 && (
+                    <div className="space-y-2 pt-2 border-t border-border-default/60">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-semibold text-text-primary">
+                          Gastos Recurrentes ({activeExpensesInCut.length})
+                        </span>
+                      </div>
 
-                            {debt.currentBalance !== undefined && (
-                              <div className="text-[10px] text-text-muted flex items-center justify-between border-t border-border-default/40 pt-1">
-                                <span>Saldo pendiente total deuda:</span>
-                                <span className="font-semibold text-text-secondary">{formatCurrency(debt.currentBalance)}</span>
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
+                      <div className="space-y-1.5">
+                        {activeExpensesInCut.map((exp) => {
+                          const amount = exp.cells[nextKey] || 0;
+                          const isPaid = paidExpenses[exp.id]?.[nextKey] !== undefined;
 
-                {/* Gastos Recurrentes del Corte */}
-                {activeExpensesInCut.length > 0 && (
-                  <div className="space-y-2 pt-2 border-t border-border-default/60">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="font-semibold text-text-primary">
-                        Gastos Recurrentes ({activeExpensesInCut.length})
-                      </span>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      {activeExpensesInCut.map((exp) => {
-                        const amount = exp.cells[nextKey] || 0;
-                        const isPaid = paidExpenses[exp.id]?.[nextKey] !== undefined;
-
-                        return (
-                          <div
-                            key={exp.id}
-                            className={`flex items-center justify-between rounded-xl border p-2 text-xs transition-colors ${
-                              isPaid
-                                ? 'border-accent-500/30 bg-accent-500/5'
-                                : 'border-border-default bg-surface-100/60'
-                            }`}
-                          >
-                            <div className="min-w-0 pr-2">
-                              <div className={`font-semibold truncate ${isPaid ? 'line-through text-text-muted' : 'text-text-primary'}`}>
-                                {exp.name}
-                              </div>
-                              <div className="text-[10px] text-text-muted">
-                                {formatCurrency(amount)}
-                              </div>
-                            </div>
-
-                            <button
-                              type="button"
-                              onClick={() => handleToggleExpensePay(exp.id, amount)}
-                              className={`px-2.5 py-0.5 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
+                          return (
+                            <div
+                              key={exp.id}
+                              className={`flex items-center justify-between rounded-xl border p-2 text-xs transition-colors ${
                                 isPaid
-                                  ? 'bg-accent-500/20 text-accent-400 border border-accent-500/30'
-                                  : 'bg-surface-200 text-text-secondary hover:bg-accent-500/15 hover:text-accent-400 border border-border-default'
+                                  ? 'border-accent-500/30 bg-accent-500/5'
+                                  : 'border-border-default bg-surface-100/60'
                               }`}
                             >
-                              {isPaid ? '✓ Pagado' : 'Marcar pagado'}
-                            </button>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
+                              <div className="min-w-0 pr-2">
+                                <div className={`font-semibold truncate ${isPaid ? 'line-through text-text-muted' : 'text-text-primary'}`}>
+                                  {exp.name}
+                                </div>
+                                <div className="text-[10px] text-text-muted">
+                                  {formatCurrency(amount)}
+                                </div>
+                              </div>
 
-                {/* Botones de acción útiles */}
-                <div className="space-y-2 pt-1 border-t border-border-default/60">
-                  {/* Activar notificaciones del navegador */}
-                  {permissionStatus !== 'granted' && (
-                    <button
-                      onClick={requestNotificationPermission}
-                      className="w-full flex items-center justify-center gap-2 rounded-xl border border-brand-500/30 bg-brand-500/10 px-3 py-2 text-xs font-semibold text-brand-400 hover:bg-brand-500/20 transition-colors cursor-pointer"
-                    >
-                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                      </svg>
-                      Activar Alertas en el Navegador
-                    </button>
+                              <button
+                                type="button"
+                                onClick={() => handleToggleExpensePay(exp.id, amount)}
+                                className={`px-2.5 py-0.5 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
+                                  isPaid
+                                    ? 'bg-accent-500/20 text-accent-400 border border-accent-500/30'
+                                    : 'bg-surface-200 text-text-secondary hover:bg-accent-500/15 hover:text-accent-400 border border-border-default'
+                                }`}
+                              >
+                                {isPaid ? '✓ Pagado' : 'Marcar pagado'}
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
                   )}
 
-                  {/* Enlace al Cronograma completo */}
-                  <a
-                    href="/app/payments"
-                    className="block text-center text-xs font-semibold text-brand-400 hover:underline pt-1"
-                  >
-                    Ver Cronograma Completo →
-                  </a>
+                  {/* Botones de acción útiles */}
+                  <div className="space-y-2 pt-1 border-t border-border-default/60">
+                    {permissionStatus !== 'granted' && (
+                      <button
+                        onClick={requestNotificationPermission}
+                        className="w-full flex items-center justify-center gap-2 rounded-xl border border-brand-500/30 bg-brand-500/10 px-3 py-2 text-xs font-semibold text-brand-400 hover:bg-brand-500/20 transition-colors cursor-pointer"
+                      >
+                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                        </svg>
+                        Activar Alertas en el Navegador
+                      </button>
+                    )}
+
+                    <a
+                      href="/app/payments"
+                      className="block text-center text-xs font-semibold text-brand-400 hover:underline pt-1"
+                    >
+                      Ver Cronograma Completo →
+                    </a>
+                  </div>
+                </>
+              ) : null
+            ) : (
+              /* Pestaña: Alertas del Sistema Persistidas */
+              <div className="space-y-3">
+                <div className="flex items-center justify-between pb-1">
+                  <span className="text-xs font-semibold text-text-secondary">
+                    Alertas Registradas ({systemAlerts.length})
+                  </span>
+                  {unreadAlertsCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={handleMarkAllAlertsRead}
+                      className="text-[11px] font-bold text-brand-400 hover:underline cursor-pointer"
+                    >
+                      Marcar todas como leídas
+                    </button>
+                  )}
                 </div>
-              </>
-            ) : null}
+
+                {systemAlerts.length === 0 ? (
+                  <div className="py-8 text-center text-xs text-text-muted rounded-xl border border-dashed border-border-default">
+                    No tienes alertas registradas en este momento.
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {systemAlerts.map((al) => (
+                      <div
+                        key={al.id}
+                        className={`relative flex flex-col gap-1 rounded-xl border p-3 text-xs transition-colors ${
+                          al.isRead
+                            ? 'border-border-default bg-surface-100/40 opacity-75'
+                            : 'border-brand-500/30 bg-brand-500/5 shadow-sm'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="font-semibold text-text-primary flex items-center gap-1.5">
+                            {!al.isRead && (
+                              <span className="h-2 w-2 rounded-full bg-brand-400 shrink-0 animate-pulse" />
+                            )}
+                            <span>{al.title}</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteAlert(al.id)}
+                            className="text-text-muted hover:text-danger-400 p-0.5 rounded cursor-pointer transition-colors"
+                            title="Eliminar alerta"
+                          >
+                            <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        </div>
+                        <p className="text-text-secondary leading-snug">{al.message}</p>
+                        <div className="text-[10px] text-text-muted pt-1">
+                          {new Date(al.createdAt).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}

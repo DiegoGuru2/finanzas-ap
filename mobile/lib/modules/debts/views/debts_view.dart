@@ -17,13 +17,103 @@ class DebtsView extends StatelessWidget {
     );
   }
 
+  void _openPaymentModal(BuildContext context, Map<String, dynamic> debt) {
+    final amountController = TextEditingController(text: (debt['minimumPayment'] ?? 0.0).toString());
+    final notesController = TextEditingController();
+    final dateStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: const BoxDecoration(
+            color: AppTheme.surface,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Abonar a ${debt['name']}',
+                      style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  IconButton(onPressed: () => Navigator.pop(ctx), icon: const Icon(Icons.close, color: AppTheme.textMuted)),
+                ],
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: amountController,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                decoration: const InputDecoration(labelText: 'Monto del abono (\$)', prefixText: '\$ '),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: notesController,
+                style: const TextStyle(color: Colors.white),
+                decoration: const InputDecoration(labelText: 'Notas / Referencia (opcional)'),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primary,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  onPressed: () async {
+                    final amt = double.tryParse(amountController.text) ?? 0.0;
+                    if (amt <= 0) return;
+                    Navigator.pop(ctx);
+                    try {
+                      await context.read<FinancesProvider>().recordPayment(
+                        debtId: debt['id'].toString(),
+                        amount: amt,
+                        paidAt: dateStr,
+                        notes: notesController.text,
+                      );
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('✅ Abono registrado exitosamente')),
+                        );
+                      }
+                    } catch (err) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Error: $err'), backgroundColor: AppTheme.danger),
+                        );
+                      }
+                    }
+                  },
+                  child: const Text('Confirmar Abono', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final fin = context.watch<FinancesProvider>();
     final currencyFormat = NumberFormat.currency(symbol: '\$', decimalDigits: 2);
 
-    final activeDebts = fin.debts.where((d) => d['status'] != 'liquidated').toList();
-    final liquidatedDebts = fin.debts.where((d) => d['status'] == 'liquidated').toList();
+    final activeDebts = fin.debts.where((d) => d['status'] != 'liquidated' && d['status'] != 'paid_off').toList();
+    final liquidatedDebts = fin.debts.where((d) => d['status'] == 'liquidated' || d['status'] == 'paid_off').toList();
 
     double totalBalance = 0.0;
     double totalMinPay = 0.0;
@@ -239,8 +329,30 @@ class DebtsView extends StatelessWidget {
                     Text('$apr%', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppTheme.textSecondary)),
                   ],
                 ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                if (!isLiquidated) ...[
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: AppTheme.primary, width: 1.2),
+                        foregroundColor: AppTheme.primary,
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                      icon: const Icon(Icons.payment_rounded, size: 16),
+                      label: const Text('Registrar Abono', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                      onPressed: () => _openPaymentModal(context, d),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                ],
                 IconButton(
                   icon: const Icon(Icons.delete_outline_rounded, color: AppTheme.danger, size: 20),
+                  tooltip: 'Eliminar deuda',
                   onPressed: () => fin.deleteDebt(d['id'].toString()),
                 ),
               ],

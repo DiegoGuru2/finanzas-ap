@@ -136,7 +136,14 @@ export default function SavingsGoalsManager() {
     }
   }, []);
 
-  useEffect(() => { fetchGoals(); }, [fetchGoals]);
+  useEffect(() => {
+    fetchGoals();
+    const handleSync = () => {
+      fetchGoals();
+    };
+    window.addEventListener('finanzas:sync', handleSync);
+    return () => window.removeEventListener('finanzas:sync', handleSync);
+  }, [fetchGoals]);
 
   // Catálogo de categorías (administrable) + gastos para vincular
   useEffect(() => {

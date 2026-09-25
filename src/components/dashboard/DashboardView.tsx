@@ -37,7 +37,7 @@ const LazyChart = lazy(() =>
               padding: '8px 12px',
               fontSize: '12px',
             }}
-            formatter={(value: number) => [`$${value.toFixed(2)}`, undefined]}
+            formatter={(value: any) => [`$${Number(value || 0).toFixed(2)}`, '']}
           />
           <mod.Area type="monotone" dataKey="saldo" stroke="#ef4444" fill="url(#colorSaldo)" strokeWidth={2} name="Saldo" />
           <mod.Area type="monotone" dataKey="capitalPagado" stroke="#10b981" fill="url(#colorCapital)" strokeWidth={2} name="Capital Pagado" />
@@ -84,9 +84,9 @@ const LazyDonutChart = lazy(() =>
               padding: '8px 12px',
               fontSize: '12px',
             }}
-            formatter={(val: number, _name: any, item: any) => [
-              formatCurrency(val),
-              item.payload.label || item.payload.name,
+            formatter={(val: any, _name: any, item: any) => [
+              formatCurrency(Number(val || 0)),
+              item?.payload?.label || item?.payload?.name || '',
             ]}
           />
         </mod.PieChart>
@@ -182,6 +182,12 @@ export default function DashboardView() {
 
   useEffect(() => {
     fetchDashboard();
+
+    const handleSync = () => {
+      fetchDashboard();
+    };
+    window.addEventListener('finanzas:sync', handleSync);
+    return () => window.removeEventListener('finanzas:sync', handleSync);
   }, [strategy]);
 
   const handleSaveOnboarding = async (e: React.FormEvent) => {

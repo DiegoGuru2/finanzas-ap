@@ -305,3 +305,260 @@ export async function sendVaultAccessEmail({
   });
 }
 
+// ═══════════════════════════════════════════
+// Transacciones y Notificaciones de Pagos
+// ═══════════════════════════════════════════
+
+export interface PaymentReceiptEmailData {
+  to: string;
+  name?: string;
+  debtName: string;
+  amount: number;
+  remainingBalance: number;
+  isPaidOff: boolean;
+  paidAt: string | Date;
+  paymentType?: string;
+  notes?: string;
+}
+
+export async function sendPaymentReceiptEmail({
+  to,
+  name,
+  debtName,
+  amount,
+  remainingBalance,
+  isPaidOff,
+  paidAt,
+  paymentType = 'Abono',
+  notes,
+}: PaymentReceiptEmailData) {
+  const formattedAmount = `$${amount.toFixed(2)}`;
+  const formattedRemaining = `$${remainingBalance.toFixed(2)}`;
+  const dateStr = typeof paidAt === 'string' ? paidAt.slice(0, 10) : paidAt.toISOString().slice(0, 10);
+
+  const html = `
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Comprobante de Pago Registrado</title>
+  <style>
+    body { margin: 0; padding: 0; background-color: #090d16; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #f8fafc; }
+    .container { max-width: 580px; margin: 0 auto; padding: 28px 16px; }
+    .card { background-color: #111a2e; border-radius: 20px; border: 1px solid #1f2f4c; padding: 32px 24px; box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.5); }
+    .badge { display: inline-flex; align-items: center; justify-content: center; width: 54px; height: 54px; background: ${isPaidOff ? 'rgba(16, 185, 129, 0.2)' : 'rgba(99, 102, 241, 0.2)'}; border: 1px solid ${isPaidOff ? 'rgba(16, 185, 129, 0.4)' : 'rgba(99, 102, 241, 0.4)'}; border-radius: 16px; font-size: 26px; margin-bottom: 18px; }
+    h1 { color: #ffffff; font-size: 22px; font-weight: 800; margin: 0 0 6px 0; }
+    p { color: #94a3b8; font-size: 14px; line-height: 1.5; margin: 0 0 18px 0; }
+    .receipt-box { background-color: #0b1220; border: 1px solid #1e2c45; border-radius: 14px; padding: 18px 20px; margin: 20px 0; }
+    .row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #16243b; font-size: 13.5px; }
+    .row:last-child { border-bottom: none; }
+    .label { color: #64748b; }
+    .value { color: #f1f5f9; font-weight: 700; text-align: right; }
+    .amount-highlight { font-size: 26px; font-weight: 900; color: #10b981; margin: 8px 0; text-align: center; }
+    .footer { text-align: center; margin-top: 24px; color: #64748b; font-size: 11px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <div style="text-align: center;">
+        <div class="badge">${isPaidOff ? '🎉' : '💳'}</div>
+        <h1>${isPaidOff ? '¡Deuda Cancelada por Completo!' : 'Comprobante de Abono Registrado'}</h1>
+        <p>Hola <strong>${name || 'Usuario'}</strong>, se ha procesado exitosamente tu abono en ProyecAhorro.</p>
+        <div class="amount-highlight">${formattedAmount}</div>
+      </div>
+
+      <div class="receipt-box">
+        <table style="width: 100%; border-collapse: collapse; font-size: 13.5px;">
+          <tr style="border-bottom: 1px solid #16243b;">
+            <td style="padding: 8px 0; color: #64748b;">Deuda destino:</td>
+            <td style="padding: 8px 0; color: #ffffff; font-weight: bold; text-align: right;">${debtName}</td>
+          </tr>
+          <tr style="border-bottom: 1px solid #16243b;">
+            <td style="padding: 8px 0; color: #64748b;">Monto abonado:</td>
+            <td style="padding: 8px 0; color: #10b981; font-weight: bold; text-align: right;">${formattedAmount}</td>
+          </tr>
+          <tr style="border-bottom: 1px solid #16243b;">
+            <td style="padding: 8px 0; color: #64748b;">Saldo restante:</td>
+            <td style="padding: 8px 0; color: ${isPaidOff ? '#10b981' : '#f59e0b'}; font-weight: bold; text-align: right;">${isPaidOff ? '$0.00 (Liquidada)' : formattedRemaining}</td>
+          </tr>
+          <tr style="border-bottom: 1px solid #16243b;">
+            <td style="padding: 8px 0; color: #64748b;">Fecha aplicada:</td>
+            <td style="padding: 8px 0; color: #f1f5f9; text-align: right;">${dateStr}</td>
+          </tr>
+          ${notes ? `
+          <tr>
+            <td style="padding: 8px 0; color: #64748b;">Notas / Referencia:</td>
+            <td style="padding: 8px 0; color: #94a3b8; text-align: right;">${notes}</td>
+          </tr>` : ''}
+        </table>
+      </div>
+
+      <div style="text-align: center; margin-top: 20px;">
+        <a href="https://finanzas-ap-black.vercel.app/app/payments" style="display: inline-block; background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%); color: #ffffff; font-weight: bold; font-size: 13.5px; padding: 12px 24px; border-radius: 12px; text-decoration: none;">
+          Ver Cronograma de Pagos →
+        </a>
+      </div>
+
+      <div class="footer">
+        © 2026 ProyecAhorro · Gestión Financiera Inteligente<br>
+        Desarrollado por <strong style="color: #34d399;">DG design</strong>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+  `;
+
+  if (!transporter) {
+    console.warn('[ProyecAhorro] Correo de recibo no enviado: SMTP no configurado.');
+    return;
+  }
+
+  return transporter.sendMail({
+    from: `"ProyecAhorro Pagos" <${SMTP_USER}>`,
+    to,
+    subject: isPaidOff
+      ? `🎉 ¡Felicitaciones! Has liquidado por completo tu deuda ${debtName}`
+      : `✅ Comprobante de Abono: ${formattedAmount} a ${debtName}`,
+    html,
+  });
+}
+
+export interface DebtPaidOffEmailData {
+  to: string;
+  name?: string;
+  debtName: string;
+  totalPaid?: number;
+}
+
+export async function sendDebtPaidOffEmail({
+  to,
+  name,
+  debtName,
+  totalPaid,
+}: DebtPaidOffEmailData) {
+  const html = `
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>¡Victoria Financiera! Deuda Liquidada</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #090d16; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #f8fafc;">
+  <div style="max-width: 560px; margin: 30px auto; background-color: #111a2e; border-radius: 18px; border: 1px solid #1f2f4c; padding: 32px 24px; text-align: center;">
+    <div style="font-size: 40px; margin-bottom: 12px;">🏆</div>
+    <h1 style="color: #ffffff; font-size: 24px; font-weight: 800; margin: 0 0 8px 0;">¡Felicidades, lograste una meta financiera!</h1>
+    <p style="color: #94a3b8; font-size: 14px; line-height: 1.6; margin: 0 0 20px 0;">
+      Hola <strong>${name || 'Usuario'}</strong>, has pagado por completo tu deuda <strong>"${debtName}"</strong>. Este dinero ahora queda libre cada mes para tu ahorro, inversión y tranquilidad.
+    </p>
+    ${totalPaid ? `<div style="background-color: #0b1220; border: 1px solid #10b981; border-radius: 12px; padding: 14px; margin: 20px 0; color: #10b981; font-weight: bold;">Total liberado: $${totalPaid.toFixed(2)}</div>` : ''}
+    <a href="https://finanzas-ap-black.vercel.app/app/dashboard" style="display: inline-block; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #ffffff; font-weight: bold; font-size: 14px; padding: 12px 28px; border-radius: 10px; text-decoration: none;">
+      Ver mi nuevo progreso financiero
+    </a>
+    <div style="margin-top: 24px; color: #64748b; font-size: 11px;">
+      © 2026 ProyecAhorro · Desarrollado por <strong style="color: #34d399;">DG design</strong>
+    </div>
+  </div>
+</body>
+</html>
+  `;
+
+  if (!transporter) return;
+  return transporter.sendMail({
+    from: `"ProyecAhorro Logros" <${SMTP_USER}>`,
+    to,
+    subject: `🏆 ¡Meta cumplida! Has liquidado tu deuda "${debtName}"`,
+    html,
+  });
+}
+
+export interface CutReminderEmailData {
+  to: string;
+  name?: string;
+  cutDate: string;
+  cutDay: number;
+  cutMonthName: string;
+  pendingDebtsCount: number;
+  totalDebtsAmount: number;
+  pendingExpensesCount: number;
+  totalExpensesAmount: number;
+  remainingIncome: number;
+}
+
+export async function sendCutReminderEmail({
+  to,
+  name,
+  cutDate,
+  cutDay,
+  cutMonthName,
+  pendingDebtsCount,
+  totalDebtsAmount,
+  pendingExpensesCount,
+  totalExpensesAmount,
+  remainingIncome,
+}: CutReminderEmailData) {
+  const totalCommitment = totalDebtsAmount + totalExpensesAmount;
+
+  const html = `
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Recordatorio de Corte de Pagos</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #090d16; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #f8fafc;">
+  <div style="max-width: 580px; margin: 30px auto; background-color: #111a2e; border-radius: 18px; border: 1px solid #1f2f4c; padding: 32px 24px;">
+    <div style="text-align: center; margin-bottom: 20px;">
+      <div style="font-size: 34px; margin-bottom: 8px;">⏰</div>
+      <h2 style="color: #ffffff; margin: 0 0 6px 0;">Recordatorio: Próximo Corte de Pago</h2>
+      <p style="color: #94a3b8; font-size: 14px; margin: 0;">
+        Hola <strong>${name || 'Usuario'}</strong>, se aproxima tu corte del <strong>${cutDay} de ${cutMonthName}</strong>.
+      </p>
+    </div>
+
+    <div style="background-color: #0b1220; border: 1px solid #1e2c45; border-radius: 14px; padding: 18px 20px; margin: 20px 0;">
+      <table style="width: 100%; border-collapse: collapse; font-size: 13.5px;">
+        <tr style="border-bottom: 1px solid #16243b;">
+          <td style="padding: 7px 0; color: #64748b;">Deudas por cubrir (${pendingDebtsCount}):</td>
+          <td style="padding: 7px 0; color: #f59e0b; font-weight: bold; text-align: right;">$${totalDebtsAmount.toFixed(2)}</td>
+        </tr>
+        <tr style="border-bottom: 1px solid #16243b;">
+          <td style="padding: 7px 0; color: #64748b;">Gastos fijos (${pendingExpensesCount}):</td>
+          <td style="padding: 7px 0; color: #f59e0b; font-weight: bold; text-align: right;">$${totalExpensesAmount.toFixed(2)}</td>
+        </tr>
+        <tr style="border-bottom: 1px solid #16243b;">
+          <td style="padding: 7px 0; color: #64748b;">Total compromisos corte:</td>
+          <td style="padding: 7px 0; color: #ffffff; font-weight: 800; text-align: right;">$${totalCommitment.toFixed(2)}</td>
+        </tr>
+        <tr>
+          <td style="padding: 7px 0; color: #64748b;">Saldo libre estimado:</td>
+          <td style="padding: 7px 0; color: ${remainingIncome >= 0 ? '#10b981' : '#ef4444'}; font-weight: bold; text-align: right;">$${remainingIncome.toFixed(2)}</td>
+        </tr>
+      </table>
+    </div>
+
+    <div style="text-align: center; margin-top: 24px;">
+      <a href="https://finanzas-ap-black.vercel.app/app/payments" style="display: inline-block; background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%); color: #ffffff; font-weight: bold; font-size: 14px; padding: 12px 28px; border-radius: 10px; text-decoration: none;">
+        Revisar y Abonar en Cronograma →
+      </a>
+    </div>
+
+    <div style="text-align: center; margin-top: 24px; color: #64748b; font-size: 11px;">
+      © 2026 ProyecAhorro · Desarrollado por <strong style="color: #34d399;">DG design</strong>
+    </div>
+  </div>
+</body>
+</html>
+  `;
+
+  if (!transporter) return;
+  return transporter.sendMail({
+    from: `"Recordatorios ProyecAhorro" <${SMTP_USER}>`,
+    to,
+    subject: `⏰ Corte ${cutDay} de ${cutMonthName}: Tienes pagos pendientes en ProyecAhorro`,
+    html,
+  });
+}
+

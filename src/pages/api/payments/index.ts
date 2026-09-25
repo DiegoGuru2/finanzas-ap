@@ -1,9 +1,10 @@
 import type { APIRoute } from 'astro';
 import { db } from '@/lib/db';
-import { payments, debts } from '@/lib/db/schema';
+import { payments, debts, alerts } from '@/lib/db/schema';
 import { eq, and, desc } from 'drizzle-orm';
 import { paymentSchema } from '@/modules/financial-engine/validators';
-import { generateId } from '@/lib/utils';
+import { generateId, parseLocalDateParts, toLocalDateString } from '@/lib/utils';
+import { sendPaymentReceiptEmail, sendDebtPaidOffEmail } from '@/lib/email';
 
 export const GET: APIRoute = async (ctx) => {
   const user = ctx.locals.user;
@@ -31,6 +32,7 @@ export const GET: APIRoute = async (ctx) => {
     const formatted = userPayments.map((p) => ({
       ...p,
       amount: parseFloat(p.amount as string),
+      paidAt: toLocalDateString(p.paidAt),
     }));
 
     return new Response(JSON.stringify({ data: formatted }), {
@@ -62,7 +64,11 @@ export const POST: APIRoute = async (ctx) => {
     const { debtId, amount, type, paidAt, notes } = parsed.data;
     const newId = generateId();
 
-    // ─── Transacción atómica: insertar pago + actualizar saldo ───
+    // Normalizar fecha de pago evitando desfasajes de zona horaria
+    const dateParts = parseLocalDateParts(paidAt);
+    const safeDateStr = dateParts ? dateParts.dateStr : toLocalDateString(new Date());
+
+    // ─── Transacción atómica: insertar pago + actualizar saldo + generar alerta ───
     const result = await db.transaction(async (tx) => {
       const [targetDebt] = await tx
         .select()
@@ -74,7 +80,9 @@ export const POST: APIRoute = async (ctx) => {
       }
 
       const currentBal = parseFloat(targetDebt.currentBalance as string);
+      const overpayment = Math.round(Math.max(0, amount - currentBal) * 100) / 100;
       const newBal = Math.max(0, Math.round((currentBal - amount) * 100) / 100);
+      const isPaidOff = newBal === 0;
 
       await tx.insert(payments).values({
         id: newId,
@@ -82,7 +90,7 @@ export const POST: APIRoute = async (ctx) => {
         debtId,
         amount: amount.toString(),
         type,
-        paidAt: new Date(paidAt) as any,
+        paidAt: safeDateStr as any,
         notes: notes || '',
       });
 
@@ -90,15 +98,69 @@ export const POST: APIRoute = async (ctx) => {
         .update(debts)
         .set({
           currentBalance: newBal.toString(),
-          status: newBal === 0 ? 'paid_off' : 'active',
+          status: isPaidOff ? 'paid_off' : 'active',
         })
         .where(eq(debts.id, debtId));
 
-      return { newBal };
+      // ─── Generar alerta in-app en la tabla alerts ───
+      const alertId = generateId();
+      await tx.insert(alerts).values({
+        id: alertId,
+        userId: user.id,
+        type: isPaidOff ? 'debt_cleared' : 'payment',
+        title: isPaidOff
+          ? `🎉 ¡Deuda liquidada: ${targetDebt.name}!`
+          : `Abono de $${amount.toFixed(2)} registrado`,
+        message: isPaidOff
+          ? `¡Felicidades! Has liquidado por completo "${targetDebt.name}" con un abono de $${amount.toFixed(2)}.`
+          : `Se aplicó un abono de $${amount.toFixed(2)} a "${targetDebt.name}". Saldo restante: $${newBal.toFixed(2)}.`,
+        isRead: false,
+      });
+
+      return {
+        newBal,
+        isPaidOff,
+        overpayment,
+        debtName: targetDebt.name,
+      };
     });
 
+    // ─── Envío asíncrono de comprobante por correo (no bloquea respuesta si falla SMTP) ───
+    if (user.email) {
+      sendPaymentReceiptEmail({
+        to: user.email,
+        name: user.name,
+        debtName: result.debtName,
+        amount,
+        remainingBalance: result.newBal,
+        isPaidOff: result.isPaidOff,
+        paidAt: safeDateStr,
+        paymentType: type,
+        notes,
+      }).catch((emailErr) => {
+        console.error('[Payments] Error enviando comprobante de pago por correo:', emailErr?.message || emailErr);
+      });
+
+      if (result.isPaidOff) {
+        sendDebtPaidOffEmail({
+          to: user.email,
+          name: user.name,
+          debtName: result.debtName,
+          totalPaid: amount,
+        }).catch((emailErr) => {
+          console.error('[Payments] Error enviando correo de felicitación por deuda liquidada:', emailErr?.message || emailErr);
+        });
+      }
+    }
+
     return new Response(
-      JSON.stringify({ success: true, id: newId, remainingBalance: result.newBal }),
+      JSON.stringify({
+        success: true,
+        id: newId,
+        remainingBalance: result.newBal,
+        isPaidOff: result.isPaidOff,
+        overpayment: result.overpayment,
+      }),
       { status: 201, headers: { 'Content-Type': 'application/json' } }
     );
   } catch (err: any) {
@@ -132,6 +194,8 @@ export const PUT: APIRoute = async (ctx) => {
     }
 
     const { amount, type, paidAt, notes } = parsed.data;
+    const dateParts = parseLocalDateParts(paidAt);
+    const safeDateStr = dateParts ? dateParts.dateStr : toLocalDateString(new Date());
 
     // ─── Transacción atómica: actualizar pago + ajustar saldo ───
     const result = await db.transaction(async (tx) => {
@@ -157,13 +221,14 @@ export const PUT: APIRoute = async (ctx) => {
       const delta = amount - oldAmount;
       const currentBal = parseFloat(targetDebt.currentBalance as string);
       const newBal = Math.max(0, Math.round((currentBal - delta) * 100) / 100);
+      const isPaidOff = newBal === 0;
 
       await tx
         .update(payments)
         .set({
           amount: amount.toString(),
           type,
-          paidAt: new Date(paidAt) as any,
+          paidAt: safeDateStr as any,
           notes: notes || '',
         })
         .where(and(eq(payments.id, id), eq(payments.userId, user.id)));
@@ -172,15 +237,15 @@ export const PUT: APIRoute = async (ctx) => {
         .update(debts)
         .set({
           currentBalance: newBal.toString(),
-          status: newBal === 0 ? 'paid_off' : 'active',
+          status: isPaidOff ? 'paid_off' : 'active',
         })
         .where(eq(debts.id, existing.debtId));
 
-      return { newBal };
+      return { newBal, isPaidOff };
     });
 
     return new Response(
-      JSON.stringify({ success: true, remainingBalance: result.newBal }),
+      JSON.stringify({ success: true, remainingBalance: result.newBal, isPaidOff: result.isPaidOff }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     );
   } catch (err: any) {
@@ -207,7 +272,7 @@ export const DELETE: APIRoute = async (ctx) => {
       return new Response(JSON.stringify({ error: 'ID requerido' }), { status: 400 });
     }
 
-    // ─── Transacción atómica: revertir saldo + eliminar pago ───
+    // ─── Transacción atómica: revertir saldo + eliminar pago + registrar alerta ───
     await db.transaction(async (tx) => {
       const [existing] = await tx
         .select()
@@ -237,6 +302,15 @@ export const DELETE: APIRoute = async (ctx) => {
             status: restored > 0 ? 'active' : 'paid_off',
           })
           .where(eq(debts.id, existing.debtId));
+
+        await tx.insert(alerts).values({
+          id: generateId(),
+          userId: user.id,
+          type: 'payment_reversed',
+          title: 'Pago eliminado y saldo restaurado',
+          message: `Se eliminó el abono de $${parseFloat(existing.amount as string).toFixed(2)} a "${targetDebt.name}". El saldo se restauró a $${restored.toFixed(2)}.`,
+          isRead: false,
+        });
       }
 
       await tx.delete(payments).where(and(eq(payments.id, id), eq(payments.userId, user.id)));

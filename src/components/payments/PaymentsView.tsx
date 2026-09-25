@@ -3,6 +3,7 @@ import { formatCurrency } from '@/lib/utils';
 import { catalogTint, fetchCatalog, type CatalogOption } from '@/lib/catalogs';
 import ScheduleConfig from './ScheduleConfig';
 import { exportScheduleToExcel } from '@/lib/excel-export';
+import { notifyFinancialSync } from '@/stores/sync';
 
 interface SchedulePeriod {
   key: string;
@@ -125,7 +126,12 @@ export default function PaymentsView() {
   const [editType, setEditType] = useState('minimum');
   const [editNotes, setEditNotes] = useState('');
 
-  const refresh = () => setReload((r) => r + 1);
+  const refresh = (emitSync = false) => {
+    setReload((r) => r + 1);
+    if (emitSync) {
+      notifyFinancialSync();
+    }
+  };
 
   const handleToggleExpensePay = async (
     expenseId: string,
@@ -162,11 +168,13 @@ export default function PaymentsView() {
         }),
       });
       if (!res.ok) {
-        refresh();
+        refresh(true);
+      } else {
+        refresh(true);
       }
     } catch (e) {
       console.error(e);
-      refresh();
+      refresh(true);
     }
   };
 
@@ -190,6 +198,15 @@ export default function PaymentsView() {
     };
     fetchSchedule();
   }, [months, reload]);
+
+  // Sincronización reactiva con otras islas (NotificationCenter, DebtsManager)
+  useEffect(() => {
+    const handleSync = () => {
+      setReload((r) => r + 1);
+    };
+    window.addEventListener('finanzas:sync', handleSync);
+    return () => window.removeEventListener('finanzas:sync', handleSync);
+  }, []);
 
   // Selección inicial del próximo corte
   useEffect(() => {
@@ -230,7 +247,7 @@ export default function PaymentsView() {
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || 'Error al registrar el abono');
       setPayCell(null);
-      refresh();
+      refresh(true);
     } catch (err: any) {
       setModalError(err.message);
     } finally {
@@ -268,7 +285,7 @@ export default function PaymentsView() {
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || 'Error al actualizar el pago');
       setEditPayment(null);
-      refresh();
+      refresh(true);
     } catch (err: any) {
       setModalError(err.message);
     } finally {
@@ -290,7 +307,7 @@ export default function PaymentsView() {
         alert(json.error || 'Error al eliminar el pago');
         return;
       }
-      refresh();
+      refresh(true);
     } catch (err) {
       console.error(err);
     }

@@ -199,6 +199,92 @@ class AlarmService {
     } catch (_) {}
   }
 
+  /// Programar recordatorio de corte financiero usando el canal financial_reminders
+  Future<void> scheduleFinancialReminder({
+    required DateTime cutDate,
+    required double totalDue,
+    required int pendingCount,
+  }) async {
+    const int notificationId = 99901;
+    final now = DateTime.now();
+
+    // Notificar a las 9:00 AM del día del corte o inmediatamente si ya es el día
+    DateTime reminderTime = DateTime(cutDate.year, cutDate.month, cutDate.day, 9, 0);
+    if (reminderTime.isBefore(now)) {
+      reminderTime = now.add(const Duration(minutes: 5));
+    }
+
+    final scheduledTZ = tz.TZDateTime.from(reminderTime, tz.local);
+
+    const androidDetails = AndroidNotificationDetails(
+      'financial_reminders',
+      'Recordatorios Financieros',
+      channelDescription: 'Alertas de pagos de deudas, gastos y cortes quincenales',
+      importance: Importance.high,
+      priority: Priority.high,
+      playSound: true,
+      enableVibration: true,
+      visibility: NotificationVisibility.public,
+    );
+
+    final title = '📅 Recordatorio de Corte Quincenal';
+    final body = pendingCount > 0
+        ? 'Tienes $pendingCount pago(s) pendiente(s) por un total de \$${totalDue.toStringAsFixed(2)}.'
+        : 'Corte quincenal al día. ¡Tus finanzas están al corriente!';
+
+    try {
+      await _notificationsPlugin.cancel(notificationId);
+      await _notificationsPlugin.zonedSchedule(
+        notificationId,
+        title,
+        body,
+        scheduledTZ,
+        const NotificationDetails(android: androidDetails),
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
+        payload: 'financial_cut',
+      );
+      debugPrint('[AlarmService] ✅ Recordatorio financiero programado para: $scheduledTZ');
+    } catch (e) {
+      debugPrint('[AlarmService] Error programando recordatorio financiero: $e');
+    }
+  }
+
+  /// Mostrar notificación instantánea de pago registrado
+  Future<void> showPaymentNotification({
+    required String title,
+    required String body,
+  }) async {
+    final int notificationId = DateTime.now().millisecondsSinceEpoch % 100000;
+    const androidDetails = AndroidNotificationDetails(
+      'financial_reminders',
+      'Recordatorios Financieros',
+      channelDescription: 'Alertas de pagos de deudas, gastos y cortes quincenales',
+      importance: Importance.high,
+      priority: Priority.high,
+      playSound: true,
+      enableVibration: true,
+    );
+
+    try {
+      await _notificationsPlugin.show(
+        notificationId,
+        title,
+        body,
+        const NotificationDetails(android: androidDetails),
+        payload: 'payment_success',
+      );
+    } catch (e) {
+      debugPrint('[AlarmService] Error mostrando notificación de pago: $e');
+    }
+  }
+
+  /// Cancelar recordatorios financieros
+  Future<void> cancelFinancialReminders() async {
+    const int notificationId = 99901;
+    await _notificationsPlugin.cancel(notificationId);
+  }
+
   /// Callback estático ejecutado por el AlarmManager en segundo plano
   @pragma('vm:entry-point')
   static void alarmCallback(int id) {
