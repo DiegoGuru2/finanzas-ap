@@ -19,9 +19,20 @@ import {
 export default function SettingsManager() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [showSuccessToast, setShowSuccessToast] = useState(false);
+  const [toast, setToast] = useState<{
+    type: 'success' | 'error';
+    title: string;
+    description: string;
+  } | null>(null);
+
+  // Auto-dismiss corner toast after 4.5s
+  useEffect(() => {
+    if (!toast) return;
+    const timer = setTimeout(() => {
+      setToast(null);
+    }, 4500);
+    return () => clearTimeout(timer);
+  }, [toast]);
 
   // Salary / Income settings
   const [salaryId, setSalaryId] = useState<string | null>(null);
@@ -170,8 +181,7 @@ export default function SettingsManager() {
   const handleSaveSalary = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
-    setSuccessMessage(null);
-    setErrorMessage(null);
+    setToast(null);
 
     try {
       const url = '/api/incomes';
@@ -211,12 +221,18 @@ export default function SettingsManager() {
       if (!res.ok) throw new Error(json.error || 'Error al actualizar');
 
       setSalaryId(json.id);
-      setSuccessMessage('¡Configuración guardada exitosamente! Se actualizaron tu sueldo, contrato, beneficios y liquidación legal.');
-      setShowSuccessToast(true);
-      setTimeout(() => setShowSuccessToast(false), 5000);
+      setToast({
+        type: 'success',
+        title: '¡Configuración Guardada!',
+        description: 'Se actualizaron tu sueldo, contrato, beneficios y liquidación con éxito.',
+      });
       notifyFinancialSync();
     } catch (err: any) {
-      setErrorMessage(err.message || 'Error al guardar');
+      setToast({
+        type: 'error',
+        title: 'Error al guardar',
+        description: err.message || 'No se pudo guardar la configuración salarial.',
+      });
     } finally {
       setSaving(false);
     }
@@ -260,20 +276,37 @@ export default function SettingsManager() {
 
   return (
     <div className="w-full space-y-6">
-      {/* Floating Success Toast Alert */}
-      {showSuccessToast && (
-        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3.5 rounded-2xl bg-surface-50/95 backdrop-blur-xl border border-accent-500/40 px-5 py-3.5 shadow-[0_10px_40px_rgba(16,185,129,0.25)] text-accent-400 animate-in fade-in slide-in-from-top-4 duration-300 max-w-md ring-1 ring-accent-500/30">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-accent-500/20 text-accent-400 shrink-0">
-            <CheckCircle2 className="h-5 w-5" />
+      {/* Floating Corner Notification (Toast) */}
+      {toast && (
+        <div
+          role="alert"
+          aria-live="assertive"
+          className={`fixed top-4 right-4 left-4 sm:left-auto sm:top-5 sm:right-6 z-[70] flex items-start gap-3.5 rounded-2xl p-4 shadow-2xl backdrop-blur-xl border transition-all duration-300 animate-in fade-in slide-in-from-top-3 sm:slide-in-from-right-6 sm:max-w-md sm:w-full ${
+            toast.type === 'success'
+              ? 'bg-surface-50/95 border-accent-500/40 text-accent-400 shadow-accent-500/20 ring-1 ring-accent-500/30'
+              : 'bg-surface-50/95 border-danger-500/40 text-danger-400 shadow-danger-500/20 ring-1 ring-danger-500/30'
+          }`}
+        >
+          <div
+            className={`flex h-9 w-9 items-center justify-center rounded-xl shrink-0 mt-0.5 ${
+              toast.type === 'success' ? 'bg-accent-500/20 text-accent-400' : 'bg-danger-500/20 text-danger-400'
+            }`}
+          >
+            {toast.type === 'success' ? (
+              <CheckCircle2 className="h-5 w-5" />
+            ) : (
+              <AlertTriangle className="h-5 w-5" />
+            )}
           </div>
-          <div className="flex-1 min-w-0 pr-2">
-            <div className="text-sm font-bold text-text-primary">¡Configuración Guardada!</div>
-            <div className="text-xs text-text-muted">Se ha guardado correctamente toda tu información.</div>
+          <div className="flex-1 min-w-0 pr-1">
+            <div className="text-sm font-bold text-text-primary tracking-tight">{toast.title}</div>
+            <div className="text-xs text-text-muted mt-0.5 leading-relaxed">{toast.description}</div>
           </div>
           <button
             type="button"
-            onClick={() => setShowSuccessToast(false)}
-            className="p-1 rounded-lg text-text-muted hover:text-text-primary hover:bg-surface-100 cursor-pointer transition-colors"
+            onClick={() => setToast(null)}
+            className="p-1 rounded-lg text-text-muted hover:text-text-primary hover:bg-surface-100 cursor-pointer transition-colors shrink-0"
+            aria-label="Cerrar notificación"
           >
             <X className="h-4 w-4" />
           </button>
@@ -303,20 +336,6 @@ export default function SettingsManager() {
           <span>{saving ? 'Guardando...' : 'Guardar Cambios'}</span>
         </button>
       </div>
-
-      {successMessage && (
-        <div className="rounded-2xl border border-accent-500/30 bg-accent-500/10 p-4 text-xs font-semibold text-accent-400 flex items-center gap-2.5 animate-in fade-in">
-          <CheckCircle2 className="h-4 w-4 shrink-0 text-accent-400" />
-          <span>{successMessage}</span>
-        </div>
-      )}
-
-      {errorMessage && (
-        <div className="rounded-2xl border border-danger-500/30 bg-danger-500/10 p-4 text-xs font-semibold text-danger-400 flex items-center gap-2.5 animate-in fade-in">
-          <AlertTriangle className="h-4 w-4 shrink-0 text-danger-400" />
-          <span>{errorMessage}</span>
-        </div>
-      )}
 
       {/* Main 2-Column Responsive Dashboard */}
       <form onSubmit={handleSaveSalary}>
@@ -609,10 +628,10 @@ export default function SettingsManager() {
 
               {/* Si es Contrato Emergente: Opciones Especiales */}
               {contractType === 'emergente' && (
-                <div className="rounded-2xl border border-warning-500/30 bg-warning-500/5 p-4 space-y-4">
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <div className="flex items-center gap-2">
+                <div className="rounded-2xl border border-warning-500/30 bg-warning-500/5 p-4 sm:p-5 space-y-4 overflow-hidden">
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <span className="rounded-md bg-warning-500/20 text-warning-400 text-[10px] font-bold px-2 py-0.5">
                           Ley Humanitaria Art. 19
                         </span>
@@ -623,12 +642,12 @@ export default function SettingsManager() {
                       </p>
                     </div>
 
-                    <div className="shrink-0 w-32">
+                    <div className="w-full sm:w-44 shrink-0">
                       <label className="block text-[10px] font-bold text-text-secondary mb-1">Duración Pactada:</label>
                       <select
                         value={contractDurationMonths}
                         onChange={(e) => setContractDurationMonths(parseInt(e.target.value, 10))}
-                        className="w-full rounded-lg border border-warning-500/40 bg-surface-50 px-2 py-1.5 text-xs font-bold text-warning-400 focus:outline-none"
+                        className="w-full max-w-full rounded-xl border border-warning-500/40 bg-surface-100 sm:bg-surface-50 px-3 py-2 text-xs font-bold text-warning-400 focus:border-warning-500 focus:outline-none focus:ring-1 focus:ring-warning-500 cursor-pointer"
                       >
                         <option value={6}>6 meses</option>
                         <option value={12}>12 meses (1 año)</option>
@@ -639,12 +658,12 @@ export default function SettingsManager() {
                   </div>
 
                   {/* Resumen de derechos de liquidación del contrato emergente */}
-                  <div className="rounded-xl bg-surface-0/70 border border-border-default p-3 space-y-2 text-xs">
-                    <div className="font-bold text-text-primary flex items-center gap-1.5">
-                      <Scale className="h-3.5 w-3.5 text-brand-400" />
+                  <div className="rounded-xl bg-surface-0/70 border border-border-default p-3 sm:p-4 space-y-2 text-xs">
+                    <div className="font-bold text-text-primary flex items-center gap-1.5 flex-wrap">
+                      <Scale className="h-3.5 w-3.5 text-brand-400 shrink-0" />
                       <span>¿Da derecho a liquidación el contrato emergente?</span>
                     </div>
-                    <ul className="text-[11px] text-text-muted space-y-1 pl-4 list-disc">
+                    <ul className="text-[11px] text-text-muted space-y-1.5 pl-4 list-disc leading-relaxed">
                       <li>
                         <strong className="text-text-primary">Al terminar el plazo acordado:</strong> <strong className="text-accent-400">SÍ recibes liquidación</strong> de haberes proporcionales (Décimo 13ro, Décimo 14to, vacaciones) y <strong>bonificación por desahucio</strong> (25% por año).
                       </li>
