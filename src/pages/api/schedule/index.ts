@@ -71,6 +71,13 @@ export const GET: APIRoute = async (ctx) => {
         sbuAmount: i.sbuAmount ? parseFloat(i.sbuAmount as string) : undefined,
         hasUtilidades: i.hasUtilidades ?? true,
         utilidadesAmount: i.utilidadesAmount ? parseFloat(i.utilidadesAmount as string) : 0,
+        workStartDate: i.workStartDate
+          ? (typeof i.workStartDate === 'string'
+            ? i.workStartDate
+            : (i.workStartDate as any).toISOString?.().slice(0, 10) || String(i.workStartDate))
+          : null,
+        contractType: (i.contractType as any) || 'indefinite',
+        contractDurationMonths: i.contractDurationMonths ?? 12,
         date: toIsoDate(i.date),
       }));
 

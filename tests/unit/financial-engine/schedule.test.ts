@@ -340,4 +340,67 @@ describe('buildPaymentSchedule', () => {
     expect(result.periods[0].key).toBe('2026-08-31');
     expect(result.periods[1].key).toBe('2026-09-15');
   });
+
+  it('calculates proportional 13th salary in schedule when starting mid-cycle', () => {
+    const freshSalary: Income = {
+      id: 'fresh-1',
+      name: 'Nuevo Empleo',
+      amount: 1200,
+      frequency: 'monthly',
+      isSalary: true,
+      deductIess: true,
+      paymentScheme: 'quincena_fin_mes',
+      quincenaAmount: 500,
+      decimoTerceroMensualizado: false,
+      workStartDate: '2026-09-01',
+    };
+
+    const result = buildPaymentSchedule({
+      debts: [],
+      incomes: [freshSalary],
+      expenses: [],
+      months: 6,
+      startDate: '2026-09-01',
+    });
+
+    // In December (month 11, fin_de_mes)
+    const dicPeriod = result.periods.find((p) => p.month === 11 && p.timing === 'fin_de_mes');
+    expect(dicPeriod).toBeDefined();
+    const payouts = result.benefitPayouts[dicPeriod!.key];
+    expect(payouts).toBeDefined();
+    expect(payouts[0].amount).toBe(300); // 90 / 360 * 1200 = 300
+    expect(payouts[0].label).toContain('proporcional');
+  });
+
+  it('activates fondos de reserva in the schedule only after 1 full year of tenure', () => {
+    const juniorSalary: Income = {
+      id: 'junior-1',
+      name: 'Empleo Junior',
+      amount: 1200,
+      frequency: 'monthly',
+      isSalary: true,
+      paymentScheme: 'single_cut',
+      hasFondosReserva: true,
+      fondosReservaMensualizado: true,
+      workStartDate: '2026-06-01',
+    };
+
+    // Horizon of 14 months starting from 2026-06-01
+    const result = buildPaymentSchedule({
+      debts: [],
+      incomes: [juniorSalary],
+      expenses: [],
+      months: 14,
+      startDate: '2026-06-01',
+    });
+
+    // In June 2026 (0 months tenure), fondos de reserva should NOT be included
+    const jun2026 = result.periods.find((p) => p.year === 2026 && p.month === 5 && p.timing === 'fin_de_mes');
+    expect(jun2026).toBeDefined();
+    // In June 2027 (12 months tenure reached), fondos de reserva (1200/12 = 100) should be included
+    const jun2027 = result.periods.find((p) => p.year === 2027 && p.month === 5 && p.timing === 'fin_de_mes');
+    expect(jun2027).toBeDefined();
+    expect(jun2027!.incomeAvailable).toBe(jun2026!.incomeAvailable + 100);
+  });
 });
+

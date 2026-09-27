@@ -137,4 +137,21 @@ describe('cronograma con beneficios', () => {
       { label: 'Décimo tercer sueldo', amount: 1200 },
     ]);
   });
+
+  it('el décimo tercero en diciembre es proporcional si entró en septiembre', () => {
+    const result = buildPaymentSchedule({
+      debts: [],
+      incomes: [withBenefits({ decimoTerceroMensualizado: false, workStartDate: '2026-09-01' })],
+      expenses: [],
+      months: 5,
+      startDate: '2026-09-01',
+    });
+
+    const dic = result.periods.find((p) => p.month === 11 && p.timing === 'fin_de_mes');
+    expect(dic).toBeDefined();
+    const payout = result.benefitPayouts[dic!.key]?.[0];
+    expect(payout).toBeDefined();
+    expect(payout.amount).toBe(300);
+    expect(payout.label).toContain('proporcional');
+  });
 });

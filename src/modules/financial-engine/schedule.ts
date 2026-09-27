@@ -9,7 +9,7 @@
  * period ("Lo que queda del sueldo").
  */
 
-import { calculateBenefits } from './benefits';
+import { calculateBenefits, checkFondosReservaEligibility } from './benefits';
 import { calculateSalaryDetails, normalizeToMonthly } from './cashflow';
 import { round } from './constants';
 import type { Debt, Expense, Income } from './types';
@@ -169,7 +169,7 @@ export function buildPaymentSchedule(input: ScheduleInput): PaymentScheduleResul
       quincenaIncome += details.quincenaAmount;
       finDeMesIncome += details.finDeMesAmount;
       // Beneficios de ley mensualizados llegan con el rol de fin de mes
-      finDeMesIncome += calculateBenefits(inc).monthlyRecurring;
+      finDeMesIncome += calculateBenefits(inc, startDate).monthlyRecurring;
     } else {
       finDeMesIncome += normalizeToMonthly(inc.amount, inc.frequency);
     }
@@ -185,18 +185,38 @@ export function buildPaymentSchedule(input: ScheduleInput): PaymentScheduleResul
     includePastCuts
   );
 
-  // ─── Beneficios anuales (décimos no mensualizados, utilidades) en su mes legal ───
+  // ─── Beneficios anuales (décimos proporcionales al tiempo laborado, utilidades) ───
   const benefitPayouts: Record<string, { label: string; amount: number }[]> = {};
   for (const inc of input.incomes) {
     if (inc.frequency === 'once' || !inc.isSalary) continue;
-    for (const payout of calculateBenefits(inc).annualPayouts) {
-      for (const period of periods) {
+    for (const period of periods) {
+      const periodDate = new Date(`${period.date}T00:00:00`);
+      const periodBenefits = calculateBenefits(inc, periodDate);
+      for (const payout of periodBenefits.annualPayouts) {
         if (period.month !== payout.month || period.timing !== payout.timing) continue;
         period.incomeAvailable = round(period.incomeAvailable + payout.amount);
         (benefitPayouts[period.key] ??= []).push({
           label: payout.label,
           amount: payout.amount,
         });
+      }
+    }
+  }
+
+  // ─── Fondos de reserva dinámicos según antigüedad en cada corte de fin de mes ───
+  for (const inc of input.incomes) {
+    if (!inc.isSalary || !inc.hasFondosReserva || !inc.fondosReservaMensualizado || !inc.workStartDate) continue;
+    const initialEligible = checkFondosReservaEligibility(inc.workStartDate, startDate).isEligible;
+    const frAmount = round(inc.amount / 12);
+
+    for (const period of periods) {
+      if (period.timing !== 'fin_de_mes') continue;
+      const periodDate = new Date(`${period.date}T00:00:00`);
+      const periodEligible = checkFondosReservaEligibility(inc.workStartDate, periodDate).isEligible;
+
+      // Si no era elegible al inicio pero ya es elegible en este corte: se suma el fondo al corte
+      if (!initialEligible && periodEligible) {
+        period.incomeAvailable = round(period.incomeAvailable + frAmount);
       }
     }
   }
