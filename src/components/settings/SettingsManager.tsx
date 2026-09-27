@@ -215,12 +215,8 @@ export default function SettingsManager() {
       setShowSuccessToast(true);
       setTimeout(() => setShowSuccessToast(false), 5000);
       notifyFinancialSync();
-
-      // Alert dialog requested by user
-      alert('¡Se ha guardado correctamente!');
     } catch (err: any) {
       setErrorMessage(err.message || 'Error al guardar');
-      alert(`Error al guardar: ${err.message || 'Ocurrió un error inesperado'}`);
     } finally {
       setSaving(false);
     }
@@ -266,16 +262,18 @@ export default function SettingsManager() {
     <div className="w-full space-y-6">
       {/* Floating Success Toast Alert */}
       {showSuccessToast && (
-        <div className="fixed top-20 right-6 z-50 flex items-center gap-3 rounded-2xl bg-surface-50 border border-accent-500/40 p-4 shadow-2xl shadow-accent-500/20 text-accent-400 animate-in fade-in slide-in-from-top-4 max-w-md">
-          <CheckCircle2 className="h-6 w-6 text-accent-400 shrink-0" />
-          <div className="flex-1">
-            <div className="text-xs font-bold text-text-primary">¡Configuración Guardada!</div>
-            <div className="text-[11px] text-text-muted mt-0.5">Se han guardado todos los cambios correctamente.</div>
+        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3.5 rounded-2xl bg-surface-50/95 backdrop-blur-xl border border-accent-500/40 px-5 py-3.5 shadow-[0_10px_40px_rgba(16,185,129,0.25)] text-accent-400 animate-in fade-in slide-in-from-top-4 duration-300 max-w-md ring-1 ring-accent-500/30">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-accent-500/20 text-accent-400 shrink-0">
+            <CheckCircle2 className="h-5 w-5" />
+          </div>
+          <div className="flex-1 min-w-0 pr-2">
+            <div className="text-sm font-bold text-text-primary">¡Configuración Guardada!</div>
+            <div className="text-xs text-text-muted">Se ha guardado correctamente toda tu información.</div>
           </div>
           <button
             type="button"
             onClick={() => setShowSuccessToast(false)}
-            className="p-1 rounded-lg text-text-muted hover:text-text-primary hover:bg-surface-100 cursor-pointer"
+            className="p-1 rounded-lg text-text-muted hover:text-text-primary hover:bg-surface-100 cursor-pointer transition-colors"
           >
             <X className="h-4 w-4" />
           </button>
