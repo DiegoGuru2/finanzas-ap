@@ -1,0 +1,10 @@
+---
+import AppLayout from '../../layouts/AppLayout.astro';
+import ToolsView from '@/components/tools/ToolsView';
+
+const user = Astro.locals.user;
+---
+
+<AppLayout title="Herramientas Inteligentes">
+  <ToolsView client:load />
+</AppLayout>
