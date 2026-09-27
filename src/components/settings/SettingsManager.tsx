@@ -13,7 +13,7 @@ import { notifyFinancialSync } from '@/stores/sync';
 import {
   Briefcase, Calendar, ShieldCheck, ShieldAlert, AlertTriangle,
   CheckCircle2, DollarSign, Clock, HelpCircle, Info, ChevronRight,
-  Sparkles, Save, FileText, ArrowRight, Percent, Scale, Award
+  Sparkles, Save, FileText, ArrowRight, Percent, Scale, Award, X
 } from 'lucide-react';
 
 export default function SettingsManager() {
@@ -21,6 +21,7 @@ export default function SettingsManager() {
   const [saving, setSaving] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [showSuccessToast, setShowSuccessToast] = useState(false);
 
   // Salary / Income settings
   const [salaryId, setSalaryId] = useState<string | null>(null);
@@ -211,9 +212,15 @@ export default function SettingsManager() {
 
       setSalaryId(json.id);
       setSuccessMessage('¡Configuración guardada exitosamente! Se actualizaron tu sueldo, contrato, beneficios y liquidación legal.');
+      setShowSuccessToast(true);
+      setTimeout(() => setShowSuccessToast(false), 5000);
       notifyFinancialSync();
+
+      // Alert dialog requested by user
+      alert('¡Se ha guardado correctamente!');
     } catch (err: any) {
       setErrorMessage(err.message || 'Error al guardar');
+      alert(`Error al guardar: ${err.message || 'Ocurrió un error inesperado'}`);
     } finally {
       setSaving(false);
     }
@@ -257,6 +264,24 @@ export default function SettingsManager() {
 
   return (
     <div className="w-full space-y-6">
+      {/* Floating Success Toast Alert */}
+      {showSuccessToast && (
+        <div className="fixed top-20 right-6 z-50 flex items-center gap-3 rounded-2xl bg-surface-50 border border-accent-500/40 p-4 shadow-2xl shadow-accent-500/20 text-accent-400 animate-in fade-in slide-in-from-top-4 max-w-md">
+          <CheckCircle2 className="h-6 w-6 text-accent-400 shrink-0" />
+          <div className="flex-1">
+            <div className="text-xs font-bold text-text-primary">¡Configuración Guardada!</div>
+            <div className="text-[11px] text-text-muted mt-0.5">Se han guardado todos los cambios correctamente.</div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowSuccessToast(false)}
+            className="p-1 rounded-lg text-text-muted hover:text-text-primary hover:bg-surface-100 cursor-pointer"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+
       {/* Header Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
