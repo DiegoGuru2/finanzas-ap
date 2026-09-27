@@ -3,6 +3,7 @@ import { formatCurrency } from '@/lib/utils';
 import { DEFAULT_CATALOGS, fetchCatalog, type CatalogOption } from '@/lib/catalogs';
 import { CategoryIcon } from '@/components/ui/CategoryIcon';
 import { notifyFinancialSync } from '@/stores/sync';
+import { PieChart } from 'lucide-react';
 
 interface BudgetItem {
   id: string;
@@ -186,7 +187,9 @@ export default function BudgetsManager() {
       {/* Lista de Presupuestos */}
       {budgets.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border-default bg-surface-50 p-12 text-center">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-500/10 text-3xl mb-4">📊</div>
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-500/10 mb-4">
+            <PieChart className="h-8 w-8 text-brand-400" />
+          </div>
           <h3 className="text-base font-bold text-text-primary">Sin presupuestos asignados</h3>
           <p className="text-xs text-text-secondary mt-1 max-w-sm">
             Asigna un techo de gasto mensual a cada categoría para monitorear tu disciplina financiera y recibir alertas cuando estés por superar el límite.

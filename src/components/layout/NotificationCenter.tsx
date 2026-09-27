@@ -187,8 +187,16 @@ export default function NotificationCenter() {
   const activeDebtsInCut = debtRows.filter((r) => (r.cells[nextKey] || 0) > 0 || paid[r.id]?.[nextKey] !== undefined);
   const activeExpensesInCut = expenseRows.filter((r) => (r.cells[nextKey] || 0) > 0 || paidExpenses[r.id]?.[nextKey] !== undefined);
 
-  const paidDebtsInCut = activeDebtsInCut.filter((r) => paid[r.id]?.[nextKey] !== undefined);
-  const pendingDebtsInCut = activeDebtsInCut.filter((r) => paid[r.id]?.[nextKey] === undefined);
+  const isDebtCompleted = (r: ScheduleRow) => {
+    const cellAmount = r.cells[nextKey] || 0;
+    const paidVal = paid[r.id]?.[nextKey];
+    if (paidVal === undefined) return false;
+    if (cellAmount === 0) return true;
+    return paidVal >= cellAmount - 0.01;
+  };
+
+  const paidDebtsInCut = activeDebtsInCut.filter(isDebtCompleted);
+  const pendingDebtsInCut = activeDebtsInCut.filter((r) => !isDebtCompleted(r));
 
   const totalToPayInCut = schedule?.totals[nextKey] ?? 0;
   const incomeInCut = nextPeriod?.incomeAvailable ?? 0;
@@ -208,7 +216,7 @@ export default function NotificationCenter() {
       const permission = await Notification.requestPermission();
       setPermissionStatus(permission);
       if (permission === 'granted' && nextPeriod) {
-        new Notification('🔔 ProyecAhorro: Alertas activadas', {
+        new Notification('ProyecAhorro: Alertas activadas', {
           body: `Próximo corte: ${nextPeriod.day} de ${MONTH_SHORT[nextPeriod.month]}. Tienes ${pendingCount} pagos pendientes. Te quedarán ${formatCurrency(remainingInCut)} libres.`,
           icon: '/images/logo-icon.png',
         });
@@ -218,13 +226,21 @@ export default function NotificationCenter() {
     }
   };
 
-  const openQuickPay = (row: ScheduleRow) => {
+  const openQuickPay = (row: ScheduleRow, defaultAmount?: number) => {
     if (!nextPeriod) return;
-    const amount = row.cells[nextKey] || 0;
+    const fullAmount = row.cells[nextKey] || 0;
+    const paidVal = paid[row.id]?.[nextKey] || 0;
+    const rem =
+      defaultAmount !== undefined
+        ? defaultAmount
+        : paidVal > 0
+          ? Math.max(0, Math.round((fullAmount - paidVal) * 100) / 100)
+          : fullAmount;
+    const amount = rem > 0 ? rem : fullAmount;
     setQuickPayDebt({ id: row.id, name: row.name, amount, date: nextPeriod.date });
     setQuickPayAmount(amount);
     setQuickPayDate(todayIso);
-    setQuickPayNotes('');
+    setQuickPayNotes(paidVal > 0 ? `Abono restante (${formatCurrency(paidVal)} ya abonados)` : '');
   };
 
   const handleQuickPaySubmit = async (e: React.FormEvent) => {
@@ -509,11 +525,26 @@ export default function NotificationCenter() {
                                   </div>
                                 </div>
 
-                                <div className="shrink-0">
-                                  {isPaid ? (
+                                <div className="shrink-0 flex items-center gap-1.5">
+                                  {isPaid && !isPartial ? (
                                     <span className="inline-flex items-center gap-1 rounded-md bg-accent-500/15 border border-accent-500/30 px-2 py-0.5 text-[10px] font-bold text-accent-400">
-                                      {isPartial ? `✓ Abono: ${formatCurrency(paidAmount)}` : `✓ Pagado (${formatCurrency(paidAmount)})`}
+                                      ✓ Pagado ({formatCurrency(paidAmount)})
                                     </span>
+                                  ) : isPaid && isPartial ? (
+                                    <div className="flex items-center gap-1.5">
+                                      <span className="inline-flex items-center gap-1 rounded-md bg-warning-500/15 border border-warning-500/30 px-2 py-0.5 text-[10px] font-bold text-warning-400">
+                                        ✓ Abono: {formatCurrency(paidAmount)}
+                                      </span>
+                                      <button
+                                        onClick={() =>
+                                          openQuickPay(debt, Math.max(0, Math.round((amount - paidAmount) * 100) / 100))
+                                        }
+                                        className="rounded-lg bg-brand-500 px-2 py-0.5 text-[10px] font-bold text-white hover:bg-brand-400 transition-colors cursor-pointer"
+                                        title="Abonar el resto"
+                                      >
+                                        Abonar resto
+                                      </button>
+                                    </div>
                                   ) : (
                                     <button
                                       onClick={() => openQuickPay(debt)}

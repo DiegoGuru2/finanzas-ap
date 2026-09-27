@@ -4,7 +4,7 @@ import { catalogTint, fetchCatalog, type CatalogOption } from '@/lib/catalogs';
 import ScheduleConfig from './ScheduleConfig';
 import { exportScheduleToExcel } from '@/lib/excel-export';
 import { notifyFinancialSync } from '@/stores/sync';
-import { Zap, CreditCard, Gift, Sparkles, Info } from 'lucide-react';
+import { Zap, CreditCard, Gift, Sparkles, Info, Receipt } from 'lucide-react';
 
 interface SchedulePeriod {
   key: string;
@@ -218,13 +218,26 @@ export default function PaymentsView() {
     }
   }, [schedule]);
 
-  const openPayCell = (row: ScheduleRow, periodKey: string, periodDate: string) => {
-    const amount = row.cells[periodKey] || 0;
+  const openPayCell = (
+    row: ScheduleRow,
+    periodKey: string,
+    periodDate: string,
+    defaultAmount?: number
+  ) => {
+    const fullAmount = row.cells[periodKey] || 0;
+    const paidSoFar = paid[row.id]?.[periodKey] || 0;
+    const remainingToPay =
+      defaultAmount !== undefined
+        ? defaultAmount
+        : paidSoFar > 0
+          ? Math.max(0, Math.round((fullAmount - paidSoFar) * 100) / 100)
+          : fullAmount;
+    const amount = remainingToPay > 0 ? remainingToPay : fullAmount;
     setPayCell({ debtId: row.id, debtName: row.name, amount, date: periodDate });
     setPayAmount(amount);
     const today = localIso(new Date());
     setPayDate(periodDate <= today ? periodDate : today);
-    setPayNotes('');
+    setPayNotes(paidSoFar > 0 ? `Abono restante (${formatCurrency(paidSoFar)} ya abonados)` : '');
     setModalError(null);
   };
 
@@ -852,10 +865,28 @@ export default function PaymentsView() {
                                   </div>
 
                                   <div>
-                                    {paidAmount !== undefined ? (
+                                    {paidAmount !== undefined && (amount <= 0 || paidAmount >= amount - 0.01) ? (
                                       <span className="inline-flex items-center gap-1 rounded-lg bg-accent-500/15 border border-accent-500/20 px-3 py-1.5 text-xs font-semibold text-accent-400">
                                         ✓ Pagado ({formatCurrency(paidAmount)})
                                       </span>
+                                    ) : paidAmount !== undefined && paidAmount < amount - 0.01 ? (
+                                      <div className="flex flex-col sm:flex-row items-end sm:items-center gap-2">
+                                        <span
+                                          className="inline-flex items-center gap-1 rounded-lg bg-warning-500/15 border border-warning-500/25 px-2.5 py-1 text-xs font-semibold text-warning-400"
+                                          title={`Abonado: ${formatCurrency(paidAmount)} de ${formatCurrency(amount)}`}
+                                        >
+                                          Abonado: {formatCurrency(paidAmount)} (Falta {formatCurrency(Math.max(0, amount - paidAmount))})
+                                        </span>
+                                        <button
+                                          onClick={() =>
+                                            openPayCell(debt, p.key, p.date, Math.max(0, Math.round((amount - paidAmount) * 100) / 100))
+                                          }
+                                          className="inline-flex items-center gap-1 rounded-lg bg-brand-500 px-3 py-1 text-xs font-semibold text-white shadow-sm hover:bg-brand-400 transition-colors cursor-pointer"
+                                          title="Abonar el saldo pendiente de esta cuota"
+                                        >
+                                          Abonar resto
+                                        </button>
+                                      </div>
                                     ) : (
                                       <button
                                         onClick={() => openPayCell(debt, p.key, p.date)}
@@ -1114,7 +1145,9 @@ export default function PaymentsView() {
                       const amount = row.cells[p.key];
                       const isNext = p.key === nextKey;
                       const paidAmount = cellPaid(row.id, p.key);
-                      const isPaid = paidAmount !== undefined;
+                      const isPaidFull = paidAmount !== undefined && (amount <= 0 || paidAmount >= amount - 0.01);
+                      const isPartial = paidAmount !== undefined && amount > 0 && paidAmount < amount - 0.01;
+                      const remainingDue = Math.max(0, Math.round((amount - (paidAmount || 0)) * 100) / 100);
 
                       return (
                         <td
@@ -1122,10 +1155,19 @@ export default function PaymentsView() {
                           className={`border-l border-border-default/50 px-1.5 sm:px-2.5 py-2 text-center text-xs${isNext ? ' bg-brand-500/[0.04]' : ''}`}
                         >
                           {amount ? (
-                            isPaid ? (
+                            isPaidFull ? (
                               <div className="inline-flex items-center gap-1 rounded bg-accent-500/15 border border-accent-500/30 px-1.5 py-0.5 text-[10px] font-bold text-accent-400">
                                 ✓ {formatCurrency(paidAmount)}
                               </div>
+                            ) : isPartial ? (
+                              <button
+                                onClick={() => openPayCell(row, p.key, p.date, remainingDue)}
+                                className="inline-flex flex-col items-center rounded bg-warning-500/15 border border-warning-500/30 px-1.5 py-0.5 text-[10px] font-bold text-warning-400 hover:bg-warning-500/25 transition-colors cursor-pointer"
+                                title={`Abonado: ${formatCurrency(paidAmount)} de ${formatCurrency(amount)}. Clic para abonar el restante (${formatCurrency(remainingDue)})`}
+                              >
+                                <span>{formatCurrency(paidAmount)}</span>
+                                <span className="text-[9px] text-warning-400/80">Falta {formatCurrency(remainingDue)}</span>
+                              </button>
                             ) : (
                               <button
                                 onClick={() => openPayCell(row, p.key, p.date)}
@@ -1151,7 +1193,10 @@ export default function PaymentsView() {
                       colSpan={filteredMatrixPeriods.length + 1}
                       className="sticky left-0 z-10 bg-surface-100/90 px-3 sm:px-4 py-1.5 text-xs font-bold uppercase tracking-wide text-warning-400 border-b border-border-default/80"
                     >
-                      🧾 Gastos Recurrentes
+                      <span className="inline-flex items-center gap-1.5">
+                        <Receipt className="h-3.5 w-3.5" />
+                        <span>Gastos Recurrentes</span>
+                      </span>
                     </td>
                   </tr>
                 )}

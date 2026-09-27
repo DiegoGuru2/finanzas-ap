@@ -122,9 +122,9 @@ export default function DashboardView() {
 
   const [fetchError, setFetchError] = useState<string | null>(null);
 
-  const fetchDashboard = async () => {
+  const fetchDashboard = async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       setFetchError(null);
       const res = await fetch(`/api/dashboard?strategy=${strategy}`);
       if (!res.ok) {
@@ -141,7 +141,7 @@ export default function DashboardView() {
       console.error('Error fetching dashboard:', err);
       setFetchError(err.message || 'Error al conectar con la base de datos');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
@@ -149,7 +149,7 @@ export default function DashboardView() {
     fetchDashboard();
 
     const handleSync = () => {
-      fetchDashboard();
+      fetchDashboard(true);
     };
     window.addEventListener('finanzas:sync', handleSync);
     return () => window.removeEventListener('finanzas:sync', handleSync);
