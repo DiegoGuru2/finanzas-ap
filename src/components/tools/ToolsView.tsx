@@ -5,7 +5,8 @@ import {
   Search, ShieldAlert, Eye, AlertTriangle, CheckCircle,
   AlertOctagon, TrendingDown, Zap, ToggleLeft, ToggleRight,
   DollarSign, Clock, ArrowRight, X, Shield, Flame, Info,
-  CircleDollarSign, Gauge, ScanSearch, Power
+  CircleDollarSign, Gauge, ScanSearch, Power, Briefcase,
+  Scale, Award, Calendar
 } from 'lucide-react';
 
 // ═══════════════════════════════════════════
@@ -420,6 +421,7 @@ function StressTest() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [survivalMode, setSurvivalMode] = useState(false);
+  const [cushionMode, setCushionMode] = useState<'pure' | 'resignation' | 'dismissal' | 'seasonal'>('pure');
 
   useEffect(() => {
     fetchData(false);
@@ -457,6 +459,40 @@ function StressTest() {
 
   if (!data) return null;
 
+  const severance = data.severance;
+  const resignationAmount = severance?.resignation?.total || 0;
+  const dismissalAmount = severance?.dismissal?.total || 0;
+  const seasonalTotal = data.seasonalTotal || 0;
+
+  // Active Cushion Calculation based on user scenario
+  let activeSavings = data.totalSavings;
+  let scenarioTitle = 'Solo fondo de ahorros actual';
+
+  if (cushionMode === 'resignation') {
+    activeSavings = data.totalSavings + resignationAmount;
+    scenarioTitle = `Ahorros (${fmt(data.totalSavings)}) + Liquidación por Renuncia (${fmt(resignationAmount)})`;
+  } else if (cushionMode === 'dismissal') {
+    activeSavings = data.totalSavings + dismissalAmount;
+    scenarioTitle = `Ahorros (${fmt(data.totalSavings)}) + Liquidación por Despido (${fmt(dismissalAmount)})`;
+  } else if (cushionMode === 'seasonal') {
+    activeSavings = data.totalSavings + seasonalTotal;
+    scenarioTitle = `Ahorros (${fmt(data.totalSavings)}) + Décimos y Utilidades anuales (${fmt(seasonalTotal)})`;
+  }
+
+  const effectiveRunwayMonths = data.activeBurnRate > 0
+    ? Math.round((activeSavings / data.activeBurnRate) * 10) / 10
+    : activeSavings > 0 ? 999 : 0;
+
+  const effectiveRunwayDays = Math.round(effectiveRunwayMonths * 30.44);
+
+  // Dynamic Risk Level based on active scenario
+  let riskLevel: 'critical' | 'danger' | 'warning' | 'safe' | 'strong';
+  if (effectiveRunwayMonths < 1) riskLevel = 'critical';
+  else if (effectiveRunwayMonths < 3) riskLevel = 'danger';
+  else if (effectiveRunwayMonths < 6) riskLevel = 'warning';
+  else if (effectiveRunwayMonths < 12) riskLevel = 'safe';
+  else riskLevel = 'strong';
+
   const riskColors: Record<string, { bg: string; border: string; text: string; ring: string }> = {
     critical: { bg: 'bg-danger-500/10', border: 'border-danger-500/30', text: 'text-danger-400', ring: 'ring-danger-500/20' },
     danger: { bg: 'bg-danger-500/8', border: 'border-danger-500/25', text: 'text-danger-400', ring: 'ring-danger-500/15' },
@@ -465,48 +501,111 @@ function StressTest() {
     strong: { bg: 'bg-brand-500/10', border: 'border-brand-500/30', text: 'text-brand-400', ring: 'ring-brand-500/20' },
   };
 
-  const rc = riskColors[data.riskLevel] || riskColors.warning;
-
-  // Runway visual bar (max 12 months = 100%)
-  const barPercent = Math.min(100, (data.runwayMonths / 12) * 100);
+  const rc = riskColors[riskLevel];
+  const barPercent = Math.min(100, (effectiveRunwayMonths / 12) * 100);
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       {/* Header Card */}
-      <div className={`rounded-2xl border ${rc.border} ${rc.bg} p-6 space-y-5 ring-1 ${rc.ring}`}>
-        <div className="flex items-start gap-4">
-          <div className="shrink-0">
-            <div className={`flex h-14 w-14 items-center justify-center rounded-2xl ${rc.bg} border ${rc.border}`}>
-              <ShieldAlert className={`h-7 w-7 ${rc.text}`} />
+      <div className={`rounded-3xl border ${rc.border} ${rc.bg} p-6 sm:p-7 space-y-6 ring-1 ${rc.ring} shadow-xl`}>
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+          <div className="flex items-start gap-3.5">
+            <div className={`flex h-12 w-12 items-center justify-center rounded-2xl ${rc.bg} border ${rc.border} shrink-0`}>
+              <ShieldAlert className={`h-6 w-6 ${rc.text}`} />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-text-primary">
+                Simulador de Supervivencia Financiera
+              </h3>
+              <p className={`text-xs mt-0.5 ${rc.text} font-medium leading-relaxed`}>
+                {riskLevel === 'critical' && 'Situación crítica: menos de 1 mes cubierto sin ingresos.'}
+                {riskLevel === 'danger' && 'Riesgo alto: menos de 3 meses de colchón. Se aconseja reforzar tu fondo.'}
+                {riskLevel === 'warning' && 'Precaución: entre 3 y 6 meses de respaldo ante contingencias.'}
+                {riskLevel === 'safe' && 'Buen respaldo: entre 6 y 12 meses de autonomía financiera.'}
+                {riskLevel === 'strong' && 'Excelente: más de 1 año completo de tranquilidad asegurada.'}
+              </p>
             </div>
           </div>
-          <div className="flex-1 min-w-0">
-            <h3 className="text-sm font-bold text-text-primary">
-              Simulador de Emergencia: ¿Cuántos meses sobrevivo?
-            </h3>
-            <p className={`text-xs mt-1 ${rc.text} font-medium leading-relaxed`}>
-              {data.riskMessage}
-            </p>
+
+          {/* Scenario Selector: Pure Savings vs Severance vs Seasonal */}
+          <div className="flex flex-wrap gap-1.5 p-1 bg-surface-0/60 rounded-2xl border border-border-default/70 shrink-0">
+            <button
+              type="button"
+              onClick={() => setCushionMode('pure')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                cushionMode === 'pure'
+                  ? 'bg-surface-200 text-text-primary shadow-sm'
+                  : 'text-text-muted hover:text-text-primary'
+              }`}
+            >
+              Solo Ahorros
+            </button>
+            {severance && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setCushionMode('resignation')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    cushionMode === 'resignation'
+                      ? 'bg-accent-500 text-white shadow-sm'
+                      : 'text-text-muted hover:text-accent-400'
+                  }`}
+                  title="Incluye liquidación si decides renunciar"
+                >
+                  🟢 + Si Renuncio
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCushionMode('dismissal')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    cushionMode === 'dismissal'
+                      ? 'bg-danger-500 text-white shadow-sm'
+                      : 'text-text-muted hover:text-danger-400'
+                  }`}
+                  title="Incluye indemnización de despido intempestivo"
+                >
+                  🔴 + Si me Despiden
+                </button>
+              </>
+            )}
+            {seasonalTotal > 0 && (
+              <button
+                type="button"
+                onClick={() => setCushionMode('seasonal')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  cushionMode === 'seasonal'
+                    ? 'bg-warning-500 text-white shadow-sm'
+                    : 'text-text-muted hover:text-warning-400'
+                }`}
+                title="Incluye décimos y utilidades anuales"
+              >
+                ⭐ + Décimos/Utilidades
+              </button>
+            )}
           </div>
         </div>
 
         {/* Big Runway Display */}
-        <div className="text-center space-y-3">
-          <div className={`text-5xl font-black ${rc.text} tabular-nums tracking-tight`}>
-            {data.runwayMonths}
-            <span className="text-lg font-bold ml-1 opacity-70">meses</span>
+        <div className="text-center space-y-3 py-2">
+          <div className={`text-6xl font-black ${rc.text} tabular-nums tracking-tight`}>
+            {effectiveRunwayMonths}
+            <span className="text-xl font-bold ml-1.5 opacity-75">meses</span>
           </div>
           <div className="text-xs text-text-muted">
-            ({data.runwayDays} días) con un fondo de ahorros de <strong className="text-text-primary">{fmt(data.totalSavings)}</strong>
+            ({effectiveRunwayDays} días de supervivencia) con un colchón total de{' '}
+            <strong className="text-text-primary font-bold">{fmt(activeSavings)}</strong>
+          </div>
+          <div className="text-[11px] text-text-secondary bg-surface-0/50 py-1 px-3 rounded-full inline-block border border-border-default/50">
+            Escenario activo: <strong>{scenarioTitle}</strong>
           </div>
 
           {/* Runway Progress Bar */}
-          <div className="relative w-full h-4 rounded-full bg-surface-200 overflow-hidden">
+          <div className="relative w-full h-4 rounded-full bg-surface-200 overflow-hidden mt-4">
             <div
               className={`h-full rounded-full transition-all duration-700 ease-out ${
-                data.riskLevel === 'critical' || data.riskLevel === 'danger'
+                riskLevel === 'critical' || riskLevel === 'danger'
                   ? 'bg-gradient-to-r from-danger-500 to-danger-400'
-                  : data.riskLevel === 'warning'
+                  : riskLevel === 'warning'
                     ? 'bg-gradient-to-r from-warning-500 to-warning-400'
                     : 'bg-gradient-to-r from-accent-500 to-brand-500'
               }`}
@@ -517,47 +616,141 @@ function StressTest() {
             <div className="absolute top-0 left-[50%] h-full w-px bg-surface-0/30" title="6 meses" />
             <div className="absolute top-0 left-[75%] h-full w-px bg-surface-0/30" title="9 meses" />
           </div>
-          <div className="flex justify-between text-[9px] text-text-muted px-1">
-            <span>0</span><span>3 meses</span><span>6 meses</span><span>9 meses</span><span>12+</span>
+          <div className="flex justify-between text-[9px] text-text-muted px-1 font-semibold">
+            <span>0</span><span>3 meses (mínimo)</span><span>6 meses (recomendado)</span><span>9 meses</span><span>12+ meses</span>
           </div>
         </div>
 
         {/* Burn Rate Breakdown */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <div className="rounded-xl bg-surface-0/60 border border-border-default/60 p-3 text-center">
-            <div className="text-[10px] text-text-muted font-medium uppercase tracking-wider">Gastos Esenciales</div>
+          <div className="rounded-2xl bg-surface-0/70 border border-border-default/60 p-3.5 text-center">
+            <div className="text-[10px] text-text-muted font-bold uppercase tracking-wider">Gastos Esenciales</div>
             <div className="text-sm font-bold text-text-primary mt-1">{fmt(data.essentialMonthly)}</div>
           </div>
-          <div className="rounded-xl bg-surface-0/60 border border-border-default/60 p-3 text-center">
-            <div className="text-[10px] text-text-muted font-medium uppercase tracking-wider">Gastos No Esenciales</div>
+          <div className="rounded-2xl bg-surface-0/70 border border-border-default/60 p-3.5 text-center">
+            <div className="text-[10px] text-text-muted font-bold uppercase tracking-wider">Gastos No Esenciales</div>
             <div className={`text-sm font-bold mt-1 ${survivalMode ? 'text-text-muted line-through' : 'text-warning-400'}`}>
               {fmt(data.nonEssentialMonthly)}
             </div>
           </div>
-          <div className="rounded-xl bg-surface-0/60 border border-border-default/60 p-3 text-center">
-            <div className="text-[10px] text-text-muted font-medium uppercase tracking-wider">Deudas Mínimas</div>
+          <div className="rounded-2xl bg-surface-0/70 border border-border-default/60 p-3.5 text-center">
+            <div className="text-[10px] text-text-muted font-bold uppercase tracking-wider">Deudas Mínimas</div>
             <div className="text-sm font-bold text-danger-400 mt-1">{fmt(data.minimumDebts)}</div>
           </div>
-          <div className="rounded-xl bg-surface-0/60 border border-border-default/60 p-3 text-center">
-            <div className="text-[10px] text-text-muted font-medium uppercase tracking-wider">Burn Rate Activo</div>
+          <div className="rounded-2xl bg-surface-0/70 border border-border-default/60 p-3.5 text-center">
+            <div className="text-[10px] text-text-muted font-bold uppercase tracking-wider">Gasto Mensual Activo</div>
             <div className="text-sm font-bold text-text-primary mt-1">{fmt(data.activeBurnRate)}/mes</div>
           </div>
         </div>
       </div>
 
-      {/* Survival Mode Toggle */}
-      <div className={`rounded-2xl border p-5 transition-all duration-500 ${
+      {/* Grid: Labor Cushion & Seasonal Boosts */}
+      {severance && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          {/* Card A: Escudo de Liquidación Laboral */}
+          <div className="rounded-3xl border border-border-default bg-surface-50 p-5 space-y-4 shadow-sm">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-text-primary flex items-center gap-2">
+                <Scale className="h-4 w-4 text-brand-400" />
+                Escudo Laboral Legal (Ecuador)
+              </span>
+              <span className="text-[10px] bg-brand-500/10 text-brand-400 font-bold px-2 py-0.5 rounded-full">
+                {severance.contractType === 'emergente' ? 'Contrato Emergente' : 'Contrato Indefinido'}
+              </span>
+            </div>
+
+            <div className="text-xs text-text-muted">
+              Antigüedad registrada: <strong className="text-text-primary font-bold">{severance.tenure.formatted}</strong>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 pt-1">
+              <div
+                onClick={() => setCushionMode('resignation')}
+                className={`p-3 rounded-2xl border cursor-pointer transition-all ${
+                  cushionMode === 'resignation'
+                    ? 'border-accent-500 bg-accent-500/10 ring-1 ring-accent-500'
+                    : 'border-border-default bg-surface-100 hover:border-accent-500/40'
+                }`}
+              >
+                <div className="text-[10px] font-bold text-accent-400 uppercase">Si Renuncias</div>
+                <div className="text-lg font-black text-text-primary mt-0.5">{fmt(resignationAmount)}</div>
+                <div className="text-[10px] text-text-muted mt-1">
+                  +{data.resignationRunwayMonths} meses de pista
+                </div>
+              </div>
+
+              <div
+                onClick={() => setCushionMode('dismissal')}
+                className={`p-3 rounded-2xl border cursor-pointer transition-all ${
+                  cushionMode === 'dismissal'
+                    ? 'border-danger-500 bg-danger-500/10 ring-1 ring-danger-500'
+                    : 'border-border-default bg-surface-100 hover:border-danger-500/40'
+                }`}
+              >
+                <div className="text-[10px] font-bold text-danger-400 uppercase">Si te Despiden</div>
+                <div className="text-lg font-black text-danger-400 mt-0.5">{fmt(dismissalAmount)}</div>
+                <div className="text-[10px] text-text-muted mt-1">
+                  +{data.dismissalRunwayMonths} meses de pista
+                </div>
+              </div>
+            </div>
+
+            <p className="text-[10px] text-text-muted leading-relaxed">
+              En caso de contingencia o desvinculación, tu liquidación legal te otorga un escudo inmediato para financiar tu costo de vida sin recurrir a deudas.
+            </p>
+          </div>
+
+          {/* Card B: Inyecciones de Liquidez Estacional (Décimos y Utilidades) */}
+          <div className="rounded-3xl border border-border-default bg-surface-50 p-5 space-y-4 shadow-sm">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-text-primary flex items-center gap-2">
+                <Award className="h-4 w-4 text-warning-400" />
+                Inyecciones de Décimos y Utilidades
+              </span>
+              <span className="text-[10px] bg-warning-500/10 text-warning-400 font-bold px-2 py-0.5 rounded-full">
+                Cobro Anual
+              </span>
+            </div>
+
+            <p className="text-xs text-text-muted">
+              Si acumulas décimos o utilidades, estos pagos extraordinarios representan liquidez estacional clave:
+            </p>
+
+            {data.seasonalBenefits && data.seasonalBenefits.length > 0 ? (
+              <div className="space-y-1.5">
+                {data.seasonalBenefits.map((b: any, idx: number) => (
+                  <div key={idx} className="flex justify-between items-center text-xs p-2 rounded-xl bg-surface-100 border border-border-default">
+                    <span className="text-text-primary font-medium">{b.label}</span>
+                    <strong className="text-warning-400">{fmt(b.amount)}</strong>
+                  </div>
+                ))}
+                <div className="flex justify-between items-center text-xs pt-1.5 font-bold text-text-primary">
+                  <span>Total refuerzo estacional:</span>
+                  <span className="text-accent-400 font-black">+{fmt(seasonalTotal)}</span>
+                </div>
+              </div>
+            ) : (
+              <div className="p-3 rounded-2xl bg-surface-100 border border-border-default text-xs text-text-muted text-center">
+                Actualmente tus décimos llegan mensualizados cada mes en tu rol de pagos.
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Extreme Survival Mode (Recorte Extremo) */}
+      <div className={`rounded-3xl border p-6 transition-all duration-500 ${
         survivalMode
           ? 'border-accent-500/30 bg-accent-500/5 shadow-[0_0_30px_rgba(16,185,129,0.08)]'
           : 'border-border-default bg-surface-50'
       }`}>
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <Power className={`h-5 w-5 ${survivalMode ? 'text-accent-400' : 'text-text-muted'}`} />
+            <Power className={`h-6 w-6 ${survivalMode ? 'text-accent-400' : 'text-text-muted'}`} />
             <div>
               <h4 className="text-sm font-bold text-text-primary">Protocolo de Recorte Extremo</h4>
               <p className="text-xs text-text-muted mt-0.5">
-                Simula eliminar todos los gastos no esenciales para maximizar tu pista de supervivencia
+                Simula pausar todos tus gastos no esenciales para extender tu horizonte de supervivencia
               </p>
             </div>
           </div>
@@ -566,41 +759,41 @@ function StressTest() {
             className="shrink-0 cursor-pointer"
           >
             {survivalMode ? (
-              <ToggleRight className="h-8 w-8 text-accent-400" />
+              <ToggleRight className="h-9 w-9 text-accent-400" />
             ) : (
-              <ToggleLeft className="h-8 w-8 text-text-muted" />
+              <ToggleLeft className="h-9 w-9 text-text-muted" />
             )}
           </button>
         </div>
 
         {/* Runway Comparison */}
         {data.runwayGain > 0 && (
-          <div className="mt-4 rounded-xl bg-surface-0/60 border border-border-default/50 p-4 grid grid-cols-3 gap-3 text-center">
+          <div className="mt-5 rounded-2xl bg-surface-0/60 border border-border-default/50 p-4 grid grid-cols-3 gap-3 text-center">
             <div>
-              <div className="text-[10px] text-text-muted uppercase tracking-wider">Sin recortes</div>
+              <div className="text-[10px] text-text-muted uppercase tracking-wider font-semibold">Sin recortes</div>
               <div className="text-base font-bold text-text-primary mt-1">{data.fullRunway} meses</div>
             </div>
             <div>
-              <div className="text-[10px] text-text-muted uppercase tracking-wider flex items-center justify-center gap-1">
+              <div className="text-[10px] text-text-muted uppercase tracking-wider font-semibold flex items-center justify-center gap-1">
                 <ArrowRight className="h-2.5 w-2.5" />
-                Ganancia
+                Ganancia neta
               </div>
               <div className="text-base font-bold text-accent-400 mt-1">+{data.runwayGain} meses</div>
             </div>
             <div>
-              <div className="text-[10px] text-text-muted uppercase tracking-wider">Con recortes</div>
+              <div className="text-[10px] text-text-muted uppercase tracking-wider font-semibold">Con recortes</div>
               <div className="text-base font-bold text-accent-400 mt-1">{data.survivalRunway} meses</div>
             </div>
           </div>
         )}
       </div>
 
-      {/* Cut List (what to cancel) */}
+      {/* Cut List */}
       {survivalMode && data.nonEssentialExpenses?.length > 0 && (
-        <div className="space-y-2">
+        <div className="space-y-3">
           <h4 className="text-xs font-bold uppercase tracking-wider text-danger-400 flex items-center gap-1.5">
             <X className="h-3.5 w-3.5" />
-            Lista de gastos a cancelar inmediatamente ({data.nonEssentialExpenses.length})
+            Gastos no esenciales a congelar ({data.nonEssentialExpenses.length})
           </h4>
           <div className="space-y-1.5">
             {data.nonEssentialExpenses.map((e: any) => (
@@ -617,21 +810,9 @@ function StressTest() {
               </div>
             ))}
           </div>
-          <div className="text-xs text-text-muted text-center pt-2">
-            Total recortado: <strong className="text-danger-400">{fmt(data.nonEssentialMonthly)}/mes</strong> ·
-            Ahorro anual: <strong className="text-accent-400">{fmt(data.nonEssentialMonthly * 12)}</strong>
+          <div className="text-xs text-text-muted text-center pt-1">
+            Ahorro mensual obtenido: <strong className="text-danger-400">{fmt(data.nonEssentialMonthly)}/mes</strong>
           </div>
-        </div>
-      )}
-
-      {/* Monthly savings needed for 6-month cushion */}
-      {data.monthlyMonthlySavingsNeededFor6 > 0 && (
-        <div className="rounded-xl border border-brand-500/20 bg-brand-500/5 p-4 flex items-center gap-3 text-xs">
-          <Gauge className="h-5 w-5 text-brand-400 shrink-0" />
-          <span className="text-text-secondary">
-            Para alcanzar un colchón de <strong className="text-text-primary">6 meses</strong>, necesitas ahorrar
-            <strong className="text-brand-400"> {fmt(data.monthlyMonthlySavingsNeededFor6)}/mes</strong> durante 12 meses.
-          </span>
         </div>
       )}
     </div>

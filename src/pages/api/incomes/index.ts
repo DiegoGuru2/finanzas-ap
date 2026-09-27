@@ -34,6 +34,13 @@ const toEngineIncome = (inc: typeof incomes.$inferSelect) => ({
   sbuAmount: inc.sbuAmount ? parseFloat(inc.sbuAmount as string) : DEFAULT_SBU,
   hasUtilidades: inc.hasUtilidades ?? true,
   utilidadesAmount: inc.utilidadesAmount ? parseFloat(inc.utilidadesAmount as string) : 0,
+  workStartDate: inc.workStartDate
+    ? (typeof inc.workStartDate === 'string'
+      ? inc.workStartDate
+      : (inc.workStartDate as any).toISOString?.().slice(0, 10) || String(inc.workStartDate))
+    : null,
+  contractType: (inc.contractType as any) || 'indefinite',
+  contractDurationMonths: inc.contractDurationMonths ?? 12,
 });
 
 /** Valores para INSERT/UPDATE a partir del payload validado. */
@@ -59,6 +66,9 @@ const toDbValues = (data: IncomeInput) => {
     sbuAmount: data.sbuAmount.toString(),
     hasUtilidades: data.hasUtilidades,
     utilidadesAmount: data.utilidadesAmount.toString(),
+    workStartDate: data.workStartDate ? (new Date(`${data.workStartDate}T00:00:00`) as any) : null,
+    contractType: data.contractType || 'indefinite',
+    contractDurationMonths: data.contractDurationMonths ?? 12,
     category: data.category || 'Sueldo',
     date: data.date ? (new Date(data.date) as any) : null,
   };

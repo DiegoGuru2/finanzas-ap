@@ -35,6 +35,9 @@ export interface Income {
   sbuAmount?: number; // SBU vigente (configurable; cambia cada año)
   hasUtilidades?: boolean; // La empresa reparte utilidades
   utilidadesAmount?: number; // Estimado anual de utilidades
+  workStartDate?: string | null; // Fecha de inicio de labores (YYYY-MM-DD)
+  contractType?: 'indefinite' | 'emergente'; // Tipo de contrato laboral
+  contractDurationMonths?: number; // Duración pactada en meses para contrato emergente (máx 24)
 }
 
 // ─── Expense ───

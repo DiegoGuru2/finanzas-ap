@@ -83,6 +83,8 @@ export const incomeSchema = z.object({
     .max(999999999.99, 'El monto excede el límite')
     .default(0),
   workStartDate: optionalCleanString(50).nullable(),
+  contractType: z.enum(['indefinite', 'emergente']).default('indefinite'),
+  contractDurationMonths: z.number().int().min(1).max(24).default(12),
   date: optionalCleanString(50),
   category: optionalCleanString(50),
 });

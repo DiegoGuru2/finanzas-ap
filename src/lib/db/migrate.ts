@@ -61,8 +61,16 @@ async function migrateAll() {
       await db.execute(sql`ALTER TABLE \`incomes\` ADD COLUMN \`workStartDate\` DATE;`);
       console.log('✅ Added workStartDate column to incomes table');
     }
+    if (!incColNames.includes('contractType')) {
+      await db.execute(sql`ALTER TABLE \`incomes\` ADD COLUMN \`contractType\` VARCHAR(50) DEFAULT 'indefinite';`);
+      console.log('✅ Added contractType column to incomes table');
+    }
+    if (!incColNames.includes('contractDurationMonths')) {
+      await db.execute(sql`ALTER TABLE \`incomes\` ADD COLUMN \`contractDurationMonths\` INT DEFAULT 12;`);
+      console.log('✅ Added contractDurationMonths column to incomes table');
+    }
   } catch (e: any) {
-    console.error('Incomes workStartDate check:', e.message);
+    console.error('Incomes columns check:', e.message);
   }
   console.log('✅ Tabla incomes lista');
 

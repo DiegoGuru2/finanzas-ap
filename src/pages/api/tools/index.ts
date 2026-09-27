@@ -4,6 +4,8 @@ import { incomes, expenses, debts, savingsGoals, payments, expensePayments } fro
 import { eq } from 'drizzle-orm';
 import { calculateCashflow, normalizeToMonthly } from '@/modules/financial-engine/cashflow';
 import { optimizeDebt } from '@/modules/financial-engine/optimizer';
+import { calculateSeverance } from '@/modules/financial-engine/severance';
+import { calculateBenefits } from '@/modules/financial-engine/benefits';
 import type { Debt, Expense, Income } from '@/modules/financial-engine/types';
 import { parseLocalDateParts } from '@/lib/utils';
 
@@ -61,6 +63,13 @@ export const GET: APIRoute = async (ctx) => {
       sbuAmount: i.sbuAmount ? parseFloat(i.sbuAmount as string) : undefined,
       hasUtilidades: i.hasUtilidades ?? true,
       utilidadesAmount: i.utilidadesAmount ? parseFloat(i.utilidadesAmount as string) : 0,
+      workStartDate: i.workStartDate
+        ? (typeof i.workStartDate === 'string'
+          ? i.workStartDate
+          : (i.workStartDate as any).toISOString?.().slice(0, 10) || String(i.workStartDate))
+        : null,
+      contractType: (i.contractType as any) || 'indefinite',
+      contractDurationMonths: i.contractDurationMonths ?? 12,
     }));
 
     const formattedExpenses: Expense[] = userExpenses
@@ -111,7 +120,7 @@ export const GET: APIRoute = async (ctx) => {
 
     if (tool === 'stress-test') {
       const cutNonEssential = url.searchParams.get('cutNonEssential') === 'true';
-      return handleStressTest(cashflow, formattedExpenses, formattedDebts, userSavings, cutNonEssential);
+      return handleStressTest(cashflow, formattedExpenses, formattedDebts, userSavings, formattedIncomes, cutNonEssential);
     }
 
     return new Response(JSON.stringify({ error: 'Herramienta no especificada. Usa ?tool=afford-check|leak-radar|stress-test' }), { status: 400 });
@@ -359,6 +368,7 @@ function handleStressTest(
   expenses: Expense[],
   debts: Debt[],
   savings: any[],
+  incomes: Income[],
   cutNonEssential: boolean
 ) {
   // Calculate total emergency fund / savings
@@ -394,6 +404,44 @@ function handleStressTest(
     : totalSavings > 0 ? 999 : 0;
 
   const runwayDays = Math.round(runwayMonths * 30.44);
+
+  // ─── Severance & Ecuadorian Labor Cushion ───
+  const salaryIncome = incomes.find((i) => i.isSalary) || incomes[0];
+  let severance: any = null;
+  let seasonalBenefits: any[] = [];
+  let seasonalTotal = 0;
+
+  if (salaryIncome && salaryIncome.amount > 0) {
+    severance = calculateSeverance({
+      salary: salaryIncome.amount,
+      sbu: salaryIncome.sbuAmount,
+      workStartDate: salaryIncome.workStartDate,
+      contractType: salaryIncome.contractType,
+      contractDurationMonths: salaryIncome.contractDurationMonths,
+      region: salaryIncome.region,
+      decimoTerceroMensualizado: salaryIncome.decimoTerceroMensualizado,
+      decimoCuartoMensualizado: salaryIncome.decimoCuartoMensualizado,
+    });
+
+    const b = calculateBenefits(salaryIncome);
+    seasonalBenefits = b.annualPayouts;
+    seasonalTotal = seasonalBenefits.reduce((s, item) => s + item.amount, 0);
+  }
+
+  const resignationAmount = severance ? severance.resignation.total : 0;
+  const dismissalAmount = severance ? severance.dismissal.total : 0;
+
+  const resignationRunwayMonths = activeBurnRate > 0
+    ? Math.round(((totalSavings + resignationAmount) / activeBurnRate) * 10) / 10
+    : 0;
+
+  const dismissalRunwayMonths = activeBurnRate > 0
+    ? Math.round(((totalSavings + dismissalAmount) / activeBurnRate) * 10) / 10
+    : 0;
+
+  const seasonalRunwayMonths = activeBurnRate > 0
+    ? Math.round(((totalSavings + seasonalTotal) / activeBurnRate) * 10) / 10
+    : 0;
 
   // Determine risk level
   let riskLevel: 'critical' | 'danger' | 'warning' | 'safe' | 'strong';
@@ -461,6 +509,13 @@ function handleStressTest(
     nonEssentialExpenses,
     essentialExpenses,
     monthlyMonthlySavingsNeededFor6: Math.max(0, Math.round(((survivalBurnRate * 6 - totalSavings) / 12) * 100) / 100),
+    // 🇪🇨 Severance & Labor Shield Data
+    severance,
+    resignationRunwayMonths,
+    dismissalRunwayMonths,
+    seasonalBenefits,
+    seasonalTotal,
+    seasonalRunwayMonths,
   });
 }
 
