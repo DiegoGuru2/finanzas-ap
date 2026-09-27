@@ -241,6 +241,17 @@ export const PUT: APIRoute = async (ctx) => {
         })
         .where(eq(debts.id, existing.debtId));
 
+      await tx.insert(alerts).values({
+        id: generateId(),
+        userId: user.id,
+        type: isPaidOff ? 'debt_cleared' : 'payment',
+        title: isPaidOff
+          ? `¡Deuda liquidada: ${targetDebt.name}!`
+          : `Abono actualizado: ${targetDebt.name}`,
+        message: `Se actualizó el abono a $${amount.toFixed(2)} en "${targetDebt.name}". Saldo actual: $${newBal.toFixed(2)}.`,
+        isRead: false,
+      });
+
       return { newBal, isPaidOff };
     });
 

@@ -19,6 +19,14 @@ interface Badge {
   unlocked: boolean;
 }
 
+interface Recommendation {
+  id: string;
+  category: string;
+  title: string;
+  message: string;
+  impact: string;
+}
+
 interface HealthData {
   score: number;
   level: string;
@@ -30,6 +38,7 @@ interface HealthData {
     budgetDiscipline: Breakdown;
   };
   badges: Badge[];
+  recommendations?: Recommendation[];
   stats: {
     totalIncome: number;
     totalExpenses: number;
@@ -247,6 +256,45 @@ export default function HealthScoreWidget() {
           </div>
         )}
       </div>
+
+      {/* 💡 Plan de Acción y Recomendaciones Inteligentes */}
+      {data.recommendations && data.recommendations.length > 0 && (
+        <div className="rounded-2xl border border-brand-500/25 bg-surface-50 p-6 space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <svg className="h-5 w-5 text-brand-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+              <div>
+                <h3 className="text-base font-bold text-text-primary">Plan de Acción para Elevar tu Score</h3>
+                <p className="text-xs text-text-secondary mt-0.5">Sugerencias inteligentes personalizadas según tu estado financiero</p>
+              </div>
+            </div>
+            <span className="text-xs font-semibold text-brand-400 bg-brand-500/10 border border-brand-500/20 px-2.5 py-1 rounded-lg w-fit">
+              {data.recommendations.length} acciones sugeridas
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+            {data.recommendations.map((rec) => (
+              <div
+                key={rec.id}
+                className="flex items-start justify-between gap-3 rounded-xl border border-border-default bg-surface-100/60 p-3.5 hover:border-brand-500/40 transition-colors"
+              >
+                <div className="space-y-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-xs text-text-primary truncate">{rec.title}</span>
+                  </div>
+                  <p className="text-xs text-text-secondary leading-relaxed">{rec.message}</p>
+                </div>
+                <span className="shrink-0 rounded-lg bg-emerald-500/10 border border-emerald-500/25 px-2 py-0.5 text-[10px] font-bold text-emerald-400">
+                  {rec.impact}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

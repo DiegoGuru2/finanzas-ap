@@ -4,6 +4,7 @@ import { calculateSalaryDetails } from '@/modules/financial-engine/cashflow';
 import { calculateBenefits } from '@/modules/financial-engine/benefits';
 import { DEFAULT_SBU, round } from '@/modules/financial-engine/constants';
 import type { Income } from '@/modules/financial-engine/types';
+import { notifyFinancialSync } from '@/stores/sync';
 
 export default function SettingsManager() {
   const [loading, setLoading] = useState(true);
@@ -171,7 +172,8 @@ export default function SettingsManager() {
       if (!res.ok) throw new Error(json.error || 'Error al actualizar');
 
       setSalaryId(json.id);
-      setSuccessMessage('✅ ¡Configuración guardada! Sueldo, IESS, Beneficios de Ley y Ahorro Programado actualizados.');
+      setSuccessMessage('¡Configuración guardada! Sueldo, IESS, Beneficios de Ley y Ahorro Programado actualizados correctamente.');
+      notifyFinancialSync();
     } catch (err: any) {
       setErrorMessage(err.message || 'Error al guardar');
     } finally {

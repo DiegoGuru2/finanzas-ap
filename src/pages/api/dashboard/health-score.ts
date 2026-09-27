@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { db } from '@/lib/db';
-import { incomes, expenses, debts, payments, savingsGoals, budgets } from '@/lib/db/schema';
+import { incomes, expenses, debts, payments, savingsGoals, budgets, vaultKeys } from '@/lib/db/schema';
 import { eq, desc } from 'drizzle-orm';
 
 interface Badge {
@@ -27,13 +27,14 @@ export const GET: APIRoute = async (ctx) => {
       }
     };
 
-    const [userIncomes, userExpenses, userDebts, userPayments, userSavings, userBudgets] = await Promise.all([
+    const [userIncomes, userExpenses, userDebts, userPayments, userSavings, userBudgets, userVaultKeys] = await Promise.all([
       safeQuery(db.select().from(incomes).where(eq(incomes.userId, user.id)), []),
       safeQuery(db.select().from(expenses).where(eq(expenses.userId, user.id)), []),
       safeQuery(db.select().from(debts).where(eq(debts.userId, user.id)), []),
       safeQuery(db.select().from(payments).where(eq(payments.userId, user.id)).orderBy(desc(payments.paidAt)), []),
       safeQuery(db.select().from(savingsGoals).where(eq(savingsGoals.userId, user.id)), []),
       safeQuery(db.select().from(budgets).where(eq(budgets.userId, user.id)), []),
+      safeQuery(db.select({ id: vaultKeys.id }).from(vaultKeys).where(eq(vaultKeys.userId, user.id)), []),
     ]);
 
     // ═══ Métricas Base ═══
@@ -201,9 +202,62 @@ export const GET: APIRoute = async (ctx) => {
         name: 'Bóveda Protegida',
         icon: 'lock',
         description: 'Has configurado tu bóveda de contraseñas con cifrado AES-256',
-        unlocked: false, // Se verificará del lado del cliente
+        unlocked: userVaultKeys.length > 0,
       },
     ];
+
+    // ═══ Recomendaciones Inteligentes Accionables ═══
+    const recommendations: { id: string; category: string; title: string; message: string; impact: string }[] = [];
+
+    if (debtToIncomeRatio > 35) {
+      recommendations.push({
+        id: 'reduce_dti',
+        category: 'debt',
+        title: 'Carga financiera elevada (DTI > 35%)',
+        message: `Tu ratio de deuda sobre ingreso es del ${Math.round(debtToIncomeRatio)}%. Destina abonos extraordinarios a tus deudas con mayor APR para reducir el pago mínimo mensual.`,
+        impact: '+8 pts',
+      });
+    }
+
+    if (savingsRate < 25) {
+      recommendations.push({
+        id: 'boost_emergency_fund',
+        category: 'savings',
+        title: 'Fondo de emergencia vulnerable',
+        message: 'Aún no cubres 1 mes de gastos esenciales en reservas. Define una meta de ahorro con abono automático mensual.',
+        impact: '+10 pts',
+      });
+    }
+
+    if (userBudgets.length < 2) {
+      recommendations.push({
+        id: 'create_budgets',
+        category: 'budget',
+        title: 'Configura presupuestos por categoría',
+        message: 'No tienes presupuestos activos para controlar fugas en gastos variables (Alimentos, Entretenimiento, Compras).',
+        impact: '+6 pts',
+      });
+    }
+
+    if (paymentCompliance < 100) {
+      recommendations.push({
+        id: 'payment_punctuality',
+        category: 'payments',
+        title: 'Asegura la puntualidad en tus cortes',
+        message: 'Cumplir tus cuotas de quincena y fin de mes al 100% mejorará tu score y desbloqueará la insignia Racha de Pagos.',
+        impact: '+7 pts',
+      });
+    }
+
+    if (userVaultKeys.length === 0) {
+      recommendations.push({
+        id: 'secure_vault',
+        category: 'security',
+        title: 'Protege tus credenciales financieras',
+        message: 'Activa tu Bóveda de Contraseñas con cifrado militar AES-256 para resguardar tus accesos bancarios.',
+        impact: 'Insignia Bóveda',
+      });
+    }
 
     return new Response(JSON.stringify({
       score: totalScore,
@@ -216,6 +270,7 @@ export const GET: APIRoute = async (ctx) => {
         budgetDiscipline: { score: budgetScore, max: 20, budgetsCount: userBudgets.length },
       },
       badges,
+      recommendations,
       stats: {
         totalIncome: totalGrossIncome,
         totalExpenses: Math.round(totalExpenses * 100) / 100,

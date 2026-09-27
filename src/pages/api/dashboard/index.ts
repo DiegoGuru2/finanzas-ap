@@ -99,15 +99,17 @@ export const GET: APIRoute = async (ctx) => {
       minimumPayments: totalMinimumPayments,
     });
 
+    const totalAvailableForDebt = totalMinimumPayments + Math.max(0, cashflow.surplus);
+
     // Optimize debt payments using the selected strategy
     const optimization = optimizeDebt({
-      surplus: Math.max(0, cashflow.surplus),
+      surplus: totalAvailableForDebt,
       debts: formattedDebts,
       strategy,
     });
 
     const strategyComparison = compareStrategies(
-      Math.max(0, cashflow.surplus),
+      totalAvailableForDebt,
       formattedDebts
     );
 

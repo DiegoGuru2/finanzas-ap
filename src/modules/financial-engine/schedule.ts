@@ -233,7 +233,14 @@ export function buildPaymentSchedule(input: ScheduleInput): PaymentScheduleResul
     let remaining = debt.currentBalance;
     let totalScheduled = 0;
     let payoffPeriodKey: string | null = null;
-    let installment = 0;
+
+    // Calcular cuántas cuotas restan según el saldo actual y la cuota mensual
+    const remainingInstallmentsCount = Math.max(1, Math.ceil(debt.currentBalance / monthlyDue));
+    // Si es plan de cuotas fijas, las cuotas ya amortizadas determinan la numeración inicial
+    const alreadyPaidCount = hasPlan && planMonths > remainingInstallmentsCount
+      ? planMonths - remainingInstallmentsCount
+      : 0;
+    let installment = alreadyPaidCount;
 
     for (const period of periods) {
       if (period.timing !== timing || remaining <= 0) continue;
@@ -258,9 +265,7 @@ export function buildPaymentSchedule(input: ScheduleInput): PaymentScheduleResul
       monthlyAmount: round(monthlyDue),
       totalScheduled: round(totalScheduled),
       currentBalance: round(debt.currentBalance),
-      remainingInstallments: hasPlan
-        ? planMonths
-        : Math.ceil(debt.currentBalance / monthlyDue),
+      remainingInstallments: remainingInstallmentsCount,
       totalInstallments: hasPlan ? planMonths : null,
       payoffPeriodKey,
       cells,
