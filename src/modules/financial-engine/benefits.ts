@@ -88,6 +88,108 @@ export function calculateDecimoTerceroCycleDays(
 }
 
 /**
+ * Calcula el Décimo Tercero anual acumulado (1 Dic al 30 Nov) según el Art. 111 y 95
+ * del Código del Trabajo de Ecuador.
+ * Considera:
+ * - Proporcional por fecha de ingreso (workStartDate).
+ * - Variación o aumento de sueldo (hasSalaryChange, previousSalaryAmount, salaryChangeDate).
+ * - Horas extras y comisiones mensuales imponibles (monthlyOvertimeAmount).
+ */
+export function calculateDecimoTerceroAnnual(
+  income: Income,
+  targetYear: number = new Date().getFullYear()
+): { amount: number; label: string; details: string; totalEarnings: number } {
+  const gross = income.amount;
+  const overtime = income.monthlyOvertimeAmount && income.monthlyOvertimeAmount > 0
+    ? income.monthlyOvertimeAmount
+    : 0;
+
+  // Si no hay fecha de inicio, ni cambio de sueldo, ni horas extras: cálculo directo
+  if (!income.workStartDate && !income.hasSalaryChange && overtime === 0) {
+    return {
+      amount: round(gross),
+      label: 'Décimo tercer sueldo',
+      details: 'Cálculo estándar sobre remuneración fija.',
+      totalEarnings: round(gross * 12),
+    };
+  }
+
+  // Ciclo legal: 1 de diciembre de targetYear - 1 hasta 30 de noviembre de targetYear (12 meses)
+  let totalEarnings = 0;
+  let monthsWorked = 0;
+  const start = income.workStartDate ? new Date(`${income.workStartDate}T00:00:00`) : null;
+  const changeDate = income.hasSalaryChange && income.salaryChangeDate
+    ? new Date(`${income.salaryChangeDate}T00:00:00`)
+    : null;
+  const prevSalary = income.hasSalaryChange && (income.previousSalaryAmount ?? 0) > 0
+    ? (income.previousSalaryAmount as number)
+    : gross;
+
+  let monthsWithPrev = 0;
+  let monthsWithNew = 0;
+
+  for (let m = 0; m < 12; m++) {
+    // m=0: Diciembre del año anterior
+    // m=1..11: Enero a Noviembre del año de pago
+    const year = m === 0 ? targetYear - 1 : targetYear;
+    const month = m === 0 ? 11 : m - 1;
+    const monthStart = new Date(year, month, 1);
+    const monthEnd = new Date(year, month + 1, 0);
+
+    // Si aún no ingresaba a laborar en este mes
+    if (start && start > monthEnd) {
+      continue;
+    }
+
+    // Fracción del mes si ingresó a mitad del mes
+    let monthFraction = 1.0;
+    if (start && start > monthStart && start <= monthEnd) {
+      const daysWorked = Math.max(0, 30 - start.getDate() + 1);
+      monthFraction = Math.min(1.0, Math.max(0, daysWorked / 30));
+    }
+
+    monthsWorked += monthFraction;
+
+    // Determinar qué sueldo aplicaba en este mes
+    let baseSalary = gross;
+    if (changeDate && monthStart < changeDate) {
+      baseSalary = prevSalary;
+      monthsWithPrev += monthFraction;
+    } else {
+      monthsWithNew += monthFraction;
+    }
+
+    totalEarnings += (baseSalary + overtime) * monthFraction;
+  }
+
+  const decimoAmount = round(totalEarnings / 12);
+  let label = 'Décimo tercer sueldo';
+  let details = '';
+
+  const roundP = Math.round(monthsWithPrev);
+  const roundN = Math.round(monthsWithNew);
+
+  if (income.hasSalaryChange && roundP > 0 && roundN > 0) {
+    label = `Décimo 3ro (ponderado: ${roundP}m a $${prevSalary} + ${roundN}m a $${gross})`;
+    details = `Ponderado por aumento: ${roundP} meses con $${prevSalary} y ${roundN} meses con $${gross}${overtime > 0 ? ` (+ $${overtime}/m extras)` : ''}.`;
+  } else if (monthsWorked < 12) {
+    const mw = Math.round(monthsWorked * 10) / 10;
+    label = `Décimo tercer sueldo (proporcional ${mw} m)`;
+    details = `Proporcional a ${mw} meses laborados en el ciclo legal.`;
+  } else if (overtime > 0) {
+    label = `Décimo tercer sueldo (con horas extras)`;
+    details = `Incluye promedio mensual de $${overtime} en horas extras y comisiones.`;
+  }
+
+  return {
+    amount: decimoAmount,
+    label,
+    details,
+    totalEarnings: round(totalEarnings),
+  };
+}
+
+/**
  * Calcula los días acumulados en el ciclo del Décimo Cuarto (Costa vs Sierra).
  */
 export function calculateDecimoCuartoCycleDays(
@@ -192,17 +294,17 @@ export function calculateBenefits(income: Income, asOfDate: Date = new Date()): 
   const hasFondos = !!income.hasFondosReserva && fondosEligible;
 
   // Prorrateo legal mensual en el rol (1/12 estándar)
-  const fondosReservaMonthly = hasFondos ? round(gross / 12) : 0;
-  const decimoTerceroMonthly = round(gross / 12);
+  const overtime = income.monthlyOvertimeAmount && income.monthlyOvertimeAmount > 0
+    ? income.monthlyOvertimeAmount
+    : 0;
+  const fondosReservaMonthly = hasFondos ? round((gross + overtime) / 12) : 0;
+  const decimoTerceroMonthly = round((gross + overtime) / 12);
   const decimoCuartoMonthly = round(sbu / 12);
 
-  // ─── Décimo Tercero Anual (Proporcional si hay workStartDate) ───
-  const dtDays = calculateDecimoTerceroCycleDays(income.workStartDate, targetYear);
-  const decimoTerceroAnnual = dtDays >= 360 ? round(gross) : round((gross * dtDays) / 360);
-  const dtMonths = Math.round((dtDays / 30) * 10) / 10;
-  const dtLabel = dtDays < 360
-    ? `Décimo tercer sueldo (proporcional ${dtMonths} m)`
-    : 'Décimo tercer sueldo';
+  // ─── Décimo Tercero Anual (Ponderado por Aumento / Proporcional / Horas Extras) ───
+  const dtCalc = calculateDecimoTerceroAnnual(income, targetYear);
+  const decimoTerceroAnnual = dtCalc.amount;
+  const dtLabel = dtCalc.label;
 
   // ─── Décimo Cuarto Anual (Proporcional si hay workStartDate) ───
   const dcDays = calculateDecimoCuartoCycleDays(income.workStartDate, region, targetYear);

@@ -99,6 +99,10 @@ export const incomes = mysqlTable('incomes', {
   workStartDate: date('workStartDate'), // Fecha de inicio de labores (para cálculo automático de Fondos de Reserva y liquidación)
   contractType: varchar('contractType', { length: 50 }).default('indefinite'), // 'indefinite' | 'emergente'
   contractDurationMonths: int('contractDurationMonths').default(12), // Duración pactada para contrato emergente (máx 24 meses)
+  hasSalaryChange: boolean('hasSalaryChange').default(false), // Variación / aumento de sueldo en el ciclo anual
+  previousSalaryAmount: decimal('previousSalaryAmount', { precision: 15, scale: 2 }).default('0.00'), // Sueldo anterior antes del aumento
+  salaryChangeDate: date('salaryChangeDate'), // Fecha en que entró en vigencia el nuevo sueldo
+  monthlyOvertimeAmount: decimal('monthlyOvertimeAmount', { precision: 15, scale: 2 }).default('0.00'), // Promedio mensual de horas extras / comisiones
   date: date('date'),
   category: varchar('category', { length: 100 }),
   isActive: boolean('isActive').default(true),

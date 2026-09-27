@@ -13,7 +13,7 @@ import { notifyFinancialSync } from '@/stores/sync';
 import {
   Briefcase, Calendar, ShieldCheck, ShieldAlert, AlertTriangle,
   CheckCircle2, DollarSign, Clock, HelpCircle, Info, ChevronRight,
-  Sparkles, Save, FileText, ArrowRight, Percent, Scale, Award, X
+  Sparkles, Save, FileText, ArrowRight, Percent, Scale, Award, X, TrendingUp
 } from 'lucide-react';
 
 export default function SettingsManager() {
@@ -50,6 +50,12 @@ export default function SettingsManager() {
   const [workStartDate, setWorkStartDate] = useState<string>('');
   const [contractType, setContractType] = useState<'indefinite' | 'emergente'>('indefinite');
   const [contractDurationMonths, setContractDurationMonths] = useState<number>(12);
+
+  // 📈 Variación Salarial y Horas Extras (Art. 111 y 95)
+  const [hasSalaryChange, setHasSalaryChange] = useState(false);
+  const [previousSalaryAmount, setPreviousSalaryAmount] = useState<number>(504.21);
+  const [salaryChangeDate, setSalaryChangeDate] = useState<string>('2026-09-01');
+  const [monthlyOvertimeAmount, setMonthlyOvertimeAmount] = useState<number>(0);
 
   // 💰 Ahorro Programado a Fin de Mes
   const [hasProgrammedSavings, setHasProgrammedSavings] = useState(false);
@@ -96,6 +102,10 @@ export default function SettingsManager() {
     workStartDate: workStartDate || null,
     contractType,
     contractDurationMonths,
+    hasSalaryChange,
+    previousSalaryAmount: Number(previousSalaryAmount),
+    salaryChangeDate: salaryChangeDate || null,
+    monthlyOvertimeAmount: Number(monthlyOvertimeAmount),
   };
 
   // Live recalculation (motor financiero)
@@ -149,6 +159,17 @@ export default function SettingsManager() {
         }
         setContractType(principal.contractType || 'indefinite');
         setContractDurationMonths(Number(principal.contractDurationMonths) || 12);
+
+        // Variación Salarial y Horas Extras
+        setHasSalaryChange(!!principal.hasSalaryChange);
+        setPreviousSalaryAmount(Number(principal.previousSalaryAmount) || 504.21);
+        if (principal.salaryChangeDate) {
+          const rawDate = typeof principal.salaryChangeDate === 'string'
+            ? principal.salaryChangeDate.slice(0, 10)
+            : '';
+          setSalaryChangeDate(rawDate);
+        }
+        setMonthlyOvertimeAmount(Number(principal.monthlyOvertimeAmount) || 0);
 
         // Reparto quincena/fin de mes
         const q = Number(principal.quincenaAmount) || 0;
@@ -204,6 +225,10 @@ export default function SettingsManager() {
           workStartDate: workStartDate || null,
           contractType,
           contractDurationMonths: Number(contractDurationMonths),
+          hasSalaryChange,
+          previousSalaryAmount: Number(previousSalaryAmount),
+          salaryChangeDate: salaryChangeDate || null,
+          monthlyOvertimeAmount: Number(monthlyOvertimeAmount),
           // Beneficios de Ley
           hasFondosReserva,
           fondosReservaMensualizado,
@@ -259,6 +284,10 @@ export default function SettingsManager() {
     region,
     decimoTerceroMensualizado,
     decimoCuartoMensualizado,
+    hasSalaryChange,
+    previousSalaryAmount: Number(previousSalaryAmount),
+    salaryChangeDate: salaryChangeDate || null,
+    monthlyOvertimeAmount: Number(monthlyOvertimeAmount),
   });
 
   const tenure = severance.tenure;
@@ -384,6 +413,104 @@ export default function SettingsManager() {
                       required
                       className="w-full rounded-xl border border-border-default bg-surface-100 pl-8 pr-4 py-2.5 text-sm font-bold text-text-primary focus:border-brand-500 focus:outline-none"
                       placeholder="1200.00"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Variación de Sueldo y Horas Extras */}
+              <div className="rounded-2xl border border-brand-500/25 bg-brand-500/5 p-4 sm:p-5 space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="checkbox"
+                      id="settingsSalaryChangeToggle"
+                      checked={hasSalaryChange}
+                      onChange={(e) => setHasSalaryChange(e.target.checked)}
+                      className="h-4 w-4 rounded border-brand-500 text-brand-500 focus:ring-brand-500 cursor-pointer"
+                    />
+                    <div>
+                      <label htmlFor="settingsSalaryChangeToggle" className="text-xs font-bold text-text-primary cursor-pointer flex items-center gap-1.5 flex-wrap">
+                        <TrendingUp className="h-3.5 w-3.5 text-brand-400" />
+                        <span>¿Tuviste aumento o cambio de sueldo este año?</span>
+                        <span className="rounded bg-brand-500/20 text-brand-400 px-1.5 py-0.5 text-[9px] font-bold">Art. 111</span>
+                      </label>
+                      <p className="text-[11px] text-text-muted">
+                        Pondera tu sueldo anterior y tu sueldo nuevo en el décimo de navidad según los meses trabajados
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {hasSalaryChange && (
+                  <div className="pt-2 border-t border-brand-500/20 space-y-3 animate-in fade-in duration-200">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[11px] font-semibold text-text-secondary mb-1">
+                          Sueldo Anterior ($ USD)
+                        </label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted font-bold text-xs">$</span>
+                          <input
+                            type="number"
+                            inputMode="decimal"
+                            step="0.01"
+                            min="0"
+                            value={previousSalaryAmount}
+                            onChange={(e) => setPreviousSalaryAmount(parseFloat(e.target.value) || 0)}
+                            className="w-full rounded-xl border border-border-default bg-surface-50 pl-7 pr-3 py-2 text-xs font-bold text-text-primary focus:border-brand-500 focus:outline-none"
+                            placeholder="504.21"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-semibold text-text-secondary mb-1">
+                          Mes en que empezó el nuevo sueldo
+                        </label>
+                        <input
+                          type="date"
+                          value={salaryChangeDate}
+                          onChange={(e) => setSalaryChangeDate(e.target.value)}
+                          className="w-full rounded-xl border border-border-default bg-surface-50 px-3 py-2 text-xs font-bold text-text-primary focus:border-brand-500 focus:outline-none"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="p-3 rounded-xl bg-surface-100/90 border border-brand-500/20 text-xs text-text-secondary leading-relaxed flex items-start gap-2">
+                      <Sparkles className="h-4 w-4 text-brand-400 shrink-0 mt-0.5" />
+                      <div>
+                        <strong className="text-text-primary block font-bold">Cálculo Ponderado Oficial:</strong>
+                        <span>
+                          Tu décimo de diciembre proyectado es de <strong className="text-accent-400 font-bold">{formatCurrency(benefits.decimoTerceroAnnual)}</strong> (ponderando tu sueldo anterior de {formatCurrency(previousSalaryAmount)} con tu nuevo sueldo de {formatCurrency(salaryAmount)}).
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Horas extras / Comisiones */}
+                <div className="pt-3 border-t border-brand-500/20 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <div>
+                    <label className="text-xs font-bold text-text-primary flex items-center gap-1.5 flex-wrap">
+                      <span>Horas Extras / Comisiones Promedio ($ USD/mes)</span>
+                      <span className="rounded bg-accent-500/20 text-accent-400 px-1.5 py-0.5 text-[9px] font-bold">Art. 95</span>
+                    </label>
+                    <p className="text-[11px] text-text-muted">
+                      Ingresos imponibles regulares que suman a la bolsa anual del décimo de navidad
+                    </p>
+                  </div>
+                  <div className="relative w-full sm:w-36 shrink-0">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted font-bold text-xs">$</span>
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      step="0.01"
+                      min="0"
+                      value={monthlyOvertimeAmount}
+                      onChange={(e) => setMonthlyOvertimeAmount(parseFloat(e.target.value) || 0)}
+                      className="w-full rounded-xl border border-border-default bg-surface-50 pl-7 pr-3 py-2 text-xs font-bold text-accent-400 focus:border-brand-500 focus:outline-none"
+                      placeholder="0.00"
                     />
                   </div>
                 </div>
@@ -772,6 +899,21 @@ export default function SettingsManager() {
                     </button>
                   </div>
                 </div>
+                {!decimoTerceroMensualizado && (
+                  <div className="flex justify-between items-center text-xs pt-2.5 border-t border-warning-500/20 text-text-muted">
+                    <div>
+                      <span className="font-semibold text-text-primary block">Proyección a cobrar en Diciembre:</span>
+                      {hasSalaryChange && (
+                        <span className="text-[10px] text-accent-400 block mt-0.5 font-medium">
+                          Ponderado por aumento salarial (Art. 111)
+                        </span>
+                      )}
+                    </div>
+                    <strong className="text-warning-400 text-sm font-black">
+                      {formatCurrency(benefits.decimoTerceroAnnual)}
+                    </strong>
+                  </div>
+                )}
               </div>
 
               {/* Décimo Cuarto Sueldo */}

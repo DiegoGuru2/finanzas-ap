@@ -275,6 +275,10 @@ export interface SeveranceInput {
   region?: 'costa' | 'sierra';
   decimoTerceroMensualizado?: boolean;
   decimoCuartoMensualizado?: boolean;
+  hasSalaryChange?: boolean;
+  previousSalaryAmount?: number;
+  salaryChangeDate?: string | null;
+  monthlyOvertimeAmount?: number;
   asOfDate?: Date;
 }
 
@@ -284,6 +288,8 @@ export interface SeveranceInput {
  */
 export function calculateSeverance(input: SeveranceInput): SeveranceCalculationResult {
   const salary = Math.max(0, input.salary || 0);
+  const overtime = input.monthlyOvertimeAmount && input.monthlyOvertimeAmount > 0 ? input.monthlyOvertimeAmount : 0;
+  const fullSalary = salary + overtime;
   const sbu = Math.max(0, input.sbu && input.sbu > 0 ? input.sbu : DEFAULT_SBU);
   const contractType = input.contractType || 'indefinite';
   const duration = input.contractDurationMonths ?? 12;
@@ -297,9 +303,37 @@ export function calculateSeverance(input: SeveranceInput): SeveranceCalculationR
   // 1. Décimo Tercero
   const dtDays = getDecimoTerceroAccumulatedDays(asOf, workStartDate);
   // Si mensualiza, en la liquidación solo se paga el mes en curso proporcional (fracción de 30 días)
-  const decimoTercero = input.decimoTerceroMensualizado
-    ? round((salary / 12) * (tenure.days / 30))
-    : round((salary * dtDays) / 360);
+  let decimoTercero = 0;
+  if (input.decimoTerceroMensualizado) {
+    decimoTercero = round((fullSalary / 12) * (tenure.days / 30));
+  } else if (input.hasSalaryChange && input.previousSalaryAmount && input.salaryChangeDate) {
+    const changeDate = new Date(`${input.salaryChangeDate}T00:00:00`);
+    const prevSalary = input.previousSalaryAmount + overtime;
+    const currentSalary = fullSalary;
+    const cycleStartYear = asOf.getMonth() === 11 ? asOf.getFullYear() : asOf.getFullYear() - 1;
+    const cycleStart = new Date(cycleStartYear, 11, 1);
+    const start = workStartDate ? new Date(`${workStartDate}T00:00:00`) : cycleStart;
+    const effectiveStart = start > cycleStart ? start : cycleStart;
+
+    let totalEarnings = 0;
+    const currentYear = asOf.getFullYear();
+    const currentMonth = asOf.getMonth();
+    let cur = new Date(effectiveStart.getFullYear(), effectiveStart.getMonth(), 1);
+    const end = new Date(currentYear, currentMonth, 1);
+
+    while (cur <= end) {
+      const base = cur < changeDate ? prevSalary : currentSalary;
+      if (cur.getTime() === end.getTime()) {
+        totalEarnings += base * (tenure.days / 30);
+      } else {
+        totalEarnings += base;
+      }
+      cur.setMonth(cur.getMonth() + 1);
+    }
+    decimoTercero = round(totalEarnings / 12);
+  } else {
+    decimoTercero = round((fullSalary * dtDays) / 360);
+  }
 
   // 2. Décimo Cuarto
   const dcDays = getDecimoCuartoAccumulatedDays(region, asOf, workStartDate);
@@ -307,15 +341,15 @@ export function calculateSeverance(input: SeveranceInput): SeveranceCalculationR
     ? round((sbu / 12) * (tenure.days / 30))
     : round((sbu * dcDays) / 360);
 
-  // 3. Vacaciones no gozadas proporcionales (15 días al año = salary / 24)
+  // 3. Vacaciones no gozadas proporcionales (15 días al año = fullSalary / 24)
   // Días laborados en el periodo anual en curso
   const daysInCurrentYear = tenure.months * 30 + tenure.days;
-  const vacaciones = round((salary / 24) * (Math.min(360, daysInCurrentYear) / 360));
+  const vacaciones = round((fullSalary / 24) * (Math.min(360, daysInCurrentYear) / 360));
 
   // 4. Bonificación por Desahucio (Art. 185 Código del Trabajo):
   // 25% de la última remuneración mensual por cada año de servicio completo y proporcional por fracciones.
   const serviceYearsDecimal = tenure.years + tenure.months / 12 + tenure.days / 365;
-  const desahucio = round(0.25 * salary * serviceYearsDecimal);
+  const desahucio = round(0.25 * fullSalary * serviceYearsDecimal);
 
   // Subtotal haberes y desahucio (común para renuncia y despido)
   const subtotalHaberes = round(decimoTercero + decimoCuarto + vacaciones + desahucio);
@@ -324,19 +358,19 @@ export function calculateSeverance(input: SeveranceInput): SeveranceCalculationR
   // • Hasta 3 años de servicio: 3 remuneraciones (piso mínimo legal).
   // • Más de 3 años de servicio: 1 remuneración por cada año de servicio, donde la fracción de año cuenta como año completo (máximo 25).
   let indemnityDismissal = 0;
-  if (salary > 0) {
+  if (fullSalary > 0) {
     if (contractType === 'emergente' && !emergentInfo.isOverTwoYears && !emergentInfo.isExpired) {
       // En contrato emergente despedido anticipadamente antes del plazo pactado
-      indemnityDismissal = round(Math.max(3 * salary, salary * Math.ceil(serviceYearsDecimal)));
+      indemnityDismissal = round(Math.max(3 * fullSalary, fullSalary * Math.ceil(serviceYearsDecimal)));
     } else {
       // Contrato indefinido u ordinario
       if (tenure.years < 3) {
-        indemnityDismissal = round(3 * salary);
+        indemnityDismissal = round(3 * fullSalary);
       } else {
         // Fracción de año cuenta como año completo
         const yearsCounted = tenure.months > 0 || tenure.days > 0 ? tenure.years + 1 : tenure.years;
         const cappedYears = Math.min(25, yearsCounted);
-        indemnityDismissal = round(cappedYears * salary);
+        indemnityDismissal = round(cappedYears * fullSalary);
       }
     }
   }

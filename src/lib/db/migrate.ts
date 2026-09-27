@@ -69,6 +69,22 @@ async function migrateAll() {
       await db.execute(sql`ALTER TABLE \`incomes\` ADD COLUMN \`contractDurationMonths\` INT DEFAULT 12;`);
       console.log('✅ Added contractDurationMonths column to incomes table');
     }
+    if (!incColNames.includes('hasSalaryChange')) {
+      await db.execute(sql`ALTER TABLE \`incomes\` ADD COLUMN \`hasSalaryChange\` BOOLEAN DEFAULT FALSE;`);
+      console.log('✅ Added hasSalaryChange column to incomes table');
+    }
+    if (!incColNames.includes('previousSalaryAmount')) {
+      await db.execute(sql`ALTER TABLE \`incomes\` ADD COLUMN \`previousSalaryAmount\` DECIMAL(15,2) DEFAULT 0.00;`);
+      console.log('✅ Added previousSalaryAmount column to incomes table');
+    }
+    if (!incColNames.includes('salaryChangeDate')) {
+      await db.execute(sql`ALTER TABLE \`incomes\` ADD COLUMN \`salaryChangeDate\` DATE;`);
+      console.log('✅ Added salaryChangeDate column to incomes table');
+    }
+    if (!incColNames.includes('monthlyOvertimeAmount')) {
+      await db.execute(sql`ALTER TABLE \`incomes\` ADD COLUMN \`monthlyOvertimeAmount\` DECIMAL(15,2) DEFAULT 0.00;`);
+      console.log('✅ Added monthlyOvertimeAmount column to incomes table');
+    }
   } catch (e: any) {
     console.error('Incomes columns check:', e.message);
   }

@@ -41,6 +41,14 @@ const toEngineIncome = (inc: typeof incomes.$inferSelect) => ({
     : null,
   contractType: (inc.contractType as any) || 'indefinite',
   contractDurationMonths: inc.contractDurationMonths ?? 12,
+  hasSalaryChange: !!inc.hasSalaryChange,
+  previousSalaryAmount: inc.previousSalaryAmount ? parseFloat(inc.previousSalaryAmount as string) : 0,
+  salaryChangeDate: inc.salaryChangeDate
+    ? (typeof inc.salaryChangeDate === 'string'
+      ? inc.salaryChangeDate
+      : (inc.salaryChangeDate as any).toISOString?.().slice(0, 10) || String(inc.salaryChangeDate))
+    : null,
+  monthlyOvertimeAmount: inc.monthlyOvertimeAmount ? parseFloat(inc.monthlyOvertimeAmount as string) : 0,
 });
 
 /** Valores para INSERT/UPDATE a partir del payload validado. */
@@ -69,6 +77,10 @@ const toDbValues = (data: IncomeInput) => {
     workStartDate: data.workStartDate ? (new Date(`${data.workStartDate}T00:00:00`) as any) : null,
     contractType: data.contractType || 'indefinite',
     contractDurationMonths: data.contractDurationMonths ?? 12,
+    hasSalaryChange: !!data.hasSalaryChange,
+    previousSalaryAmount: (data.previousSalaryAmount || 0).toString(),
+    salaryChangeDate: data.salaryChangeDate ? (new Date(`${data.salaryChangeDate}T00:00:00`) as any) : null,
+    monthlyOvertimeAmount: (data.monthlyOvertimeAmount || 0).toString(),
     category: data.category || 'Sueldo',
     date: data.date ? (new Date(data.date) as any) : null,
   };

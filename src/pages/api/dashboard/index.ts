@@ -69,6 +69,14 @@ export const GET: APIRoute = async (ctx) => {
         : null,
       contractType: (i.contractType as any) || 'indefinite',
       contractDurationMonths: i.contractDurationMonths ?? 12,
+      hasSalaryChange: !!i.hasSalaryChange,
+      previousSalaryAmount: i.previousSalaryAmount ? parseFloat(i.previousSalaryAmount as string) : 0,
+      salaryChangeDate: i.salaryChangeDate
+        ? (typeof i.salaryChangeDate === 'string'
+          ? i.salaryChangeDate
+          : (i.salaryChangeDate as any).toISOString?.().slice(0, 10) || String(i.salaryChangeDate))
+        : null,
+      monthlyOvertimeAmount: i.monthlyOvertimeAmount ? parseFloat(i.monthlyOvertimeAmount as string) : 0,
     }));
 
     // Format expenses

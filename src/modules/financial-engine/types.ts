@@ -38,6 +38,10 @@ export interface Income {
   workStartDate?: string | null; // Fecha de inicio de labores (YYYY-MM-DD)
   contractType?: 'indefinite' | 'emergente'; // Tipo de contrato laboral
   contractDurationMonths?: number; // Duración pactada en meses para contrato emergente (máx 24)
+  hasSalaryChange?: boolean; // Indica si hubo aumento o variación salarial en el ciclo anual
+  previousSalaryAmount?: number; // Sueldo nominal anterior
+  salaryChangeDate?: string | null; // Fecha o mes en que aplicó el nuevo sueldo (YYYY-MM-DD)
+  monthlyOvertimeAmount?: number; // Estimado mensual de horas extras / comisiones imponibles
 }
 
 // ─── Expense ───

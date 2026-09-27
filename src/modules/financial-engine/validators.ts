@@ -85,6 +85,10 @@ export const incomeSchema = z.object({
   workStartDate: optionalCleanString(50).nullable(),
   contractType: z.enum(['indefinite', 'emergente']).default('indefinite'),
   contractDurationMonths: z.number().int().min(1).max(24).default(12),
+  hasSalaryChange: z.boolean().default(false),
+  previousSalaryAmount: z.number().min(0).default(0),
+  salaryChangeDate: optionalCleanString(50).nullable(),
+  monthlyOvertimeAmount: z.number().min(0).default(0),
   date: optionalCleanString(50),
   category: optionalCleanString(50),
 });

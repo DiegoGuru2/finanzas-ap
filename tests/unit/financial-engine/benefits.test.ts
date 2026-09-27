@@ -154,4 +154,57 @@ describe('cronograma con beneficios', () => {
     expect(payout.amount).toBe(300);
     expect(payout.label).toContain('proporcional');
   });
+
+  it('calcula el décimo tercer sueldo ponderado cuando hubo aumento de sueldo en septiembre', () => {
+    // Caso real: Sueldo anterior 504.21 (dic a ago = 9 meses), nuevo sueldo 600.00 (sep a nov = 3 meses)
+    // (9 * 504.21 + 3 * 600) / 12 = (4537.89 + 1800) / 12 = 6337.89 / 12 = 528.16
+    const result = buildPaymentSchedule({
+      debts: [],
+      incomes: [
+        withBenefits({
+          amount: 600,
+          decimoTerceroMensualizado: false,
+          hasSalaryChange: true,
+          previousSalaryAmount: 504.21,
+          salaryChangeDate: '2026-09-01',
+        }),
+      ],
+      expenses: [],
+      months: 5,
+      startDate: '2026-09-01',
+    });
+
+    const dic = result.periods.find((p) => p.month === 11 && p.timing === 'fin_de_mes');
+    expect(dic).toBeDefined();
+    const payout = result.benefitPayouts[dic!.key]?.[0];
+    expect(payout).toBeDefined();
+    expect(payout.amount).toBe(528.16);
+    expect(payout.label).toContain('ponderado');
+  });
+
+  it('incluye horas extras en el décimo tercero acumulado de diciembre', () => {
+    // Sueldo 504.21 + 600 con $20/mes de horas extras: 528.16 + 20 = 548.16
+    const result = buildPaymentSchedule({
+      debts: [],
+      incomes: [
+        withBenefits({
+          amount: 600,
+          decimoTerceroMensualizado: false,
+          hasSalaryChange: true,
+          previousSalaryAmount: 504.21,
+          salaryChangeDate: '2026-09-01',
+          monthlyOvertimeAmount: 20,
+        }),
+      ],
+      expenses: [],
+      months: 5,
+      startDate: '2026-09-01',
+    });
+
+    const dic = result.periods.find((p) => p.month === 11 && p.timing === 'fin_de_mes');
+    expect(dic).toBeDefined();
+    const payout = result.benefitPayouts[dic!.key]?.[0];
+    expect(payout).toBeDefined();
+    expect(payout.amount).toBe(548.16);
+  });
 });
