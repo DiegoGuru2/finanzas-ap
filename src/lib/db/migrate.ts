@@ -378,5 +378,12 @@ async function migrateAll() {
   console.log('🎉 Todas las tablas e índices fueron migrados y verificados.');
 }
 
-migrateAll().catch(console.error);
+migrateAll()
+  .then(() => {
+    process.exit(0);
+  })
+  .catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });
 

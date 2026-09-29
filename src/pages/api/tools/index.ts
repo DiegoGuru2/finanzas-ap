@@ -62,7 +62,7 @@ export const GET: APIRoute = async (ctx) => {
       region: (i.region === 'sierra' ? 'sierra' : 'costa') as 'costa' | 'sierra',
       sbuAmount: i.sbuAmount ? parseFloat(i.sbuAmount as string) : undefined,
       hasUtilidades: i.hasUtilidades ?? true,
-      utilidadesAmount: i.utilidadesAmount ? parseFloat(i.utilidadesAmount as string) : 0,
+      utilidadesAmount: (i as any).utilidadesAmount ? parseFloat((i as any).utilidadesAmount as string) : 0,
       workStartDate: i.workStartDate
         ? (typeof i.workStartDate === 'string'
           ? i.workStartDate
@@ -151,7 +151,9 @@ function handleAffordCheck(
     });
   }
 
-  // Determine which cut period we are in
+  const round = (val: number) => Math.round(val * 100) / 100;
+
+  // Determine current cut period
   const today = new Date();
   const dayOfMonth = today.getDate();
   const isQuincenaCut = dayOfMonth <= 15;
@@ -159,65 +161,278 @@ function handleAffordCheck(
   const nextCutDay = isQuincenaCut ? 15 : new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
   const daysUntilCut = isQuincenaCut ? Math.max(0, 15 - dayOfMonth) : Math.max(0, nextCutDay - dayOfMonth);
 
-  // Income available for the current cut period
-  const incomeThisCut = isQuincenaCut
-    ? cashflow.quincenaAvailable
-    : cashflow.finDeMesAvailable;
+  // 1. Separate expenses into Quincena and Fin de Mes
+  let quincenaExpensesTotal = 0;
+  let finDeMesExpensesTotal = 0;
+  const adjustableExpenses: {
+    id: string;
+    name: string;
+    monthlyAmount: number;
+    quincenaAmount: number;
+    finDeMesAmount: number;
+    category?: string;
+    paymentTiming: string;
+  }[] = [];
 
-  // Expenses allocated to this cut period (approximately half for "ambas")
-  const expensesThisCut = cashflow.totalMonthlyExpenses / 2;
-  const debtsThisCut = cashflow.minimumPayments / 2;
+  for (const exp of expenses) {
+    const monthly = normalizeToMonthly(exp.amount, exp.frequency);
+    if (monthly <= 0) continue;
 
-  // Calculate how much has already been paid this cut period
+    let q = 0;
+    let f = 0;
+    const timing = exp.paymentTiming || 'ambas';
+    if (timing === 'quincena') {
+      q = monthly;
+    } else if (timing === 'fin_de_mes') {
+      f = monthly;
+    } else {
+      // 'ambas': 50% quincena, 50% fin de mes
+      q = round(monthly / 2);
+      f = round(monthly - q);
+    }
+
+    quincenaExpensesTotal += q;
+    finDeMesExpensesTotal += f;
+
+    if (!exp.isEssential) {
+      adjustableExpenses.push({
+        id: exp.id,
+        name: exp.name,
+        monthlyAmount: round(monthly),
+        quincenaAmount: round(q),
+        finDeMesAmount: round(f),
+        category: exp.category,
+        paymentTiming: timing,
+      });
+    }
+  }
+
+  // 2. Separate debts into Quincena and Fin de Mes
+  let quincenaDebtsTotal = 0;
+  let finDeMesDebtsTotal = 0;
+
+  for (const d of debts) {
+    if (d.minimumPayment <= 0) continue;
+    const timing = d.paymentTiming || 'any';
+    let isQuincenaDebt = false;
+    if (timing === 'quincena') {
+      isQuincenaDebt = true;
+    } else if (timing === 'fin_de_mes') {
+      isQuincenaDebt = false;
+    } else {
+      isQuincenaDebt = d.dueDay <= 15;
+    }
+
+    if (isQuincenaDebt) {
+      quincenaDebtsTotal += d.minimumPayment;
+    } else {
+      finDeMesDebtsTotal += d.minimumPayment;
+    }
+  }
+
+  // 3. Paid amounts this current month
   const currentMonth = today.getMonth() + 1;
   const currentYear = today.getFullYear();
-  let paidDebtsThisCut = 0;
+  let paidDebtsQuincena = 0;
+  let paidDebtsFinDeMes = 0;
   for (const p of userPayments) {
     const parts = parseLocalDateParts(p.paidAt);
     if (!parts) continue;
     if (parts.year !== currentYear || parts.month !== currentMonth) continue;
-    const inCut = isQuincenaCut ? parts.day <= 15 : parts.day > 15;
-    if (inCut) paidDebtsThisCut += parseFloat(p.amount as string);
-  }
-
-  let paidExpensesThisCut = 0;
-  const cutKey = isQuincenaCut
-    ? `${currentYear}-${String(currentMonth).padStart(2, '0')}-q`
-    : `${currentYear}-${String(currentMonth).padStart(2, '0')}-f`;
-  for (const ep of userExpensePayments) {
-    if (ep.periodKey === cutKey) {
-      paidExpensesThisCut += parseFloat(ep.amount as string);
+    if (parts.day <= 15) {
+      paidDebtsQuincena += parseFloat(p.amount as string);
+    } else {
+      paidDebtsFinDeMes += parseFloat(p.amount as string);
     }
   }
 
-  // What's still pending in this cut
-  const pendingDebts = Math.max(0, debtsThisCut - paidDebtsThisCut);
-  const pendingExpenses = Math.max(0, expensesThisCut - paidExpensesThisCut);
+  let paidExpensesQuincena = 0;
+  let paidExpensesFinDeMes = 0;
+  const qKey = `${currentYear}-${String(currentMonth).padStart(2, '0')}-q`;
+  const fKey = `${currentYear}-${String(currentMonth).padStart(2, '0')}-f`;
+  for (const ep of userExpensePayments) {
+    if (ep.periodKey === qKey) paidExpensesQuincena += parseFloat(ep.amount as string);
+    if (ep.periodKey === fKey) paidExpensesFinDeMes += parseFloat(ep.amount as string);
+  }
 
-  // Available "free cash" in the current cut
-  const freeCashBeforePurchase = Math.round((incomeThisCut - pendingDebts - pendingExpenses) * 100) / 100;
-  const freeCashAfterPurchase = Math.round((freeCashBeforePurchase - purchaseAmount) * 100) / 100;
+  const pendingQuincenaDebts = Math.max(0, quincenaDebtsTotal - paidDebtsQuincena);
+  const pendingQuincenaExpenses = Math.max(0, quincenaExpensesTotal - paidExpensesQuincena);
+  const freeCashQuincena = round(cashflow.quincenaAvailable - pendingQuincenaDebts - pendingQuincenaExpenses);
+  const freeCashQuincenaAfter = round(freeCashQuincena - purchaseAmount);
 
-  // Determine verdict
-  let verdict: 'green' | 'yellow' | 'red';
+  const pendingFinDeMesDebts = Math.max(0, finDeMesDebtsTotal - paidDebtsFinDeMes);
+  const pendingFinDeMesExpenses = Math.max(0, finDeMesExpensesTotal - paidExpensesFinDeMes);
+  const freeCashFinDeMes = round(cashflow.finDeMesAvailable - pendingFinDeMesDebts - pendingFinDeMesExpenses);
+  const freeCashFinDeMesAfter = round(freeCashFinDeMes - purchaseAmount);
+
+  // 4. Cut analysis & recommendation (Quincena vs Fin de Mes)
+  const quincenaAnalysis = {
+    cutLabel: 'Quincena (día 15)',
+    income: round(cashflow.quincenaAvailable),
+    pendingDebts: round(pendingQuincenaDebts),
+    pendingExpenses: round(pendingQuincenaExpenses),
+    freeCashBefore: freeCashQuincena,
+    freeCashAfter: freeCashQuincenaAfter,
+    canAffordFull: freeCashQuincenaAfter >= 0,
+    status: (freeCashQuincenaAfter >= cashflow.quincenaAvailable * 0.10
+      ? 'green'
+      : freeCashQuincenaAfter >= 0
+        ? 'yellow'
+        : 'red') as 'green' | 'yellow' | 'red',
+  };
+
+  const finDeMesAnalysis = {
+    cutLabel: 'Fin de Mes (día 30/31)',
+    income: round(cashflow.finDeMesAvailable),
+    pendingDebts: round(pendingFinDeMesDebts),
+    pendingExpenses: round(pendingFinDeMesExpenses),
+    freeCashBefore: freeCashFinDeMes,
+    freeCashAfter: freeCashFinDeMesAfter,
+    canAffordFull: freeCashFinDeMesAfter >= 0,
+    status: (freeCashFinDeMesAfter >= cashflow.finDeMesAvailable * 0.10
+      ? 'green'
+      : freeCashFinDeMesAfter >= 0
+        ? 'yellow'
+        : 'red') as 'green' | 'yellow' | 'red',
+  };
+
+  let recommendedCut: 'quincena' | 'fin_de_mes' | 'none';
+  let cutRecommendationReason: string;
+
+  if (quincenaAnalysis.canAffordFull && finDeMesAnalysis.canAffordFull) {
+    if (freeCashFinDeMes >= freeCashQuincena) {
+      recommendedCut = 'fin_de_mes';
+      cutRecommendationReason = `Fin de Mes es más holgado: te quedarán $${freeCashFinDeMesAfter.toFixed(2)} libres (tienes $${freeCashFinDeMes.toFixed(2)} disponibles) vs $${freeCashQuincenaAfter.toFixed(2)} en Quincena.`;
+    } else {
+      recommendedCut = 'quincena';
+      cutRecommendationReason = `Quincena es más favorable: te quedarán $${freeCashQuincenaAfter.toFixed(2)} libres vs $${freeCashFinDeMesAfter.toFixed(2)} en Fin de Mes.`;
+    }
+  } else if (finDeMesAnalysis.canAffordFull) {
+    recommendedCut = 'fin_de_mes';
+    cutRecommendationReason = `Te conviene pagarlo en Fin de Mes. En Quincena tendrías un déficit de -$${Math.abs(freeCashQuincenaAfter).toFixed(2)}, mientras que a Fin de Mes te quedan $${freeCashFinDeMesAfter.toFixed(2)} libres.`;
+  } else if (quincenaAnalysis.canAffordFull) {
+    recommendedCut = 'quincena';
+    cutRecommendationReason = `Te conviene pagarlo en la Quincena. A Fin de Mes tendrías un déficit de -$${Math.abs(freeCashFinDeMesAfter).toFixed(2)}, mientras que en Quincena te quedan $${freeCashQuincenaAfter.toFixed(2)} libres.`;
+  } else {
+    recommendedCut = 'none';
+    cutRecommendationReason = `No alcanza al contado en un solo corte (déficit de -$${Math.abs(freeCashQuincenaAfter).toFixed(2)} en Quincena y -$${Math.abs(freeCashFinDeMesAfter).toFixed(2)} a Fin de Mes). Te recomendamos diferirlo en cuotas o ajustar gastos no esenciales.`;
+  }
+
+  // 5. Installment Plans (Planes de Pago y Cuotas)
+  const monthlySurplus = round(cashflow.surplus);
+  const terms = [1, 2, 3, 6, 9, 12];
+  const installmentPlans = terms.map((term) => {
+    const monthlyInstallment = round(purchaseAmount / term);
+    const cutInstallment = round(monthlyInstallment / 2);
+
+    let status: 'green' | 'yellow' | 'red';
+    let label: string;
+    let description: string;
+    let burdenPercent = 0;
+
+    if (term === 1) {
+      const bestCutMargin = Math.max(freeCashQuincena, freeCashFinDeMes);
+      if (bestCutMargin >= purchaseAmount * 1.1) {
+        status = 'green';
+        label = 'Al contado (Óptimo)';
+        description = 'Puedes pagarlo de una sola vez sin comprometer tu colchón ni pagar intereses.';
+      } else if (bestCutMargin >= purchaseAmount) {
+        status = 'yellow';
+        label = 'Al contado (Ajustado)';
+        description = 'Puedes pagarlo en un solo corte, pero tu margen quedará al límite.';
+      } else {
+        status = 'red';
+        label = 'Al contado (No alcanza)';
+        description = 'Generaría déficit en tus cortes inmediatos. Es mejor diferirlo.';
+      }
+    } else {
+      if (monthlySurplus <= 0) {
+        status = 'red';
+        label = 'Riesgoso';
+        description = `Tu flujo mensual actual no tiene superávit ($${monthlySurplus.toFixed(2)}). Requiere recortar gastos.`;
+      } else {
+        burdenPercent = Math.min(999, round((monthlyInstallment / monthlySurplus) * 100));
+        if (burdenPercent <= 30) {
+          status = 'green';
+          label = 'Óptimo';
+          description = `Cuota de $${monthlyInstallment.toFixed(2)}/mes ($${cutInstallment.toFixed(2)} por quincena). Consume solo el ${burdenPercent}% de tu superávit libre.`;
+        } else if (burdenPercent <= 65) {
+          status = 'yellow';
+          label = 'Aceptable';
+          description = `Cuota de $${monthlyInstallment.toFixed(2)}/mes. Consume el ${burdenPercent}% de tu superávit libre. Es viable pero reduce tu capacidad de ahorro.`;
+        } else {
+          status = 'red';
+          label = 'Sobrecarga';
+          description = `Cuota de $${monthlyInstallment.toFixed(2)}/mes. Consume el ${burdenPercent}% de tu superávit. Te dejaría muy expuesto a imprevistos.`;
+        }
+      }
+    }
+
+    return {
+      term,
+      monthlyInstallment,
+      cutInstallment,
+      burdenPercent,
+      status,
+      label,
+      description,
+    };
+  });
+
+  // Recommended Installment Term
+  let recommendedTerm: number | null = null;
+  let installmentAdvice = '';
+
+  const fullPlan = installmentPlans.find((p) => p.term === 1);
+  if (fullPlan && fullPlan.status === 'green') {
+    recommendedTerm = 1;
+    installmentAdvice = `¡Excelente! Puedes pagarlo al contado de una sola vez ($${purchaseAmount.toFixed(2)}) en tu corte de ${recommendedCut === 'fin_de_mes' ? 'Fin de Mes' : 'Quincena'}, evitando cualquier tipo de deuda o interés.`;
+  } else {
+    // Look for first green deferred option
+    const greenPlan = installmentPlans.find((p) => p.term > 1 && p.status === 'green');
+    if (greenPlan) {
+      recommendedTerm = greenPlan.term;
+      installmentAdvice = `Te sugerimos financiarlo en ${greenPlan.term} cuotas de $${greenPlan.monthlyInstallment.toFixed(2)}/mes ($${greenPlan.cutInstallment.toFixed(2)} por corte). Es el plazo más corto que mantiene tus finanzas completamente seguras.`;
+    } else {
+      const yellowPlan = installmentPlans.find((p) => p.term > 1 && p.status === 'yellow');
+      if (yellowPlan) {
+        recommendedTerm = yellowPlan.term;
+        installmentAdvice = `El plazo más viable para tu presupuesto es de ${yellowPlan.term} cuotas de $${yellowPlan.monthlyInstallment.toFixed(2)}/mes. Estará algo ajustado, por lo que te recomendamos revisar los ajustes de gastos sugeridos.`;
+      } else {
+        recommendedTerm = null;
+        installmentAdvice = `Tu flujo mensual actual no soporta esta cuota sin generar déficit. Te aconsejamos ajustar gastos no esenciales antes de realizar esta compra.`;
+      }
+    }
+  }
+
+  // 6. Adjustable expenses summary
+  adjustableExpenses.sort((a, b) => b.monthlyAmount - a.monthlyAmount);
+  const totalNonEssentialMonthly = adjustableExpenses.reduce((s, e) => s + e.monthlyAmount, 0);
+  const totalNonEssentialQuincena = adjustableExpenses.reduce((s, e) => s + e.quincenaAmount, 0);
+  const totalNonEssentialFinDeMes = adjustableExpenses.reduce((s, e) => s + e.finDeMesAmount, 0);
+
+  // 7. General verdict for current cut
+  const currentCutAnalysis = isQuincenaCut ? quincenaAnalysis : finDeMesAnalysis;
+  let verdict: 'green' | 'yellow' | 'red' = currentCutAnalysis.status;
   let message: string;
   let description: string;
 
-  if (freeCashAfterPurchase >= incomeThisCut * 0.10) {
-    verdict = 'green';
-    message = 'Puedes comprarlo sin problema';
-    description = `Aún te quedarán $${freeCashAfterPurchase.toFixed(2)} libres antes del corte de ${currentCutLabel}. Tu colchón financiero se mantiene saludable.`;
-  } else if (freeCashAfterPurchase >= 0) {
-    verdict = 'yellow';
-    message = 'Precaución: margen muy ajustado';
-    description = `Te quedarán solo $${freeCashAfterPurchase.toFixed(2)} para imprevistos hasta tu próximo ingreso. Si surge algo inesperado podrías tener dificultades.`;
+  if (verdict === 'green') {
+    message = 'Puedes pagarlo al contado en este corte';
+    description = `Aún te quedarán $${currentCutAnalysis.freeCashAfter.toFixed(2)} libres antes del corte de ${currentCutLabel}. Tu colchón se mantiene saludable.`;
+  } else if (verdict === 'yellow') {
+    message = 'Precaución: margen al límite en este corte';
+    description = `Te quedarían solo $${currentCutAnalysis.freeCashAfter.toFixed(2)} libres en ${currentCutLabel}. Revisa la opción de diferir en cuotas o pagar a ${isQuincenaCut ? 'Fin de Mes' : 'Quincena'}.`;
   } else {
-    verdict = 'red';
-    message = 'No recomendado: genera déficit';
-    description = `Este gasto provocaría un déficit de -$${Math.abs(freeCashAfterPurchase).toFixed(2)} para cubrir tus compromisos pendientes del corte de ${currentCutLabel}.`;
+    message = recommendedCut !== 'none'
+      ? `No cabe en ${currentCutLabel}, pero sí en ${recommendedCut === 'quincena' ? 'Quincena' : 'Fin de Mes'}`
+      : 'No alcanza al contado en un solo corte';
+    description = recommendedCut !== 'none'
+      ? cutRecommendationReason
+      : `Generaría un déficit de -$${Math.abs(currentCutAnalysis.freeCashAfter).toFixed(2)} en ${currentCutLabel}. Te mostramos abajo los planes en cuotas y ajustes posibles.`;
   }
 
-  // Upcoming debts that could be impacted
+  // Upcoming debts impacted
   const impactedDebts = debts
     .filter((d) => d.minimumPayment > 0)
     .sort((a, b) => a.dueDay - b.dueDay)
@@ -233,13 +448,32 @@ function handleAffordCheck(
     message,
     description,
     purchaseAmount,
-    freeCashBeforePurchase,
-    freeCashAfterPurchase,
+    freeCashBeforePurchase: currentCutAnalysis.freeCashBefore,
+    freeCashAfterPurchase: currentCutAnalysis.freeCashAfter,
     currentCutLabel,
     daysUntilCut,
-    incomeThisCut: Math.round(incomeThisCut * 100) / 100,
-    pendingDebts: Math.round(pendingDebts * 100) / 100,
-    pendingExpenses: Math.round(pendingExpenses * 100) / 100,
+    incomeThisCut: currentCutAnalysis.income,
+    pendingDebts: currentCutAnalysis.pendingDebts,
+    pendingExpenses: currentCutAnalysis.pendingExpenses,
+    monthlySurplus,
+    cutsComparison: {
+      quincena: quincenaAnalysis,
+      finDeMes: finDeMesAnalysis,
+      recommendedCut,
+      cutRecommendationReason,
+    },
+    installmentsAnalysis: {
+      canPayFull: quincenaAnalysis.canAffordFull || finDeMesAnalysis.canAffordFull,
+      recommendedTerm,
+      installmentAdvice,
+      plans: installmentPlans,
+    },
+    adjustments: {
+      totalNonEssentialMonthly: round(totalNonEssentialMonthly),
+      totalNonEssentialQuincena: round(totalNonEssentialQuincena),
+      totalNonEssentialFinDeMes: round(totalNonEssentialFinDeMes),
+      items: adjustableExpenses,
+    },
     impactedDebts,
   });
 }
