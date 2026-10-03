@@ -17,6 +17,26 @@ async function migrateAll() {
       await db.execute(sql`ALTER TABLE \`user\` ADD COLUMN \`birthDate\` VARCHAR(20);`);
       console.log('✅ Added birthDate column to user table');
     }
+    if (!colNames.includes('telegramChatId')) {
+      await db.execute(sql`ALTER TABLE \`user\` ADD COLUMN \`telegramChatId\` VARCHAR(50);`);
+      console.log('✅ Added telegramChatId column to user table');
+    }
+    if (!colNames.includes('telegramUsername')) {
+      await db.execute(sql`ALTER TABLE \`user\` ADD COLUMN \`telegramUsername\` VARCHAR(100);`);
+      console.log('✅ Added telegramUsername column to user table');
+    }
+    if (!colNames.includes('telegramLinkCode')) {
+      await db.execute(sql`ALTER TABLE \`user\` ADD COLUMN \`telegramLinkCode\` VARCHAR(64);`);
+      console.log('✅ Added telegramLinkCode column to user table');
+    }
+    if (!colNames.includes('telegramLinkExpires')) {
+      await db.execute(sql`ALTER TABLE \`user\` ADD COLUMN \`telegramLinkExpires\` TIMESTAMP NULL;`);
+      console.log('✅ Added telegramLinkExpires column to user table');
+    }
+    if (!colNames.includes('telegramNotificationsEnabled')) {
+      await db.execute(sql`ALTER TABLE \`user\` ADD COLUMN \`telegramNotificationsEnabled\` BOOLEAN DEFAULT TRUE;`);
+      console.log('✅ Added telegramNotificationsEnabled column to user table');
+    }
   } catch (e: any) {
     console.error('User table check error:', e.message);
   }

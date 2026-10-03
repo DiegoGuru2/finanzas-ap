@@ -23,6 +23,11 @@ export const user = mysqlTable('user', {
   image: text('image'),
   role: varchar('role', { length: 50 }).default('user'),
   birthDate: varchar('birthDate', { length: 20 }),
+  telegramChatId: varchar('telegramChatId', { length: 50 }),
+  telegramUsername: varchar('telegramUsername', { length: 100 }),
+  telegramLinkCode: varchar('telegramLinkCode', { length: 64 }),
+  telegramLinkExpires: timestamp('telegramLinkExpires'),
+  telegramNotificationsEnabled: boolean('telegramNotificationsEnabled').default(true),
   createdAt: timestamp('createdAt').notNull().defaultNow(),
   updatedAt: timestamp('updatedAt').notNull().defaultNow().onUpdateNow(),
 });
@@ -96,6 +101,7 @@ export const incomes = mysqlTable('incomes', {
   region: varchar('region', { length: 20 }).default('costa'), // 'costa' | 'sierra' para décimo 14to
   sbuAmount: decimal('sbuAmount', { precision: 15, scale: 2 }).default('460.00'), // Salario Básico Unificado vigente
   hasUtilidades: boolean('hasUtilidades').default(true), // La empresa reparte utilidades (15%)
+  utilidadesAmount: decimal('utilidadesAmount', { precision: 15, scale: 2 }).default('0.00'),
   workStartDate: date('workStartDate'), // Fecha de inicio de labores (para cálculo automático de Fondos de Reserva y liquidación)
   contractType: varchar('contractType', { length: 50 }).default('indefinite'), // 'indefinite' | 'emergente'
   contractDurationMonths: int('contractDurationMonths').default(12), // Duración pactada para contrato emergente (máx 24 meses)

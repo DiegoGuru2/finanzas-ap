@@ -13,10 +13,12 @@ import { notifyFinancialSync } from '@/stores/sync';
 import {
   Briefcase, Calendar, ShieldCheck, ShieldAlert, AlertTriangle,
   CheckCircle2, DollarSign, Clock, HelpCircle, Info, ChevronRight,
-  Sparkles, Save, FileText, ArrowRight, Percent, Scale, Award, X, TrendingUp
+  Sparkles, Save, FileText, ArrowRight, Percent, Scale, Award, X, TrendingUp, Send
 } from 'lucide-react';
+import TelegramSettings from './TelegramSettings';
 
 export default function SettingsManager() {
+  const [activeTab, setActiveTab] = useState<'salary' | 'telegram'>('salary');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<{
@@ -346,28 +348,70 @@ export default function SettingsManager() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h2 className="text-2xl font-black text-text-primary tracking-tight flex items-center gap-2.5">
-            <Briefcase className="h-6 w-6 text-brand-400" />
-            Configuración Laboral y Salarial
+            {activeTab === 'salary' ? (
+              <>
+                <Briefcase className="h-6 w-6 text-brand-400" />
+                Configuración Laboral y Salarial
+              </>
+            ) : (
+              <>
+                <Send className="h-6 w-6 text-[#229ED9]" />
+                Notificaciones y Telegram
+              </>
+            )}
           </h2>
           <p className="text-sm text-text-muted mt-0.5">
-            Gestiona tu contrato, sueldo neto, beneficios de ley y simulador de liquidación oficial en Ecuador.
+            {activeTab === 'salary'
+              ? 'Gestiona tu contrato, sueldo neto, beneficios de ley y simulador de liquidación oficial en Ecuador.'
+              : 'Conecta tu cuenta de Telegram para recibir alertas automáticas de pago y consultar saldos al instante.'}
           </p>
         </div>
 
-        {/* Global Save Button in header for convenience */}
+        {activeTab === 'salary' && (
+          <button
+            type="button"
+            onClick={handleSaveSalary}
+            disabled={saving}
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand-500 px-5 py-2.5 text-xs font-bold text-white shadow-lg shadow-brand-500/25 hover:bg-brand-400 transition-all cursor-pointer disabled:opacity-50 shrink-0"
+          >
+            <Save className="h-4 w-4" />
+            <span>{saving ? 'Guardando...' : 'Guardar Cambios'}</span>
+          </button>
+        )}
+      </div>
+
+      {/* Tabs Switcher */}
+      <div className="flex items-center gap-2 border-b border-border-default pb-3">
         <button
           type="button"
-          onClick={handleSaveSalary}
-          disabled={saving}
-          className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand-500 px-5 py-2.5 text-xs font-bold text-white shadow-lg shadow-brand-500/25 hover:bg-brand-400 transition-all cursor-pointer disabled:opacity-50 shrink-0"
+          onClick={() => setActiveTab('salary')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+            activeTab === 'salary'
+              ? 'bg-brand-500 text-white shadow-md shadow-brand-500/20'
+              : 'text-text-muted hover:text-text-primary hover:bg-surface-100'
+          }`}
         >
-          <Save className="h-4 w-4" />
-          <span>{saving ? 'Guardando...' : 'Guardar Cambios'}</span>
+          <Briefcase className="h-4 w-4" />
+          Laboral y Salario
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('telegram')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+            activeTab === 'telegram'
+              ? 'bg-[#229ED9] text-white shadow-md shadow-[#229ED9]/25'
+              : 'text-text-muted hover:text-text-primary hover:bg-surface-100'
+          }`}
+        >
+          <Send className="h-4 w-4" />
+          Telegram y Alertas
         </button>
       </div>
 
-      {/* Main 2-Column Responsive Dashboard */}
-      <form onSubmit={handleSaveSalary}>
+      {activeTab === 'telegram' ? (
+        <TelegramSettings />
+      ) : (
+        <form onSubmit={handleSaveSalary}>
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           
           {/* ═══════════════════════════════════════════
@@ -1261,6 +1305,7 @@ export default function SettingsManager() {
 
         </div>
       </form>
+      )}
     </div>
   );
 }

@@ -379,7 +379,7 @@ describe('buildPaymentSchedule', () => {
       amount: 1200,
       frequency: 'monthly',
       isSalary: true,
-      paymentScheme: 'single_cut',
+      paymentScheme: 'monthly',
       hasFondosReserva: true,
       fondosReservaMensualizado: true,
       workStartDate: '2026-06-01',

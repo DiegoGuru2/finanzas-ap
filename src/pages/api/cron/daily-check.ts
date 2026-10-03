@@ -6,6 +6,7 @@ import { buildPaymentSchedule } from '@/modules/financial-engine/schedule';
 import type { Debt, Expense, Income } from '@/modules/financial-engine/types';
 import { generateId, parseLocalDateParts, toLocalDateString } from '@/lib/utils';
 import { sendCutReminderEmail } from '@/lib/email';
+import { sendTelegramMessage, buildCutReminderMessage } from '@/lib/telegram';
 
 const MONTH_NAMES = [
   'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -28,9 +29,16 @@ export const ALL: APIRoute = async (ctx) => {
       headers: { 'Content-Type': 'application/json' },
     });
   }
-
   try {
-    const allUsers = await db.select({ id: user.id, name: user.name, email: user.email }).from(user);
+    const allUsers = await db
+      .select({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        telegramChatId: user.telegramChatId,
+        telegramNotificationsEnabled: user.telegramNotificationsEnabled,
+      })
+      .from(user);
     const todayStr = toLocalDateString(new Date());
     const todayDate = new Date();
     todayDate.setHours(0, 0, 0, 0);
@@ -38,6 +46,7 @@ export const ALL: APIRoute = async (ctx) => {
     let processedUsers = 0;
     let alertsCreated = 0;
     let emailsSent = 0;
+    let telegramSent = 0;
 
     for (const u of allUsers) {
       processedUsers++;
@@ -219,6 +228,36 @@ export const ALL: APIRoute = async (ctx) => {
               }).catch((e) => console.error('Error enviando correo de recordatorio en cron:', e));
               emailsSent++;
             }
+
+            // 3. Enviar mensaje de Telegram (si tiene cuenta vinculada y notificaciones activas)
+            if (u.telegramChatId && u.telegramNotificationsEnabled !== false) {
+              const mappedPendingDebts = pendingDebts.map((d) => {
+                const scheduled = d.cells[nextPeriod.key] || 0;
+                const alreadyPaid = paid[d.id]?.[nextPeriod.key] || 0;
+                return { name: d.name, amount: Math.max(0, scheduled - alreadyPaid) };
+              });
+              const mappedPendingExpenses = pendingExpenses.map((e) => ({
+                name: e.name,
+                amount: e.cells[nextPeriod.key] || 0,
+              }));
+
+              const reminderMsg = buildCutReminderMessage({
+                name: u.name,
+                cutDay: nextPeriod.day,
+                cutMonthName: MONTH_NAMES[nextPeriod.month],
+                urgencyTitle: urgency,
+                pendingDebts: mappedPendingDebts,
+                pendingExpenses: mappedPendingExpenses,
+                totalDebtsAmount,
+                totalExpensesAmount,
+                remainingIncome,
+              });
+
+              await sendTelegramMessage(u.telegramChatId, reminderMsg.text, {
+                reply_markup: reminderMsg.reply_markup,
+              }).catch((e) => console.error('Error enviando recordatorio de Telegram en cron:', e));
+              telegramSent++;
+            }
           }
         }
       }
@@ -230,6 +269,7 @@ export const ALL: APIRoute = async (ctx) => {
         processedUsers,
         alertsCreated,
         emailsSent,
+        telegramSent,
         timestamp: new Date().toISOString(),
       }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
