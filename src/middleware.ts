@@ -11,12 +11,18 @@ const PUBLIC_ROUTES = [
 
 const AUTH_API_PREFIX = '/api/auth';
 const CRON_API_PREFIX = '/api/cron';
+const TELEGRAM_WEBHOOK_PREFIX = '/api/telegram/webhook';
 
 export const onRequest = defineMiddleware(async (context, next) => {
   const { pathname } = context.url;
 
-  // ─── Allow auth and cron API routes to pass through directly ───
-  if (pathname.startsWith(AUTH_API_PREFIX) || pathname.startsWith(CRON_API_PREFIX)) {
+  // ─── Allow auth, cron, and Telegram webhook API routes to pass through directly ───
+  if (
+    pathname.startsWith(AUTH_API_PREFIX) ||
+    pathname.startsWith(CRON_API_PREFIX) ||
+    pathname === TELEGRAM_WEBHOOK_PREFIX ||
+    pathname === TELEGRAM_WEBHOOK_PREFIX + '/'
+  ) {
     return next();
   }
 
