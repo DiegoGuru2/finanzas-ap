@@ -415,6 +415,18 @@ export default function TelegramSettings() {
         </p>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3.5">
+          <div className="p-3.5 rounded-xl border border-brand-500/30 bg-brand-500/10">
+            <div className="flex items-center gap-2">
+              <span className="text-sm">⚡</span>
+              <span className="font-mono text-xs font-bold text-brand-300">
+                Gasto 4.50 almuerzo
+              </span>
+            </div>
+            <div className="text-xs text-text-muted mt-2 leading-relaxed">
+              Escribe cualquier gasto (ej. <code className="text-text-primary">Taxi 5</code>). El bot detecta el monto y categoría, y actualiza tu presupuesto.
+            </div>
+          </div>
+
           <div className="p-3.5 rounded-xl border border-border-default/60 bg-surface-100/40">
             <div className="flex items-center gap-2">
               <span className="font-mono text-xs font-bold px-2 py-0.5 rounded bg-brand-500/20 text-brand-300 border border-brand-500/30">
@@ -422,7 +434,18 @@ export default function TelegramSettings() {
               </span>
             </div>
             <div className="text-xs text-text-muted mt-2 leading-relaxed">
-              Muestra el listado de deudas y gastos fijos a cubrir en tu próximo corte de quincena o fin de mes.
+              Lista las deudas del corte con botones interactivos para marcar pagos y descontar saldos con 1 toque.
+            </div>
+          </div>
+
+          <div className="p-3.5 rounded-xl border border-border-default/60 bg-surface-100/40">
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-xs font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                /metas
+              </span>
+            </div>
+            <div className="text-xs text-text-muted mt-2 leading-relaxed">
+              Muestra tus metas de ahorro con barras de progreso visuales y botones para aportar $10 o $25 al instante.
             </div>
           </div>
 
@@ -434,6 +457,17 @@ export default function TelegramSettings() {
             </div>
             <div className="text-xs text-text-muted mt-2 leading-relaxed">
               Consulta tu salario proyectado, total adeudado y cuánto dinero te queda libre tras cumplir tus pagos.
+            </div>
+          </div>
+
+          <div className="p-3.5 rounded-xl border border-border-default/60 bg-surface-100/40">
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-xs font-bold px-2 py-0.5 rounded bg-surface-200 text-text-secondary border border-border-default">
+                /gasto
+              </span>
+            </div>
+            <div className="text-xs text-text-muted mt-2 leading-relaxed">
+              Muestra ejemplos y formatos válidos para registrar gastos en lenguaje natural.
             </div>
           </div>
 
